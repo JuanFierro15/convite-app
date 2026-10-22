@@ -1,0 +1,7 @@
+{
+  "name": "convite",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular-standalone"
+}
