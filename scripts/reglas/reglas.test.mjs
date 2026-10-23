@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import { after, before, test } from 'node:test';
 import {
   createEmptyContext,
@@ -1094,6 +1095,793 @@ test(
       actualMembers,
       expectedMembers,
       'Se esperaba que únicamente el usuario fuera del equipo quedara como owner del evento'
+    );
+  }
+);
+
+test(
+  '21. Un propietario crea una invitación con dos personas usando save_invitation',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    const invitationId = crypto.randomUUID();
+    const guestOneId = crypto.randomUUID();
+    const guestTwoId = crypto.randomUUID();
+    const groupName = `PRUEBA-${ctx.run}-FAMILIA-GUARDADA`;
+    const phone = '+573000000000';
+    const guests = [
+      { id: guestOneId, full_name: 'Integrante Guardado Uno' },
+      { id: guestTwoId, full_name: 'Integrante Guardado Dos' },
+    ];
+
+    ctx.savedInvitationPayload = {
+      p_invitation_id: invitationId,
+      p_event_id: ctx.eventX.id,
+      p_group_name: groupName,
+      p_phone: phone,
+      p_guests: guests,
+    };
+
+    const { data, error } = await ctx.ownerXClient.rpc(
+      'save_invitation',
+      ctx.savedInvitationPayload
+    );
+
+    assert.equal(
+      error,
+      null,
+      'Se esperaba que save_invitation creara la invitación y sus personas sin error'
+    );
+    assert.ok(
+      data,
+      'Se esperaba recibir el objeto de la invitación guardada desde save_invitation'
+    );
+    assert.equal(
+      data.id,
+      invitationId,
+      'Se esperaba que la invitación devuelta tuviera el id enviado por el cliente'
+    );
+    assert.equal(
+      data.event_id,
+      ctx.eventX.id,
+      'Se esperaba que la invitación devuelta perteneciera al evento X'
+    );
+    assert.equal(
+      data.group_name,
+      groupName,
+      'Se esperaba que la invitación devuelta conservara el nombre de grupo enviado'
+    );
+    assert.equal(
+      data.phone,
+      phone,
+      'Se esperaba que la invitación devuelta conservara el teléfono enviado'
+    );
+    assert.equal(
+      typeof data.code === 'string' && data.code.length > 0,
+      true,
+      'Se esperaba que la invitación devuelta tuviera un código no vacío'
+    );
+    assert.equal(
+      Array.isArray(data.guests) && data.guests.length === 2,
+      true,
+      'Se esperaba que la respuesta incluyera exactamente las dos personas en guests'
+    );
+    assert.equal(
+      data.guests[0].id,
+      guestOneId,
+      'Se esperaba que la primera persona devuelta tuviera el primer id enviado'
+    );
+    assert.equal(
+      data.guests[0].full_name,
+      'Integrante Guardado Uno',
+      'Se esperaba que la primera persona devuelta conservara su nombre'
+    );
+    assert.equal(
+      data.guests[0].sort_order,
+      0,
+      'Se esperaba que la primera persona tuviera sort_order 0'
+    );
+    assert.equal(
+      data.guests[1].id,
+      guestTwoId,
+      'Se esperaba que la segunda persona devuelta tuviera el segundo id enviado'
+    );
+    assert.equal(
+      data.guests[1].full_name,
+      'Integrante Guardado Dos',
+      'Se esperaba que la segunda persona devuelta conservara su nombre'
+    );
+    assert.equal(
+      data.guests[1].sort_order,
+      1,
+      'Se esperaba que la segunda persona tuviera sort_order 1'
+    );
+
+    const { data: storedInvitations, error: checkInvError } =
+      await ctx.adminClient
+        .from('invitations')
+        .select('*')
+        .eq('id', invitationId);
+
+    assert.equal(
+      checkInvError,
+      null,
+      'Se esperaba consultar con el administrador la invitación creada sin error'
+    );
+    assert.equal(
+      storedInvitations?.length,
+      1,
+      'Se esperaba que la invitación existiera una sola vez en la base de datos'
+    );
+
+    const { data: storedGuests, error: checkGuestsError } =
+      await ctx.adminClient
+        .from('guests')
+        .select('*')
+        .eq('invitation_id', invitationId)
+        .order('sort_order', { ascending: true });
+
+    assert.equal(
+      checkGuestsError,
+      null,
+      'Se esperaba consultar con el administrador las personas de la invitación sin error'
+    );
+    assert.equal(
+      storedGuests?.length,
+      2,
+      'Se esperaba que la invitación tuviera exactamente dos personas en la base de datos'
+    );
+    assert.equal(
+      storedGuests[0].id,
+      guestOneId,
+      'Se esperaba que la primera persona en base de datos coincidiera con el primer id'
+    );
+    assert.equal(
+      storedGuests[0].full_name,
+      'Integrante Guardado Uno',
+      'Se esperaba que la primera persona en base de datos tuviera el nombre enviado'
+    );
+    assert.equal(
+      storedGuests[0].sort_order,
+      0,
+      'Se esperaba que la primera persona en base de datos tuviera sort_order 0'
+    );
+    assert.equal(
+      storedGuests[1].id,
+      guestTwoId,
+      'Se esperaba que la segunda persona en base de datos coincidiera con el segundo id'
+    );
+    assert.equal(
+      storedGuests[1].full_name,
+      'Integrante Guardado Dos',
+      'Se esperaba que la segunda persona en base de datos tuviera el nombre enviado'
+    );
+    assert.equal(
+      storedGuests[1].sort_order,
+      1,
+      'Se esperaba que la segunda persona en base de datos tuviera sort_order 1'
+    );
+  }
+);
+
+test(
+  '22. Repetir save_invitation no duplica y editar reemplaza nombre, personas y orden',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    assert.ok(
+      ctx.savedInvitationPayload,
+      'Se esperaba contar con los datos de la invitación creada en la prueba 21'
+    );
+
+    const invitationId = ctx.savedInvitationPayload.p_invitation_id;
+    const [firstGuest, secondGuest] = ctx.savedInvitationPayload.p_guests;
+
+    const { data: repeatData, error: repeatError } =
+      await ctx.ownerXClient.rpc('save_invitation', ctx.savedInvitationPayload);
+
+    assert.equal(
+      repeatError,
+      null,
+      'Se esperaba que repetir save_invitation con los mismos datos no devolviera error'
+    );
+    assert.equal(
+      repeatData?.id,
+      invitationId,
+      'Se esperaba que la llamada repetida devolviera la misma invitación'
+    );
+    assert.equal(
+      repeatData?.guests?.length,
+      2,
+      'Se esperaba que la llamada repetida devolviera dos personas'
+    );
+
+    const { data: invitationsAfterRepeat, error: invRepeatCheckError } =
+      await ctx.adminClient
+        .from('invitations')
+        .select('id')
+        .eq('id', invitationId);
+
+    assert.equal(
+      invRepeatCheckError,
+      null,
+      'Se esperaba consultar la invitación tras repetir la llamada sin error'
+    );
+    assert.equal(
+      invitationsAfterRepeat?.length,
+      1,
+      'Se esperaba que siguiera habiendo exactamente una invitación tras repetir la llamada'
+    );
+
+    const { data: guestsAfterRepeat, error: guestsRepeatCheckError } =
+      await ctx.adminClient
+        .from('guests')
+        .select('id')
+        .eq('invitation_id', invitationId);
+
+    assert.equal(
+      guestsRepeatCheckError,
+      null,
+      'Se esperaba consultar las personas tras repetir la llamada sin error'
+    );
+    assert.equal(
+      guestsAfterRepeat?.length,
+      2,
+      'Se esperaba que siguiera habiendo exactamente dos personas tras repetir la llamada'
+    );
+
+    const { error: rsvpError } = await ctx.adminClient
+      .from('guests')
+      .update({ rsvp: 'accepted' })
+      .eq('id', firstGuest.id);
+
+    assert.equal(
+      rsvpError,
+      null,
+      'Se esperaba marcar la primera persona con rsvp accepted sin error'
+    );
+
+    const editedGroupName = `PRUEBA-${ctx.run}-FAMILIA-EDITADA`;
+    const thirdGuestId = crypto.randomUUID();
+    const editedGuests = [
+      { id: thirdGuestId, full_name: 'Integrante Guardado Tres' },
+      { id: firstGuest.id, full_name: firstGuest.full_name },
+    ];
+
+    const { data: editData, error: editError } = await ctx.ownerXClient.rpc(
+      'save_invitation',
+      {
+        p_invitation_id: invitationId,
+        p_event_id: ctx.eventX.id,
+        p_group_name: editedGroupName,
+        p_phone: '',
+        p_guests: editedGuests,
+      }
+    );
+
+    assert.equal(
+      editError,
+      null,
+      'Se esperaba que editar la invitación con save_invitation no devolviera error'
+    );
+    assert.ok(
+      editData,
+      'Se esperaba recibir la invitación actualizada desde save_invitation'
+    );
+    assert.equal(
+      editData.group_name,
+      editedGroupName,
+      'Se esperaba que la respuesta reflejara el nuevo nombre de grupo'
+    );
+    assert.equal(
+      editData.phone,
+      null,
+      'Se esperaba que phone quedara nulo al enviar cadena vacía'
+    );
+    assert.equal(
+      Array.isArray(editData.guests) && editData.guests.length === 2,
+      true,
+      'Se esperaba que la respuesta tras editar tuviera exactamente dos personas'
+    );
+    assert.equal(
+      editData.guests[0].id,
+      thirdGuestId,
+      'Se esperaba que la tercera persona quedara primera en la respuesta'
+    );
+    assert.equal(
+      editData.guests[0].full_name,
+      'Integrante Guardado Tres',
+      'Se esperaba que la primera persona en el nuevo orden tuviera el nombre de la tercera'
+    );
+    assert.equal(
+      editData.guests[0].sort_order,
+      0,
+      'Se esperaba que la tercera persona tuviera sort_order 0'
+    );
+    assert.equal(
+      editData.guests[1].id,
+      firstGuest.id,
+      'Se esperaba que la primera persona original quedara en la segunda posición'
+    );
+    assert.equal(
+      editData.guests[1].full_name,
+      firstGuest.full_name,
+      'Se esperaba que la primera persona original conservara su nombre'
+    );
+    assert.equal(
+      editData.guests[1].sort_order,
+      1,
+      'Se esperaba que la primera persona original tuviera sort_order 1'
+    );
+    assert.equal(
+      editData.guests[1].rsvp,
+      'accepted',
+      'Se esperaba que la primera persona original conservara rsvp accepted en la respuesta'
+    );
+
+    const { data: storedInvitation, error: checkEditedInvError } =
+      await ctx.adminClient
+        .from('invitations')
+        .select('*')
+        .eq('id', invitationId)
+        .single();
+
+    assert.equal(
+      checkEditedInvError,
+      null,
+      'Se esperaba consultar con el administrador la invitación editada sin error'
+    );
+    assert.equal(
+      storedInvitation?.group_name,
+      editedGroupName,
+      'Se esperaba que el nombre de grupo en base de datos fuera el editado'
+    );
+    assert.equal(
+      storedInvitation?.phone,
+      null,
+      'Se esperaba que phone en base de datos fuera nulo tras editar con cadena vacía'
+    );
+
+    const { data: storedGuests, error: checkEditedGuestsError } =
+      await ctx.adminClient
+        .from('guests')
+        .select('*')
+        .eq('invitation_id', invitationId)
+        .order('sort_order', { ascending: true });
+
+    assert.equal(
+      checkEditedGuestsError,
+      null,
+      'Se esperaba consultar con el administrador las personas tras editar sin error'
+    );
+    assert.equal(
+      storedGuests?.length,
+      2,
+      'Se esperaba que en base de datos hubiera exactamente dos personas en la invitación'
+    );
+    assert.equal(
+      storedGuests[0].id,
+      thirdGuestId,
+      'Se esperaba que en base de datos la primera persona por orden fuera la tercera agregada'
+    );
+    assert.equal(
+      storedGuests[0].sort_order,
+      0,
+      'Se esperaba que en base de datos la tercera persona tuviera sort_order 0'
+    );
+    assert.equal(
+      storedGuests[1].id,
+      firstGuest.id,
+      'Se esperaba que en base de datos la segunda persona por orden fuera la primera original'
+    );
+    assert.equal(
+      storedGuests[1].sort_order,
+      1,
+      'Se esperaba que en base de datos la primera persona original tuviera sort_order 1'
+    );
+    assert.equal(
+      storedGuests[1].rsvp,
+      'accepted',
+      'Se esperaba que en base de datos la primera persona original conservara rsvp accepted'
+    );
+
+    const { data: deletedGuestRows, error: checkDeletedGuestError } =
+      await ctx.adminClient
+        .from('guests')
+        .select('id')
+        .eq('id', secondGuest.id);
+
+    assert.equal(
+      checkDeletedGuestError,
+      null,
+      'Se esperaba consultar con el administrador si la segunda persona fue eliminada sin error'
+    );
+    assert.equal(
+      deletedGuestRows?.length,
+      0,
+      'Se esperaba que la segunda persona quitada ya no existiera en la base de datos'
+    );
+  }
+);
+
+test(
+  '23. Un ayudante puede usar save_invitation y un usuario que no es miembro no',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    const helperInvitationId = crypto.randomUUID();
+    const helperGuestId = crypto.randomUUID();
+    const helperGroupName = `PRUEBA-${ctx.run}-AYUDANTE-GUARDADO`;
+
+    const { data: helperData, error: helperError } =
+      await ctx.helperXClient.rpc('save_invitation', {
+        p_invitation_id: helperInvitationId,
+        p_event_id: ctx.eventX.id,
+        p_group_name: helperGroupName,
+        p_phone: '',
+        p_guests: [
+          { id: helperGuestId, full_name: 'Integrante Guardado Por Ayudante' },
+        ],
+      });
+
+    assert.equal(
+      helperError,
+      null,
+      'Se esperaba que el ayudante del evento X pudiera usar save_invitation sin error'
+    );
+    assert.equal(
+      helperData?.id,
+      helperInvitationId,
+      'Se esperaba que save_invitation devolviera la invitación creada por el ayudante'
+    );
+
+    const { data: storedHelperInv, error: checkHelperInvError } =
+      await ctx.adminClient
+        .from('invitations')
+        .select('id')
+        .eq('id', helperInvitationId);
+
+    assert.equal(
+      checkHelperInvError,
+      null,
+      'Se esperaba consultar con el administrador la invitación del ayudante sin error'
+    );
+    assert.equal(
+      storedHelperInv?.length,
+      1,
+      'Se esperaba que la invitación creada por el ayudante existiera en la base de datos'
+    );
+
+    const nonMemberInvitationId = crypto.randomUUID();
+    const nonMemberGuestId = crypto.randomUUID();
+
+    const { error: nonMemberError } = await ctx.ownerYClient.rpc(
+      'save_invitation',
+      {
+        p_invitation_id: nonMemberInvitationId,
+        p_event_id: ctx.eventX.id,
+        p_group_name: `PRUEBA-${ctx.run}-NO-MIEMBRO`,
+        p_phone: '+573000000000',
+        p_guests: [
+          { id: nonMemberGuestId, full_name: 'Integrante No Autorizado' },
+        ],
+      }
+    );
+
+    assert.ok(
+      nonMemberError,
+      'Se esperaba un error cuando un usuario que no es miembro del evento X llama a save_invitation'
+    );
+
+    const { data: nonMemberInvRows, error: checkNonMemberInvError } =
+      await ctx.adminClient
+        .from('invitations')
+        .select('id')
+        .eq('id', nonMemberInvitationId);
+
+    assert.equal(
+      checkNonMemberInvError,
+      null,
+      'Se esperaba consultar con el administrador si existe la invitación del no miembro sin error'
+    );
+    assert.equal(
+      nonMemberInvRows?.length,
+      0,
+      'Se esperaba que no existiera ninguna invitación con el id enviado por el usuario no miembro'
+    );
+
+    const { data: nonMemberGuestRows, error: checkNonMemberGuestError } =
+      await ctx.adminClient
+        .from('guests')
+        .select('id')
+        .in('id', [nonMemberGuestId]);
+
+    assert.equal(
+      checkNonMemberGuestError,
+      null,
+      'Se esperaba consultar con el administrador si existen las personas del no miembro sin error'
+    );
+    assert.equal(
+      nonMemberGuestRows?.length,
+      0,
+      'Se esperaba que no existiera ninguna persona con los id enviados por el usuario no miembro'
+    );
+  }
+);
+
+test(
+  '24. save_invitation rechaza arreglo vacío, personas de otra invitación y clientes sin sesión',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    const emptyInvitationId = crypto.randomUUID();
+
+    const { error: emptyError } = await ctx.ownerXClient.rpc(
+      'save_invitation',
+      {
+        p_invitation_id: emptyInvitationId,
+        p_event_id: ctx.eventX.id,
+        p_group_name: `PRUEBA-${ctx.run}-SIN-PERSONAS`,
+        p_phone: '',
+        p_guests: [],
+      }
+    );
+
+    assert.ok(
+      emptyError,
+      'Se esperaba un error al llamar save_invitation con p_guests vacío'
+    );
+    assert.ok(
+      emptyError.message.includes('guests_required'),
+      `Se esperaba que el error contuviera guests_required, pero se recibió: ${emptyError.message}`
+    );
+
+    const { data: emptyInvRows, error: checkEmptyInvError } =
+      await ctx.adminClient
+        .from('invitations')
+        .select('id')
+        .eq('id', emptyInvitationId);
+
+    assert.equal(
+      checkEmptyInvError,
+      null,
+      'Se esperaba consultar con el administrador la invitación con arreglo vacío sin error'
+    );
+    assert.equal(
+      emptyInvRows?.length,
+      0,
+      'Se esperaba que no se creara la invitación cuando p_guests está vacío'
+    );
+
+    const foreignGuestInvitationId = crypto.randomUUID();
+
+    const { error: foreignGuestError } = await ctx.ownerXClient.rpc(
+      'save_invitation',
+      {
+        p_invitation_id: foreignGuestInvitationId,
+        p_event_id: ctx.eventX.id,
+        p_group_name: `PRUEBA-${ctx.run}-PERSONA-AJENA`,
+        p_phone: '',
+        p_guests: [
+          { id: ctx.guestB.id, full_name: 'Nombre Intentado Sobrescribir' },
+        ],
+      }
+    );
+
+    assert.ok(
+      foreignGuestError,
+      'Se esperaba un error al incluir el id de una persona perteneciente a otra invitación'
+    );
+    assert.ok(
+      foreignGuestError.message.includes('guest_not_in_invitation'),
+      `Se esperaba que el error contuviera guest_not_in_invitation, pero se recibió: ${foreignGuestError.message}`
+    );
+
+    const { data: foreignInvRows, error: checkForeignInvError } =
+      await ctx.adminClient
+        .from('invitations')
+        .select('id')
+        .eq('id', foreignGuestInvitationId);
+
+    assert.equal(
+      checkForeignInvError,
+      null,
+      'Se esperaba consultar con el administrador la invitación rechazada por persona ajena sin error'
+    );
+    assert.equal(
+      foreignInvRows?.length,
+      0,
+      'Se esperaba que la invitación nueva no existiera tras el rechazo por guest_not_in_invitation'
+    );
+
+    const { data: storedGuestB, error: checkGuestBError } =
+      await ctx.adminClient
+        .from('guests')
+        .select('id, invitation_id, full_name')
+        .eq('id', ctx.guestB.id)
+        .single();
+
+    assert.equal(
+      checkGuestBError,
+      null,
+      'Se esperaba consultar con el administrador la persona de la invitación B sin error'
+    );
+    assert.equal(
+      storedGuestB?.invitation_id,
+      ctx.invitationB.id,
+      'Se esperaba que la persona de la invitación B conservara su invitation_id original'
+    );
+    assert.equal(
+      storedGuestB?.full_name,
+      ctx.guestB.full_name,
+      'Se esperaba que la persona de la invitación B conservara su full_name original'
+    );
+
+    const anonInvitationId = crypto.randomUUID();
+    const anonGuestId = crypto.randomUUID();
+
+    const { error: anonError } = await ctx.anonClient.rpc('save_invitation', {
+      p_invitation_id: anonInvitationId,
+      p_event_id: ctx.eventX.id,
+      p_group_name: `PRUEBA-${ctx.run}-SIN-SESION`,
+      p_phone: '+573000000000',
+      p_guests: [{ id: anonGuestId, full_name: 'Integrante Sin Sesion' }],
+    });
+
+    assert.ok(
+      anonError,
+      'Se esperaba un error cuando un cliente sin sesión intenta llamar a save_invitation'
+    );
+
+    const { data: anonInvRows, error: checkAnonInvError } =
+      await ctx.adminClient
+        .from('invitations')
+        .select('id')
+        .eq('id', anonInvitationId);
+
+    assert.equal(
+      checkAnonInvError,
+      null,
+      'Se esperaba consultar con el administrador si se creó la invitación sin sesión sin error'
+    );
+    assert.equal(
+      anonInvRows?.length,
+      0,
+      'Se esperaba que no se creara ninguna invitación al llamar save_invitation sin sesión'
+    );
+
+    const { data: anonGuestRows, error: checkAnonGuestError } =
+      await ctx.adminClient
+        .from('guests')
+        .select('id')
+        .eq('id', anonGuestId);
+
+    assert.equal(
+      checkAnonGuestError,
+      null,
+      'Se esperaba consultar con el administrador si se creó la persona sin sesión sin error'
+    );
+    assert.equal(
+      anonGuestRows?.length,
+      0,
+      'Se esperaba que no se creara ninguna persona al llamar save_invitation sin sesión'
+    );
+  }
+);
+
+test(
+  '25. Apartar dos veces el mismo regalo desde la misma invitación responde bien y deja una sola reserva',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    const { data: repeatedGift, error: createGiftError } =
+      await ctx.adminClient
+        .from('gifts')
+        .insert({
+          event_id: ctx.eventX.id,
+          name: `PRUEBA-${ctx.run}-REGALO-REPETIDO`,
+          kind: 'unique',
+          sort_order: 10,
+        })
+        .select()
+        .single();
+
+    assert.equal(
+      createGiftError,
+      null,
+      'Se esperaba crear con el administrador el regalo único para la prueba 25 sin error'
+    );
+    assert.ok(
+      repeatedGift?.id,
+      'Se esperaba recibir el id del regalo único creado para la prueba 25'
+    );
+
+    const { data: firstReserveData, error: firstReserveError } =
+      await ctx.anonClient.rpc('reserve_gift', {
+        p_code: ctx.invitationA.code,
+        p_gift_id: repeatedGift.id,
+      });
+
+    assert.equal(
+      firstReserveError,
+      null,
+      'Se esperaba que la primera llamada a reserve_gift desde la invitación A no devolviera error'
+    );
+    assert.ok(
+      Array.isArray(firstReserveData),
+      'Se esperaba que la primera llamada a reserve_gift devolviera la lista de regalos'
+    );
+
+    const { data: secondReserveData, error: secondReserveError } =
+      await ctx.anonClient.rpc('reserve_gift', {
+        p_code: ctx.invitationA.code,
+        p_gift_id: repeatedGift.id,
+      });
+
+    assert.equal(
+      secondReserveError,
+      null,
+      'Se esperaba que la segunda llamada a reserve_gift desde la misma invitación A no devolviera error'
+    );
+    assert.ok(
+      Array.isArray(secondReserveData),
+      'Se esperaba que la segunda llamada a reserve_gift devolviera la lista de regalos'
+    );
+
+    const { data: reservationsAfterTwice, error: checkReservationsError } =
+      await ctx.adminClient
+        .from('gift_reservations')
+        .select('id, gift_id, invitation_id')
+        .eq('gift_id', repeatedGift.id);
+
+    assert.equal(
+      checkReservationsError,
+      null,
+      'Se esperaba consultar con el administrador las reservas del regalo sin error'
+    );
+    assert.equal(
+      reservationsAfterTwice?.length,
+      1,
+      'Se esperaba que hubiera exactamente una fila en gift_reservations tras apartar dos veces con la misma invitación'
+    );
+    assert.equal(
+      reservationsAfterTwice[0].invitation_id,
+      ctx.invitationA.id,
+      'Se esperaba que la reserva perteneciera a la invitación A'
+    );
+
+    const { error: otherInvitationError } = await ctx.anonClient.rpc(
+      'reserve_gift',
+      {
+        p_code: ctx.invitationB.code,
+        p_gift_id: repeatedGift.id,
+      }
+    );
+
+    assert.ok(
+      otherInvitationError,
+      'Se esperaba un error cuando otra invitación del evento X intenta apartar el mismo regalo único'
+    );
+    assert.ok(
+      otherInvitationError.message.includes('already_reserved'),
+      `Se esperaba que el error contuviera already_reserved, pero se recibió: ${otherInvitationError.message}`
+    );
+
+    const { data: reservationsAfterOther, error: checkAfterOtherError } =
+      await ctx.adminClient
+        .from('gift_reservations')
+        .select('id, gift_id, invitation_id')
+        .eq('gift_id', repeatedGift.id);
+
+    assert.equal(
+      checkAfterOtherError,
+      null,
+      'Se esperaba consultar con el administrador las reservas tras el intento de la otra invitación sin error'
+    );
+    assert.equal(
+      reservationsAfterOther?.length,
+      1,
+      'Se esperaba que siguiera habiendo una sola reserva para el regalo único'
+    );
+    assert.equal(
+      reservationsAfterOther[0].invitation_id,
+      ctx.invitationA.id,
+      'Se esperaba que la única reserva siguiera perteneciendo a la invitación A'
     );
   }
 );

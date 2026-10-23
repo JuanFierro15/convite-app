@@ -100,6 +100,7 @@ export function createEmptyContext() {
     reservationXReserved: null,
     uniqueGiftWinnerCode: null,
     uniqueGiftLoserCode: null,
+    savedInvitationPayload: null,
     createdEventIds: [],
     createdUserIds: [],
   };
