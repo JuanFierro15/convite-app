@@ -86,3 +86,8 @@ skills-lock.json
 
 # Imágenes originales
 /originales-jpg/
+
+# wrangler files
+.wrangler
+.dev.vars*
+!.dev.vars.example

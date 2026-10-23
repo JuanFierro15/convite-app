@@ -10,7 +10,8 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "lint": "ng lint",
-    "test:reglas": "node --env-file=.env --test \"scripts/reglas/*.test.mjs\""
+    "test:reglas": "node --env-file=.env --test \"scripts/reglas/*.test.mjs\"",
+    "deploy:web": "ionic build --prod && wrangler pages deploy www --project-name convite --branch main"
   },
   "private": true,
   "dependencies": {
@@ -52,7 +53,8 @@
     "supabase": "^2.122.0",
     "typescript": "~6.0.0",
     "typescript-eslint": "^8.61.0",
-    "vitest": "~5.0.5"
+    "vitest": "~5.0.5",
+    "wrangler": "4.152.0"
   },
   "description": "An Ionic project"
 }
