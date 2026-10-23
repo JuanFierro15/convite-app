@@ -1,7 +1,259 @@
 <ion-header>
   <ion-toolbar>
-    <ion-title>Evento</ion-title>
+    <ion-buttons slot="start">
+      <ion-back-button [defaultHref]="backHref()" text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>{{ pageTitle() }}</ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content></ion-content>
+<ion-content>
+  @if (loading()) {
+    <div class="form-loading" role="status" aria-live="polite">
+      <ion-spinner name="crescent" color="primary"></ion-spinner>
+      <p class="text-body form-loading__text">Cargando evento...</p>
+    </div>
+  } @else {
+    <form
+      class="event-form"
+      [formGroup]="form"
+      (ngSubmit)="onSubmit()"
+      novalidate
+    >
+      <ion-card class="form-card">
+        <ion-card-content class="form-card__content">
+          <ion-list lines="none" class="form-list">
+            <div class="form-field">
+              <ion-item class="form-item">
+                <ion-input
+                  label="Nombre del evento"
+                  labelPlacement="stacked"
+                  formControlName="name"
+                  type="text"
+                  maxlength="120"
+                  placeholder="Ej. Baby shower Familia Ejemplo"
+                  required
+                ></ion-input>
+              </ion-item>
+              @if (form.controls.name.touched || form.controls.name.dirty) {
+                @if (form.controls.name.hasError('required')) {
+                  <p class="text-label form-field__error" role="alert">
+                    El nombre del evento es obligatorio.
+                  </p>
+                } @else if (form.controls.name.hasError('maxlength')) {
+                  <p class="text-label form-field__error" role="alert">
+                    El nombre no puede superar los 120 caracteres.
+                  </p>
+                }
+              }
+            </div>
+
+            <div class="form-field">
+              <ion-item class="form-item">
+                <ion-select
+                  label="Tema"
+                  labelPlacement="stacked"
+                  formControlName="theme_id"
+                  interface="popover"
+                  (ionChange)="onThemeChange($event.detail.value)"
+                >
+                  @for (theme of themes; track theme.id) {
+                    <ion-select-option [value]="theme.id">
+                      {{ theme.label }}
+                    </ion-select-option>
+                  }
+                </ion-select>
+              </ion-item>
+            </div>
+
+            <div class="form-field">
+              <ion-item class="form-item">
+                <ion-input
+                  label="Fecha y hora"
+                  labelPlacement="stacked"
+                  formControlName="starts_at"
+                  type="datetime-local"
+                  required
+                ></ion-input>
+              </ion-item>
+              @if (
+                (form.controls.starts_at.touched || form.controls.starts_at.dirty) &&
+                form.controls.starts_at.hasError('required')
+              ) {
+                <p class="text-label form-field__error" role="alert">
+                  La fecha y hora del evento son obligatorias.
+                </p>
+              }
+            </div>
+
+            <div class="form-field">
+              <ion-item class="form-item">
+                <ion-input
+                  label="Fecha límite para responder"
+                  labelPlacement="stacked"
+                  formControlName="rsvp_deadline"
+                  type="date"
+                  required
+                ></ion-input>
+              </ion-item>
+              @if (
+                (form.controls.rsvp_deadline.touched || form.controls.rsvp_deadline.dirty) &&
+                form.controls.rsvp_deadline.hasError('required')
+              ) {
+                <p class="text-label form-field__error" role="alert">
+                  La fecha límite para responder es obligatoria.
+                </p>
+              } @else if (form.hasError('deadlineAfterStart')) {
+                <p class="text-label form-field__error" role="alert">
+                  La fecha límite debe ser antes del día del evento.
+                </p>
+              }
+            </div>
+
+            <div class="form-field">
+              <ion-item class="form-item">
+                <ion-input
+                  label="Lugar"
+                  labelPlacement="stacked"
+                  formControlName="venue_name"
+                  type="text"
+                  maxlength="120"
+                  placeholder="Ej. Salón Los Guaduales"
+                ></ion-input>
+              </ion-item>
+              @if (
+                (form.controls.venue_name.touched || form.controls.venue_name.dirty) &&
+                form.controls.venue_name.hasError('maxlength')
+              ) {
+                <p class="text-label form-field__error" role="alert">
+                  El lugar no puede superar los 120 caracteres.
+                </p>
+              }
+            </div>
+
+            <div class="form-field">
+              <ion-item class="form-item">
+                <ion-input
+                  label="Dirección"
+                  labelPlacement="stacked"
+                  formControlName="venue_address"
+                  type="text"
+                  maxlength="120"
+                  placeholder="Ej. Calle 10 # 5-20"
+                ></ion-input>
+              </ion-item>
+              @if (
+                (form.controls.venue_address.touched || form.controls.venue_address.dirty) &&
+                form.controls.venue_address.hasError('maxlength')
+              ) {
+                <p class="text-label form-field__error" role="alert">
+                  La dirección no puede superar los 120 caracteres.
+                </p>
+              }
+            </div>
+
+            <div class="form-field">
+              <ion-item class="form-item">
+                <ion-input
+                  label="Ciudad"
+                  labelPlacement="stacked"
+                  formControlName="city"
+                  type="text"
+                  maxlength="120"
+                  placeholder="Ej. Neiva"
+                ></ion-input>
+              </ion-item>
+              @if (
+                (form.controls.city.touched || form.controls.city.dirty) &&
+                form.controls.city.hasError('maxlength')
+              ) {
+                <p class="text-label form-field__error" role="alert">
+                  La ciudad no puede superar los 120 caracteres.
+                </p>
+              }
+            </div>
+
+            <div class="form-field">
+              <ion-item class="form-item">
+                <ion-input
+                  label="Enlace al mapa"
+                  labelPlacement="stacked"
+                  formControlName="map_url"
+                  type="url"
+                  placeholder="https://maps.google.com/..."
+                ></ion-input>
+              </ion-item>
+              @if (
+                (form.controls.map_url.touched || form.controls.map_url.dirty) &&
+                form.controls.map_url.hasError('httpsUrl')
+              ) {
+                <p class="text-label form-field__error" role="alert">
+                  Usa un enlace que empiece por https://
+                </p>
+              }
+            </div>
+
+            <div class="form-field">
+              <ion-item class="form-item">
+                <ion-textarea
+                  label="Mensaje de bienvenida"
+                  labelPlacement="stacked"
+                  formControlName="welcome_message"
+                  [autoGrow]="true"
+                  [rows]="3"
+                  maxlength="500"
+                  placeholder="Escribe un mensaje especial para tus invitados"
+                ></ion-textarea>
+              </ion-item>
+              @if (
+                (form.controls.welcome_message.touched || form.controls.welcome_message.dirty) &&
+                form.controls.welcome_message.hasError('maxlength')
+              ) {
+                <p class="text-label form-field__error" role="alert">
+                  El mensaje de bienvenida no puede superar los 500 caracteres.
+                </p>
+              }
+            </div>
+
+            <div class="form-field">
+              <ion-item class="form-item">
+                <ion-input
+                  label="Presupuesto (COP)"
+                  labelPlacement="stacked"
+                  formControlName="budget_cop"
+                  type="number"
+                  inputmode="numeric"
+                  min="0"
+                  step="1"
+                  placeholder="Ej. 1500000"
+                ></ion-input>
+              </ion-item>
+              @if (
+                (form.controls.budget_cop.touched || form.controls.budget_cop.dirty) &&
+                form.controls.budget_cop.hasError('nonNegativeInteger')
+              ) {
+                <p class="text-label form-field__error" role="alert">
+                  Ingresa un valor entero mayor o igual a 0.
+                </p>
+              }
+            </div>
+          </ion-list>
+        </ion-card-content>
+      </ion-card>
+
+      <div class="form-actions">
+        <ion-button
+          type="submit"
+          expand="block"
+          color="primary"
+          [disabled]="form.invalid || submitting()"
+        >
+          @if (submitting()) {
+            <ion-spinner slot="start" name="crescent"></ion-spinner>
+          }
+          {{ submitLabel() }}
+        </ion-button>
+      </div>
+    </form>
+  }
+</ion-content>

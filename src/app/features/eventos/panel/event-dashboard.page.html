@@ -1,7 +1,265 @@
 <ion-header>
   <ion-toolbar>
-    <ion-title>Panel del evento</ion-title>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/eventos" text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>{{ event()?.name ?? 'Panel del evento' }}</ion-title>
+    @if (isOwner() && event()) {
+      <ion-buttons slot="end">
+        <ion-button
+          [routerLink]="['/eventos', id(), 'editar']"
+          aria-label="Editar evento"
+        >
+          <ion-icon slot="start" name="create-outline" aria-hidden="true"></ion-icon>
+          Editar evento
+        </ion-button>
+      </ion-buttons>
+    }
   </ion-toolbar>
 </ion-header>
 
-<ion-content></ion-content>
+<ion-content>
+  @if (loading()) {
+    <div class="dashboard-loading" role="status" aria-live="polite">
+      <ion-spinner name="crescent" color="primary"></ion-spinner>
+      <p class="text-body dashboard-loading__text">Cargando evento...</p>
+    </div>
+  } @else if (!event()) {
+    <div class="dashboard-empty">
+      <app-empty-state
+        message="No encontramos este evento o no tienes acceso."
+        actionLabel="Volver a mis eventos"
+        (action)="goBackToEvents()"
+      />
+    </div>
+  } @else {
+    <div class="dashboard-container">
+      <ion-card class="countdown-card">
+        <ion-card-content class="countdown-card__content">
+          <div class="countdown-card__info">
+            <p class="countdown-card__title">{{ countdownTitle() }}</p>
+            <p class="text-body countdown-card__datetime">
+              {{ eventDateText() }} · {{ eventTimeText() }}
+            </p>
+            <div class="countdown-card__badge-wrapper">
+              <span class="badge-soft-warning text-label countdown-card__deadline">
+                <ion-icon name="alarm-outline" aria-hidden="true"></ion-icon>
+                <span>Límite para confirmar: {{ deadlineDateText() }}</span>
+              </span>
+            </div>
+          </div>
+          <div class="countdown-card__illustration">
+            <app-illustration
+              name="countdown"
+              alt="Ilustración de cuenta regresiva del evento"
+            />
+          </div>
+        </ion-card-content>
+      </ion-card>
+
+      <section class="dashboard-section" aria-labelledby="kpi-section-title">
+        <h2 id="kpi-section-title" class="text-section dashboard-section__title">
+          Resumen de asistencia
+        </h2>
+        <ion-grid class="kpi-grid">
+          <ion-row>
+            <ion-col size="4">
+              <ion-card class="kpi-card">
+                <ion-card-content class="kpi-card__content">
+                  <ion-icon
+                    name="checkmark-circle"
+                    color="success"
+                    class="kpi-card__icon"
+                    aria-hidden="true"
+                  ></ion-icon>
+                  <span class="kpi-card__value kpi-card__value--success">
+                    {{ counts().accepted }}
+                  </span>
+                  <span class="text-label kpi-card__label">Aceptados</span>
+                </ion-card-content>
+              </ion-card>
+            </ion-col>
+
+            <ion-col size="4">
+              <ion-card class="kpi-card">
+                <ion-card-content class="kpi-card__content">
+                  <ion-icon
+                    name="time"
+                    color="warning"
+                    class="kpi-card__icon"
+                    aria-hidden="true"
+                  ></ion-icon>
+                  <span class="kpi-card__value kpi-card__value--warning">
+                    {{ counts().pending }}
+                  </span>
+                  <span class="text-label kpi-card__label">Pendientes</span>
+                </ion-card-content>
+              </ion-card>
+            </ion-col>
+
+            <ion-col size="4">
+              <ion-card class="kpi-card">
+                <ion-card-content class="kpi-card__content">
+                  <ion-icon
+                    name="close-circle"
+                    color="danger"
+                    class="kpi-card__icon"
+                    aria-hidden="true"
+                  ></ion-icon>
+                  <span class="kpi-card__value kpi-card__value--danger">
+                    {{ counts().declined }}
+                  </span>
+                  <span class="text-label kpi-card__label">Cancelados</span>
+                </ion-card-content>
+              </ion-card>
+            </ion-col>
+          </ion-row>
+        </ion-grid>
+        <p class="text-label kpi-total">
+          {{ counts().total }} personas invitadas en total
+        </p>
+      </section>
+
+      <section class="dashboard-section" aria-labelledby="access-section-title">
+        <h2 id="access-section-title" class="text-section dashboard-section__title">
+          Accesos rápidos
+        </h2>
+
+        @if (isOwner()) {
+          <ion-grid class="access-grid">
+            <ion-row>
+              <ion-col size="6">
+                <ion-card
+                  class="access-card"
+                  [button]="true"
+                  [routerLink]="['/eventos', id(), 'invitaciones']"
+                >
+                  <ion-card-content class="access-card__content">
+                    <div class="access-card__top">
+                      <div class="access-card__icon-box">
+                        <ion-icon name="mail-outline" aria-hidden="true"></ion-icon>
+                      </div>
+                    </div>
+                    <span class="text-name access-card__title">Invitaciones</span>
+                  </ion-card-content>
+                </ion-card>
+              </ion-col>
+
+              <ion-col size="6">
+                <ion-card
+                  class="access-card"
+                  [button]="true"
+                  [routerLink]="['/eventos', id(), 'regalos']"
+                >
+                  <ion-card-content class="access-card__content">
+                    <div class="access-card__top">
+                      <div class="access-card__icon-box">
+                        <ion-icon name="gift-outline" aria-hidden="true"></ion-icon>
+                      </div>
+                    </div>
+                    <span class="text-name access-card__title">Lista de regalos</span>
+                  </ion-card-content>
+                </ion-card>
+              </ion-col>
+
+              <ion-col size="6">
+                <ion-card
+                  class="access-card access-card--disabled"
+                  aria-disabled="true"
+                >
+                  <ion-card-content class="access-card__content">
+                    <div class="access-card__top">
+                      <div class="access-card__icon-box access-card__icon-box--disabled">
+                        <ion-icon name="grid-outline" aria-hidden="true"></ion-icon>
+                      </div>
+                      <span class="badge-soft-medium text-label">Pronto</span>
+                    </div>
+                    <span class="text-name access-card__title">Mesas</span>
+                  </ion-card-content>
+                </ion-card>
+              </ion-col>
+
+              <ion-col size="6">
+                <ion-card
+                  class="access-card access-card--disabled"
+                  aria-disabled="true"
+                >
+                  <ion-card-content class="access-card__content">
+                    <div class="access-card__top">
+                      <div class="access-card__icon-box access-card__icon-box--disabled">
+                        <ion-icon name="wallet-outline" aria-hidden="true"></ion-icon>
+                      </div>
+                      <span class="badge-soft-medium text-label">Pronto</span>
+                    </div>
+                    <span class="text-name access-card__title">Presupuesto y gastos</span>
+                  </ion-card-content>
+                </ion-card>
+              </ion-col>
+
+              <ion-col size="6">
+                <ion-card
+                  class="access-card access-card--disabled"
+                  aria-disabled="true"
+                >
+                  <ion-card-content class="access-card__content">
+                    <div class="access-card__top">
+                      <div class="access-card__icon-box access-card__icon-box--disabled">
+                        <ion-icon name="checkbox-outline" aria-hidden="true"></ion-icon>
+                      </div>
+                      <span class="badge-soft-medium text-label">Pronto</span>
+                    </div>
+                    <span class="text-name access-card__title">Tareas</span>
+                  </ion-card-content>
+                </ion-card>
+              </ion-col>
+
+              <ion-col size="6">
+                <ion-card
+                  class="access-card access-card--disabled"
+                  aria-disabled="true"
+                >
+                  <ion-card-content class="access-card__content">
+                    <div class="access-card__top">
+                      <div class="access-card__icon-box access-card__icon-box--disabled">
+                        <ion-icon name="qr-code-outline" aria-hidden="true"></ion-icon>
+                      </div>
+                      <span class="badge-soft-medium text-label">Pronto</span>
+                    </div>
+                    <span class="text-name access-card__title">Llegada con QR</span>
+                  </ion-card-content>
+                </ion-card>
+              </ion-col>
+            </ion-row>
+          </ion-grid>
+        } @else {
+          <div class="helper-actions">
+            <ion-button
+              expand="block"
+              color="primary"
+              [routerLink]="['/eventos', id(), 'invitaciones']"
+              class="helper-actions__primary-btn"
+            >
+              <ion-icon slot="start" name="mail-outline" aria-hidden="true"></ion-icon>
+              Gestionar invitaciones
+            </ion-button>
+
+            <ion-card
+              class="access-card access-card--disabled helper-actions__qr-card"
+              aria-disabled="true"
+            >
+              <ion-card-content class="access-card__content access-card__content--row">
+                <div class="access-card__icon-box access-card__icon-box--disabled">
+                  <ion-icon name="qr-code-outline" aria-hidden="true"></ion-icon>
+                </div>
+                <span class="text-name access-card__title access-card__title--grow">
+                  Llegada con QR
+                </span>
+                <span class="badge-soft-medium text-label">Pronto</span>
+              </ion-card-content>
+            </ion-card>
+          </div>
+        }
+      </section>
+    </div>
+  }
+</ion-content>

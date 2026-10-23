@@ -1,0 +1,238 @@
+.dashboard-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-xl) var(--space-md);
+  gap: var(--space-sm);
+
+  &__text {
+    margin: 0;
+    color: var(--ion-color-medium);
+  }
+}
+
+.dashboard-empty {
+  padding: var(--space-lg) var(--space-md);
+}
+
+.dashboard-container {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.countdown-card {
+  margin: 0;
+  background: var(--ion-color-light);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+
+  &__content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+    padding: var(--space-md);
+  }
+
+  &__info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+  }
+
+  &__title {
+    margin: 0;
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.25;
+    color: var(--ion-text-color);
+  }
+
+  &__datetime {
+    margin: 0;
+    color: var(--ion-color-medium);
+  }
+
+  &__badge-wrapper {
+    margin-top: var(--space-xs);
+  }
+
+  &__deadline {
+    ion-icon {
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+  }
+
+  &__illustration {
+    width: 100%;
+    max-width: 120px;
+    flex-shrink: 0;
+  }
+}
+
+.dashboard-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+
+  &__title {
+    margin: 0;
+    color: var(--ion-text-color);
+  }
+}
+
+.kpi-grid {
+  padding: 0;
+  margin: 0 calc(var(--space-xs) * -1);
+
+  ion-col {
+    padding: var(--space-xs);
+  }
+}
+
+.kpi-card {
+  margin: 0;
+  height: 100%;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  background: var(--ion-card-background);
+
+  &__content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: var(--space-md) var(--space-sm);
+    gap: var(--space-xs);
+  }
+
+  &__icon {
+    font-size: 1.375rem;
+  }
+
+  &__value {
+    font-family: var(--font-heading);
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1.15;
+
+    &--success {
+      color: var(--ion-color-success);
+    }
+
+    &--warning {
+      color: var(--ion-color-warning);
+    }
+
+    &--danger {
+      color: var(--ion-color-danger);
+    }
+  }
+
+  &__label {
+    color: var(--ion-color-medium);
+  }
+}
+
+.kpi-total {
+  margin: 0;
+  text-align: center;
+  color: var(--ion-color-medium);
+}
+
+.access-grid {
+  padding: 0;
+  margin: 0 calc(var(--space-xs) * -1);
+
+  ion-col {
+    padding: var(--space-xs);
+  }
+}
+
+.access-card {
+  margin: 0;
+  height: 100%;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  background: var(--ion-card-background);
+
+  &--disabled {
+    opacity: 0.72;
+    pointer-events: none;
+  }
+
+  &__content {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: var(--space-md);
+    padding: var(--space-md);
+    min-height: 112px;
+
+    &--row {
+      flex-direction: row;
+      align-items: center;
+      min-height: auto;
+    }
+  }
+
+  &__top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--space-xs);
+  }
+
+  &__icon-box {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-sm);
+    background-color: rgba(var(--ion-color-primary-rgb), 0.12);
+    color: var(--ion-color-primary);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+
+    ion-icon {
+      font-size: 1.25rem;
+    }
+
+    &--disabled {
+      background-color: rgba(var(--ion-color-medium-rgb), 0.12);
+      color: var(--ion-color-medium);
+    }
+  }
+
+  &__title {
+    color: var(--ion-text-color);
+
+    &--grow {
+      flex: 1;
+    }
+  }
+}
+
+.helper-actions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+
+  &__primary-btn {
+    margin: 0;
+  }
+
+  &__qr-card {
+    margin: 0;
+  }
+}

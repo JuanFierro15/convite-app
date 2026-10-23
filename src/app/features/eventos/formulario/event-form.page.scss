@@ -1,0 +1,67 @@
+.form-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-xl) var(--space-md);
+  gap: var(--space-sm);
+
+  &__text {
+    margin: 0;
+    color: var(--ion-color-medium);
+  }
+}
+
+.event-form {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+}
+
+.form-card {
+  margin: 0;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  background: var(--ion-card-background);
+
+  &__content {
+    padding: var(--space-md);
+  }
+}
+
+.form-list {
+  padding: 0;
+  --background: var(--ion-card-background);
+  background: var(--ion-card-background);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+
+  &__error {
+    margin: 0;
+    padding: 0 var(--space-sm);
+    color: var(--ion-color-danger);
+  }
+}
+
+.form-item {
+  --background: var(--ion-item-background);
+  --border-radius: var(--radius-md);
+  --padding-start: var(--space-sm);
+  --inner-padding-end: var(--space-sm);
+  border: 1px solid var(--ion-border-color);
+  border-radius: var(--radius-md);
+}
+
+.form-actions {
+  padding-bottom: var(--space-md);
+}
