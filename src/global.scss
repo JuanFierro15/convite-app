@@ -25,13 +25,119 @@
 @import "@ionic/angular/css/text-transformation.css";
 @import "@ionic/angular/css/flex-utils.css";
 
-/**
- * Ionic Dark Mode
- * -----------------------------------------------------
- * For more info, please see:
- * https://ionicframework.com/docs/theming/dark-mode
+/*
+ * Fuentes alojadas en el proyecto: la vista del invitado debe funcionar sin
+ * conexión y un CDN externo no queda guardado en el celular.
  */
+@import "@fontsource-variable/dm-sans/index.css";
+@import "@fontsource/lora/600.css";
+@import "@fontsource/lora/700.css";
 
-/* @import "@ionic/angular/css/palettes/dark.always.css"; */
-/* @import "@ionic/angular/css/palettes/dark.class.css"; */
-@import '@ionic/angular/css/palettes/dark.system.css';
+/* La app es solo de modo claro: no se importa ninguna paleta oscura de Ionic. */
+:root {
+  color-scheme: light;
+}
+
+/* Escala tipográfica: organizador y ayudante */
+h1,
+.text-title {
+  font-family: var(--font-heading);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+h2,
+.text-section {
+  font-family: var(--font-heading);
+  font-size: 1.125rem;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.text-name {
+  font-family: var(--ion-font-family);
+  font-size: 1rem;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.text-body {
+  font-family: var(--ion-font-family);
+  font-size: 0.875rem;
+  font-weight: 400;
+  line-height: 1.5;
+}
+
+.text-label {
+  font-family: var(--ion-font-family);
+  font-size: 0.75rem;
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+ion-button {
+  --border-radius: var(--radius-md);
+  min-height: 44px;
+}
+
+/* Escala tipográfica aumentada para invitados (incluye personas mayores) */
+.guest-accessibility-view {
+  h1,
+  .text-title {
+    font-size: 1.75rem;
+  }
+
+  h2,
+  .text-section {
+    font-size: 1.375rem;
+  }
+
+  .text-name {
+    font-size: 1.1875rem;
+  }
+
+  .text-body {
+    font-size: 1.0625rem;
+  }
+
+  .text-label {
+    font-size: 0.9375rem;
+  }
+
+  ion-button {
+    min-height: 54px;
+    font-size: 17px;
+    font-weight: 600;
+  }
+}
+
+/*
+ * Badges suaves. El texto usa el color -shade porque con el base el contraste
+ * sobre el fondo al 14 % queda por debajo de 4,5:1 (WCAG AA).
+ */
+%badge-soft {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  font-weight: 700;
+}
+
+@each $color in (success, warning, danger, primary, secondary, tertiary, medium) {
+  .badge-soft-#{$color} {
+    @extend %badge-soft;
+    background-color: rgba(var(--ion-color-#{$color}-rgb), 0.14);
+    color: var(--ion-color-#{$color}-shade);
+  }
+}
+
+/* Las ilustraciones tienen fondo marfil; multiply lo funde con tarjetas blancas o claras. */
+.illustration {
+  mix-blend-mode: multiply;
+  object-fit: contain;
+  width: 100%;
+  height: auto;
+  display: block;
+}

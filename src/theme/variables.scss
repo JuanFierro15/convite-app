@@ -1,2 +1,194 @@
-// For information on how to create your own theme, please refer to:
-// https://ionicframework.com/docs/theming/
+// Temas de Convite. Cada evento aplica el suyo con el atributo data-theme.
+// Los derivados que el diseño no trae se calculan como lo hace Ionic:
+// shade = mezcla con negro al 12 %, tint = mezcla con blanco al 10 %.
+
+:root,
+[data-theme="baby-shower"] {
+  /* Tipografías */
+  --ion-font-family: 'DM Sans Variable', 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-heading: 'Lora', Georgia, serif;
+
+  /* Fondo y texto general */
+  --ion-background-color: #FFFBF9;
+  --ion-background-color-rgb: 255, 251, 249;
+  --ion-text-color: #2E2225;
+  --ion-text-color-rgb: 46, 34, 37;
+
+  /* Primary: rosa empolvado */
+  --ion-color-primary: #B55369;
+  --ion-color-primary-rgb: 181, 83, 105;
+  --ion-color-primary-contrast: #FFFFFF;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #9F495C;
+  --ion-color-primary-tint: #BC6478;
+
+  /* Secondary: verde eucalipto */
+  --ion-color-secondary: #54786A;
+  --ion-color-secondary-rgb: 84, 120, 106;
+  --ion-color-secondary-contrast: #FFFFFF;
+  --ion-color-secondary-contrast-rgb: 255, 255, 255;
+  --ion-color-secondary-shade: #4A6A5D;
+  --ion-color-secondary-tint: #658679;
+
+  /* Tertiary: ámbar terracota */
+  --ion-color-tertiary: #9E6240;
+  --ion-color-tertiary-rgb: 158, 98, 64;
+  --ion-color-tertiary-contrast: #FFFFFF;
+  --ion-color-tertiary-contrast-rgb: 255, 255, 255;
+  --ion-color-tertiary-shade: #8B5638;
+  --ion-color-tertiary-tint: #A87253;
+
+  /* Success: salvia esmeralda */
+  --ion-color-success: #2E7D5B;
+  --ion-color-success-rgb: 46, 125, 91;
+  --ion-color-success-contrast: #FFFFFF;
+  --ion-color-success-contrast-rgb: 255, 255, 255;
+  --ion-color-success-shade: #286E50;
+  --ion-color-success-tint: #438A6B;
+
+  /* Warning: miel tostada */
+  --ion-color-warning: #9C5708;
+  --ion-color-warning-rgb: 156, 87, 8;
+  --ion-color-warning-contrast: #FFFFFF;
+  --ion-color-warning-contrast-rgb: 255, 255, 255;
+  --ion-color-warning-shade: #894D07;
+  --ion-color-warning-tint: #A66821;
+
+  /* Danger: coral carmesí */
+  --ion-color-danger: #B83B48;
+  --ion-color-danger-rgb: 184, 59, 72;
+  --ion-color-danger-contrast: #FFFFFF;
+  --ion-color-danger-contrast-rgb: 255, 255, 255;
+  --ion-color-danger-shade: #A2343F;
+  --ion-color-danger-tint: #BF4F5A;
+
+  /* Light: lino pétalo */
+  --ion-color-light: #F6ECEA;
+  --ion-color-light-rgb: 246, 236, 234;
+  --ion-color-light-contrast: #2E2225;
+  --ion-color-light-contrast-rgb: 46, 34, 37;
+  --ion-color-light-shade: #D8D0CE;
+  --ion-color-light-tint: #F7EEEC;
+
+  /* Medium: topo rosado */
+  --ion-color-medium: #6E5A5F;
+  --ion-color-medium-rgb: 110, 90, 95;
+  --ion-color-medium-contrast: #FFFFFF;
+  --ion-color-medium-contrast-rgb: 255, 255, 255;
+  --ion-color-medium-shade: #614F54;
+  --ion-color-medium-tint: #7D6B6F;
+
+  /* Dark: carbón ciruela */
+  --ion-color-dark: #2E2225;
+  --ion-color-dark-rgb: 46, 34, 37;
+  --ion-color-dark-contrast: #FFFFFF;
+  --ion-color-dark-contrast-rgb: 255, 255, 255;
+  --ion-color-dark-shade: #281E21;
+  --ion-color-dark-tint: #43383B;
+
+  /* Superficies de componentes Ionic */
+  --ion-card-background: #FFFFFF;
+  --ion-item-background: #FFFFFF;
+  --ion-toolbar-background: #FFFBF9;
+  --ion-border-color: rgba(110, 90, 95, 0.16);
+
+  /* Radios de borde */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 28px;
+
+  /* Sombras cálidas, teñidas con el color del tema activo */
+  --shadow-card: 0 4px 16px rgba(var(--ion-text-color-rgb), 0.06), 0 1px 3px rgba(var(--ion-text-color-rgb), 0.04);
+  --shadow-floating: 0 8px 24px rgba(var(--ion-color-primary-rgb), 0.20);
+
+  /* Espaciados (escala base 8px) */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+}
+
+[data-theme="bautizo"] {
+  --ion-background-color: #F9FBF9;
+  --ion-background-color-rgb: 249, 251, 249;
+  --ion-text-color: #1E282A;
+  --ion-text-color-rgb: 30, 40, 42;
+
+  /* Primary: celeste sereno */
+  --ion-color-primary: #3B6E8C;
+  --ion-color-primary-rgb: 59, 110, 140;
+  --ion-color-primary-contrast: #FFFFFF;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #34617B;
+  --ion-color-primary-tint: #4F7D98;
+
+  /* Secondary: olivo */
+  --ion-color-secondary: #5F7355;
+  --ion-color-secondary-rgb: 95, 115, 85;
+  --ion-color-secondary-contrast: #FFFFFF;
+  --ion-color-secondary-contrast-rgb: 255, 255, 255;
+  --ion-color-secondary-shade: #54654B;
+  --ion-color-secondary-tint: #6F8166;
+
+  /* Tertiary: oro viejo. #9A7B3E daba 3,98:1 con blanco; #876A33 da 5,07:1 */
+  --ion-color-tertiary: #876A33;
+  --ion-color-tertiary-rgb: 135, 106, 51;
+  --ion-color-tertiary-contrast: #FFFFFF;
+  --ion-color-tertiary-contrast-rgb: 255, 255, 255;
+  --ion-color-tertiary-shade: #775D2D;
+  --ion-color-tertiary-tint: #937947;
+
+  --ion-color-success: #2B7A57;
+  --ion-color-success-rgb: 43, 122, 87;
+  --ion-color-success-contrast: #FFFFFF;
+  --ion-color-success-contrast-rgb: 255, 255, 255;
+  --ion-color-success-shade: #266B4D;
+  --ion-color-success-tint: #408768;
+
+  --ion-color-warning: #9E5D0B;
+  --ion-color-warning-rgb: 158, 93, 11;
+  --ion-color-warning-contrast: #FFFFFF;
+  --ion-color-warning-contrast-rgb: 255, 255, 255;
+  --ion-color-warning-shade: #8B520A;
+  --ion-color-warning-tint: #A86D23;
+
+  --ion-color-danger: #B03A3A;
+  --ion-color-danger-rgb: 176, 58, 58;
+  --ion-color-danger-contrast: #FFFFFF;
+  --ion-color-danger-contrast-rgb: 255, 255, 255;
+  --ion-color-danger-shade: #9B3333;
+  --ion-color-danger-tint: #B84E4E;
+
+  --ion-color-light: #EDF2F4;
+  --ion-color-light-rgb: 237, 242, 244;
+  --ion-color-light-contrast: #1E282A;
+  --ion-color-light-contrast-rgb: 30, 40, 42;
+  --ion-color-light-shade: #D1D5D7;
+  --ion-color-light-tint: #EFF3F5;
+
+  --ion-color-medium: #556468;
+  --ion-color-medium-rgb: 85, 100, 104;
+  --ion-color-medium-contrast: #FFFFFF;
+  --ion-color-medium-contrast-rgb: 255, 255, 255;
+  --ion-color-medium-shade: #4B585C;
+  --ion-color-medium-tint: #667477;
+
+  --ion-color-dark: #1E282A;
+  --ion-color-dark-rgb: 30, 40, 42;
+  --ion-color-dark-contrast: #FFFFFF;
+  --ion-color-dark-contrast-rgb: 255, 255, 255;
+  --ion-color-dark-shade: #1A2325;
+  --ion-color-dark-tint: #343E3F;
+
+  /* Superficies de componentes Ionic */
+  --ion-card-background: #FFFFFF;
+  --ion-item-background: #FFFFFF;
+  --ion-toolbar-background: #F9FBF9;
+  --ion-border-color: rgba(85, 100, 104, 0.16);
+
+  /* Sombras cálidas recalculadas con los colores del tema bautizo */
+  --shadow-card: 0 4px 16px rgba(var(--ion-text-color-rgb), 0.06), 0 1px 3px rgba(var(--ion-text-color-rgb), 0.04);
+  --shadow-floating: 0 8px 24px rgba(var(--ion-color-primary-rgb), 0.20);
+}
