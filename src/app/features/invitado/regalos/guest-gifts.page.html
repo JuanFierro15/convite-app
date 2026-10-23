@@ -1,7 +1,198 @@
-<ion-header>
+<ion-header class="ion-no-border">
   <ion-toolbar>
-    <ion-title>Lista de regalos</ion-title>
+    <ion-title>{{ eventName() }}</ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content></ion-content>
+<ion-content>
+  <ion-refresher slot="fixed" (ionRefresh)="onRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  <div class="guest-accessibility-view guest-container">
+    @if (loading()) {
+      <div class="loading-state" role="status" aria-live="polite">
+        <ion-spinner name="crescent" color="primary" aria-label="Cargando lista de regalos"></ion-spinner>
+      </div>
+    } @else if (invitation(); as inv) {
+      <div class="gifts-body">
+        <ion-button
+          class="back-button"
+          fill="outline"
+          color="primary"
+          expand="block"
+          [routerLink]="['/i', code()]"
+        >
+          <ion-icon slot="start" name="arrow-back-outline" aria-hidden="true"></ion-icon>
+          Volver a la invitación
+        </ion-button>
+
+        @if (!inv.gifts_open) {
+          <div class="closed-banner" role="status">
+            <ion-icon
+              class="closed-banner__icon"
+              name="lock-closed-outline"
+              aria-hidden="true"
+            ></ion-icon>
+            <span>La lista de regalos ya está cerrada.</span>
+          </div>
+        }
+
+        @if (showReservedConfirmation()) {
+          <ion-card class="reserved-confirmation-card" role="status" aria-live="polite">
+            <ion-card-content class="reserved-confirmation-card__content">
+              <div class="reserved-confirmation-card__illustration">
+                <app-illustration
+                  name="gift-reserved"
+                  alt="Regalo apartado"
+                  [themeId]="inv.event.theme_id"
+                />
+              </div>
+              <p class="text-body reserved-confirmation-card__text">
+                ¡Listo! Quedó apartado a nombre de {{ inv.invitation.group_name }}.
+              </p>
+            </ion-card-content>
+          </ion-card>
+        }
+
+        @if (gifts().length === 0) {
+          <app-empty-state message="Todavía no hay regalos en la lista." />
+        } @else {
+          @if (unlimitedGifts().length > 0) {
+            <section class="gift-section" aria-labelledby="section-unlimited">
+              <h2 id="section-unlimited" class="text-section gift-section__title">
+                Para elegir sin límite
+              </h2>
+              <div class="gift-list">
+                @for (gift of unlimitedGifts(); track gift.id) {
+                  <ion-card class="gift-card">
+                    <ion-card-content class="gift-card__content">
+                      <p class="text-name gift-card__name">{{ gift.name }}</p>
+                      @if (gift.description; as desc) {
+                        <p class="text-body gift-card__description">{{ desc }}</p>
+                      }
+                      @if (gift.reserved_by_me) {
+                        <div class="chosen-badge badge-soft-success">
+                          <ion-icon name="checkmark-circle" aria-hidden="true"></ion-icon>
+                          <span>Ustedes eligieron esta opción</span>
+                        </div>
+                        <ion-button
+                          fill="outline"
+                          color="primary"
+                          expand="block"
+                          [disabled]="!inv.gifts_open || processingGiftId() !== null"
+                          (click)="onToggleUnlimitedGift(gift)"
+                        >
+                          Quitar mi elección
+                        </ion-button>
+                      } @else {
+                        <ion-button
+                          color="primary"
+                          expand="block"
+                          [disabled]="!inv.gifts_open || processingGiftId() !== null"
+                          (click)="onToggleUnlimitedGift(gift)"
+                        >
+                          Elegir esta opción
+                        </ion-button>
+                      }
+                    </ion-card-content>
+                  </ion-card>
+                }
+              </div>
+            </section>
+          }
+
+          @if (availableUniqueGifts().length > 0) {
+            <section class="gift-section" aria-labelledby="section-available">
+              <h2 id="section-available" class="text-section gift-section__title">
+                Regalos disponibles
+              </h2>
+              <div class="gift-list">
+                @for (gift of availableUniqueGifts(); track gift.id) {
+                  <ion-card class="gift-card">
+                    <ion-card-content class="gift-card__content">
+                      <p class="text-name gift-card__name">{{ gift.name }}</p>
+                      @if (gift.description; as desc) {
+                        <p class="text-body gift-card__description">{{ desc }}</p>
+                      }
+                      <ion-button
+                        color="primary"
+                        expand="block"
+                        [disabled]="!inv.gifts_open || processingGiftId() !== null"
+                        (click)="onConfirmReserveUnique(gift)"
+                      >
+                        Apartar este regalo
+                      </ion-button>
+                    </ion-card-content>
+                  </ion-card>
+                }
+              </div>
+            </section>
+          }
+
+          @if (myUniqueGifts().length > 0) {
+            <section class="gift-section" aria-labelledby="section-mine">
+              <h2 id="section-mine" class="text-section gift-section__title">
+                Apartados por ustedes
+              </h2>
+              <div class="gift-list">
+                @for (gift of myUniqueGifts(); track gift.id) {
+                  <ion-card class="gift-card">
+                    <ion-card-content class="gift-card__content">
+                      <div class="gift-card__header">
+                        <p class="text-name gift-card__name">{{ gift.name }}</p>
+                        <span class="badge-soft-success">Apartado por ustedes</span>
+                      </div>
+                      @if (gift.description; as desc) {
+                        <p class="text-body gift-card__description">{{ desc }}</p>
+                      }
+                      <ion-button
+                        fill="outline"
+                        color="medium"
+                        expand="block"
+                        [disabled]="!inv.gifts_open || processingGiftId() !== null"
+                        (click)="onConfirmReleaseUnique(gift)"
+                      >
+                        Liberar
+                      </ion-button>
+                    </ion-card-content>
+                  </ion-card>
+                }
+              </div>
+            </section>
+          }
+
+          @if (takenUniqueGifts().length > 0) {
+            <section class="gift-section" aria-labelledby="section-taken">
+              <h2 id="section-taken" class="text-section gift-section__title">
+                Ya apartados
+              </h2>
+              <div class="gift-list">
+                @for (gift of takenUniqueGifts(); track gift.id) {
+                  <ion-card class="gift-card gift-card--taken">
+                    <ion-card-content class="gift-card__content">
+                      <p class="text-name gift-card__name">{{ gift.name }}</p>
+                      @if (gift.description; as desc) {
+                        <p class="text-body gift-card__description">{{ desc }}</p>
+                      }
+                      <div class="taken-badge badge-soft-medium">
+                        <ion-icon name="lock-closed-outline" aria-hidden="true"></ion-icon>
+                        <span>Ya apartado</span>
+                      </div>
+                    </ion-card-content>
+                  </ion-card>
+                }
+              </div>
+            </section>
+          }
+        }
+      </div>
+    } @else {
+      <div class="empty-wrapper">
+        <app-empty-state
+          [message]="error() ?? 'No encontramos esta invitación. Revisa el enlace que te enviaron.'"
+        />
+      </div>
+    }
+  </div>
+</ion-content>

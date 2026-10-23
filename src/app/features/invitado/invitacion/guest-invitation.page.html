@@ -1,7 +1,203 @@
-<ion-header>
-  <ion-toolbar>
-    <ion-title>Tu invitación</ion-title>
-  </ion-toolbar>
-</ion-header>
+<ion-content>
+  <ion-refresher slot="fixed" (ionRefresh)="onRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
 
-<ion-content></ion-content>
+  <div class="guest-accessibility-view guest-container">
+    @if (loading()) {
+      <div class="loading-state" role="status" aria-live="polite">
+        <ion-spinner name="crescent" color="primary" aria-label="Cargando invitación"></ion-spinner>
+      </div>
+    } @else if (invitation(); as inv) {
+      <div class="hero-wrapper">
+        <img
+          class="hero-cover"
+          [src]="heroCoverUrl()"
+          alt="Portada de la invitación"
+        />
+      </div>
+
+      <div class="guest-body">
+        <ion-card class="welcome-card">
+          <ion-card-content class="welcome-card__content">
+            <h1 class="text-title welcome-card__title">{{ welcomeTitle() }}</h1>
+            <p class="text-section welcome-card__event">{{ inv.event.name }}</p>
+            @if (inv.event.welcome_message; as welcomeMsg) {
+              <p class="text-body welcome-card__message">{{ welcomeMsg }}</p>
+            }
+          </ion-card-content>
+        </ion-card>
+
+        <ion-card class="section-card">
+          <ion-card-content class="section-card__content">
+            <div class="coordinates-list">
+              <div class="coordinate-row">
+                <ion-icon
+                  class="coordinate-row__icon"
+                  name="calendar-outline"
+                  aria-hidden="true"
+                ></ion-icon>
+                <div class="coordinate-row__text">
+                  <span class="coordinate-row__primary">{{ formattedEventDate() }}</span>
+                </div>
+              </div>
+
+              <div class="coordinate-row">
+                <ion-icon
+                  class="coordinate-row__icon"
+                  name="time-outline"
+                  aria-hidden="true"
+                ></ion-icon>
+                <div class="coordinate-row__text">
+                  <span class="coordinate-row__primary">{{ formattedEventTime() }}</span>
+                </div>
+              </div>
+
+              <div class="coordinate-row">
+                <ion-icon
+                  class="coordinate-row__icon"
+                  name="location-outline"
+                  aria-hidden="true"
+                ></ion-icon>
+                <div class="coordinate-row__text">
+                  @if (inv.event.venue_name; as venueName) {
+                    <span class="coordinate-row__primary">{{ venueName }}</span>
+                  }
+                  @if (inv.event.venue_address; as venueAddress) {
+                    <span class="text-body coordinate-row__secondary">{{ venueAddress }}</span>
+                  }
+                  @if (inv.event.city; as city) {
+                    <span class="text-body coordinate-row__secondary">{{ city }}</span>
+                  }
+                </div>
+              </div>
+            </div>
+
+            @if (inv.event.map_url; as mapUrl) {
+              <ion-button
+                class="map-button"
+                fill="outline"
+                color="secondary"
+                expand="block"
+                (click)="openMap(mapUrl)"
+              >
+                <ion-icon slot="start" name="map-outline" aria-hidden="true"></ion-icon>
+                Ver ubicación en el mapa
+              </ion-button>
+            }
+          </ion-card-content>
+        </ion-card>
+
+        <section class="rsvp-section" aria-labelledby="rsvp-heading">
+          <h2 id="rsvp-heading" class="text-section section-heading">Confirmación de asistencia</h2>
+
+          @if (inv.can_respond) {
+            <div class="deadline-banner badge-soft-warning" role="note">
+              <ion-icon
+                class="deadline-banner__icon"
+                name="alarm-outline"
+                aria-hidden="true"
+              ></ion-icon>
+              <span>Por favor respondan antes del {{ formattedDeadline() }}</span>
+            </div>
+          } @else {
+            <div class="deadline-banner deadline-banner--closed" role="status">
+              <ion-icon
+                class="deadline-banner__icon"
+                name="alarm-outline"
+                aria-hidden="true"
+              ></ion-icon>
+              <span>
+                El plazo para responder ya terminó. Si necesitas cambiar tu respuesta, escríbenos.
+              </span>
+            </div>
+          }
+
+          <div class="guests-list">
+            @for (guest of inv.guests; track guest.id) {
+              <ion-card class="guest-card">
+                <ion-card-content class="guest-card__content">
+                  <p class="text-name guest-card__name">{{ guest.full_name }}</p>
+                  <div class="guest-card__actions">
+                    <ion-button
+                      class="rsvp-button"
+                      color="success"
+                      [fill]="guest.rsvp === 'accepted' ? 'solid' : 'outline'"
+                      expand="block"
+                      [disabled]="!inv.can_respond || savingGuestId() !== null"
+                      [attr.aria-pressed]="guest.rsvp === 'accepted'"
+                      (click)="onSelectRsvp(guest, 'accepted')"
+                    >
+                      <ion-icon slot="start" name="checkmark-outline" aria-hidden="true"></ion-icon>
+                      Acepto
+                    </ion-button>
+
+                    <ion-button
+                      class="rsvp-button"
+                      color="danger"
+                      [fill]="guest.rsvp === 'declined' ? 'solid' : 'outline'"
+                      expand="block"
+                      [disabled]="!inv.can_respond || savingGuestId() !== null"
+                      [attr.aria-pressed]="guest.rsvp === 'declined'"
+                      (click)="onSelectRsvp(guest, 'declined')"
+                    >
+                      <ion-icon slot="start" name="close-outline" aria-hidden="true"></ion-icon>
+                      No acepto
+                    </ion-button>
+                  </div>
+                </ion-card-content>
+              </ion-card>
+            }
+          </div>
+
+          @if (showRsvpConfirmation()) {
+            <ion-card class="confirmation-card" role="status" aria-live="polite">
+              <ion-card-content class="confirmation-card__content">
+                <div class="confirmation-card__illustration">
+                  <app-illustration
+                    name="rsvp-sent"
+                    alt="Respuesta recibida"
+                    [themeId]="inv.event.theme_id"
+                  />
+                </div>
+                <p class="text-body confirmation-card__text">
+                  ¡Gracias! Recibimos su respuesta. Pueden cambiarla hasta el {{ formattedDeadline() }}.
+                </p>
+              </ion-card-content>
+            </ion-card>
+          }
+        </section>
+
+        <ion-card class="section-card">
+          <ion-card-content class="section-card__content">
+            <ion-button
+              color="primary"
+              expand="block"
+              [routerLink]="['/i', code(), 'regalos']"
+            >
+              <ion-icon slot="start" name="gift-outline" aria-hidden="true"></ion-icon>
+              Ver lista de regalos
+            </ion-button>
+          </ion-card-content>
+        </ion-card>
+
+        <ion-card class="section-card table-card">
+          <ion-card-content class="table-card__content">
+            <ion-icon
+              class="table-card__icon"
+              name="restaurant-outline"
+              aria-hidden="true"
+            ></ion-icon>
+            <span class="text-body table-card__text">Tu mesa se asignará pronto</span>
+          </ion-card-content>
+        </ion-card>
+      </div>
+    } @else {
+      <div class="empty-wrapper">
+        <app-empty-state
+          [message]="error() ?? 'No encontramos esta invitación. Revisa el enlace que te enviaron.'"
+        />
+      </div>
+    }
+  </div>
+</ion-content>
