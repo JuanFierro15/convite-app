@@ -329,6 +329,16 @@ export type Database = {
         Args: { p_code: string; p_gift_id: string }
         Returns: Json
       }
+      save_invitation: {
+        Args: {
+          p_event_id: string
+          p_group_name: string
+          p_guests: Json
+          p_invitation_id: string
+          p_phone: string
+        }
+        Returns: Json
+      }
       set_rsvp: {
         Args: { p_code: string; p_guest_id: string; p_rsvp: string }
         Returns: Json
