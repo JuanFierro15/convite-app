@@ -1,0 +1,71 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.gift-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding-bottom: var(--space-lg);
+}
+
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.field-label {
+  color: var(--ion-text-color);
+  margin-bottom: var(--space-xs);
+}
+
+.field-help {
+  margin: var(--space-xs) 0 0;
+  color: var(--ion-color-medium);
+}
+
+.field-notice {
+  margin: var(--space-xs) 0 0;
+  color: var(--ion-color-warning);
+  font-weight: 600;
+}
+
+.field-error {
+  margin: var(--space-xs) 0 0;
+  color: var(--ion-color-danger);
+  font-weight: 600;
+}
+
+ion-segment {
+  background: var(--ion-color-light);
+  border-radius: var(--radius-md);
+  padding: var(--space-xs);
+}
+
+ion-segment-button {
+  --border-radius: var(--radius-sm);
+  --color: var(--ion-color-medium);
+  --color-checked: var(--ion-color-primary);
+  --indicator-color: var(--ion-card-background);
+  min-height: 44px;
+  text-transform: none;
+  font-weight: 600;
+}
+
+.footer-toolbar {
+  padding: var(--space-sm) var(--space-md);
+  border-top: 1px solid var(--ion-border-color);
+}
+
+.form-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-sm);
+}
+
+.form-actions ion-button {
+  margin: 0;
+}

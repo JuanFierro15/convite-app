@@ -1,7 +1,291 @@
-<ion-header>
+<ion-header class="ion-no-border">
   <ion-toolbar>
-    <ion-title>Regalos</ion-title>
+    <ion-buttons slot="start">
+      <ion-back-button
+        [defaultHref]="'/eventos/' + id() + '/panel'"
+        text=""
+        aria-label="Volver al panel del evento"
+      ></ion-back-button>
+    </ion-buttons>
+    <ion-title class="text-title">Lista de regalos</ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content></ion-content>
+<ion-content>
+  <div class="page-container">
+    <div class="top-bar">
+      <p class="summary-text text-label">
+        {{ uniqueCount() }} regalos únicos · {{ reservedUniqueCount() }} apartados
+      </p>
+
+      <ion-button
+        fill="outline"
+        color="primary"
+        size="small"
+        (click)="addSuggestedGifts()"
+        [disabled]="addingSuggested()"
+      >
+        <ion-icon slot="start" name="sparkles-outline" aria-hidden="true"></ion-icon>
+        Agregar opciones sugeridas
+      </ion-button>
+    </div>
+
+    <ion-segment
+      [value]="filter()"
+      [scrollable]="true"
+      (ionChange)="onFilterChange($event)"
+      aria-label="Filtrar regalos por tipo"
+    >
+      <ion-segment-button value="all">
+        <ion-label>Todos</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="unique">
+        <ion-label>Únicos</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="repeatable">
+        <ion-label>Repetibles</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="free">
+        <ion-label>Regalo libre</ion-label>
+      </ion-segment-button>
+    </ion-segment>
+
+    @if (loading()) {
+      <div class="loading-state" role="status" aria-live="polite">
+        <ion-spinner name="crescent" color="primary"></ion-spinner>
+        <p class="text-body">Cargando lista de regalos...</p>
+      </div>
+    } @else if (gifts().length === 0) {
+      <app-empty-state
+        message="Todavía no hay regalos en la lista."
+        actionLabel="Agregar opciones sugeridas"
+        (action)="addSuggestedGifts()"
+      />
+    } @else if (!filteredHasItems()) {
+      <app-empty-state message="No hay regalos en este filtro." />
+    } @else {
+      @if (showRepeatableSection()) {
+        <section class="gift-section">
+          <h2 class="section-heading text-section">Regalos repetibles</h2>
+
+          @for (gift of repeatableGifts(); track gift.id) {
+            <ion-card class="gift-card">
+              <ion-card-content class="gift-card__content">
+                <div class="gift-card__header">
+                  <div class="gift-card__titles">
+                    <h3 class="gift-card__name text-name">{{ gift.name }}</h3>
+                    @if (gift.description) {
+                      <p class="gift-card__description text-body">{{ gift.description }}</p>
+                    }
+                  </div>
+                  <ion-button
+                    fill="clear"
+                    color="medium"
+                    class="options-button"
+                    (click)="openGiftOptions(gift)"
+                    [attr.aria-label]="'Opciones de ' + gift.name"
+                  >
+                    <ion-icon
+                      slot="icon-only"
+                      name="ellipsis-vertical-outline"
+                      aria-hidden="true"
+                    ></ion-icon>
+                  </ion-button>
+                </div>
+
+                <div class="gift-card__meta">
+                  <span class="text-label badge-soft-primary">
+                    {{ familyCountLabel(gift.reservations.length) }}
+                  </span>
+                </div>
+
+                @if (gift.reservations.length > 0) {
+                  <ion-accordion-group class="reservations-accordion">
+                    <ion-accordion [value]="gift.id">
+                      <ion-item slot="header" lines="none" class="accordion-header">
+                        <ion-label class="text-body">Ver familias</ion-label>
+                      </ion-item>
+                      <div slot="content" class="reservations-list">
+                        @for (res of gift.reservations; track res.id) {
+                          <div class="reservation-row">
+                            <span class="reservation-row__name text-body">
+                              {{ res.group_name }}
+                            </span>
+                            <ion-button
+                              fill="clear"
+                              color="danger"
+                              size="small"
+                              (click)="confirmRelease(gift, res)"
+                              [attr.aria-label]="'Liberar la reserva de ' + res.group_name"
+                            >
+                              <ion-icon
+                                slot="start"
+                                name="close-circle-outline"
+                                aria-hidden="true"
+                              ></ion-icon>
+                              Liberar
+                            </ion-button>
+                          </div>
+                        }
+                      </div>
+                    </ion-accordion>
+                  </ion-accordion-group>
+                }
+              </ion-card-content>
+            </ion-card>
+          }
+        </section>
+      }
+
+      @if (showFreeSection()) {
+        <section class="gift-section">
+          <h2 class="section-heading text-section">Regalo libre</h2>
+
+          @for (gift of freeGifts(); track gift.id) {
+            <ion-card class="gift-card">
+              <ion-card-content class="gift-card__content">
+                <div class="gift-card__header">
+                  <div class="gift-card__titles">
+                    <h3 class="gift-card__name text-name">{{ gift.name }}</h3>
+                    <p class="gift-card__subtitle text-body">
+                      Familias que llevarán un regalo a su elección
+                    </p>
+                    @if (gift.description) {
+                      <p class="gift-card__description text-body">{{ gift.description }}</p>
+                    }
+                  </div>
+                  <ion-button
+                    fill="clear"
+                    color="medium"
+                    class="options-button"
+                    (click)="openGiftOptions(gift)"
+                    [attr.aria-label]="'Opciones de ' + gift.name"
+                  >
+                    <ion-icon
+                      slot="icon-only"
+                      name="ellipsis-vertical-outline"
+                      aria-hidden="true"
+                    ></ion-icon>
+                  </ion-button>
+                </div>
+
+                <div class="gift-card__meta">
+                  <span class="text-label badge-soft-primary">
+                    {{ familyCountLabel(gift.reservations.length) }}
+                  </span>
+                </div>
+
+                @if (gift.reservations.length > 0) {
+                  <ion-accordion-group class="reservations-accordion">
+                    <ion-accordion [value]="gift.id">
+                      <ion-item slot="header" lines="none" class="accordion-header">
+                        <ion-label class="text-body">Ver familias</ion-label>
+                      </ion-item>
+                      <div slot="content" class="reservations-list">
+                        @for (res of gift.reservations; track res.id) {
+                          <div class="reservation-row">
+                            <span class="reservation-row__name text-body">
+                              {{ res.group_name }}
+                            </span>
+                            <ion-button
+                              fill="clear"
+                              color="danger"
+                              size="small"
+                              (click)="confirmRelease(gift, res)"
+                              [attr.aria-label]="'Liberar la reserva de ' + res.group_name"
+                            >
+                              <ion-icon
+                                slot="start"
+                                name="close-circle-outline"
+                                aria-hidden="true"
+                              ></ion-icon>
+                              Liberar
+                            </ion-button>
+                          </div>
+                        }
+                      </div>
+                    </ion-accordion>
+                  </ion-accordion-group>
+                }
+              </ion-card-content>
+            </ion-card>
+          }
+        </section>
+      }
+
+      @if (showUniqueSection()) {
+        <section class="gift-section">
+          <h2 class="section-heading text-section">Regalos únicos</h2>
+
+          @for (gift of uniqueGifts(); track gift.id) {
+            <ion-card class="gift-card">
+              <ion-card-content class="gift-card__content">
+                <div class="gift-card__header">
+                  <div class="gift-card__titles">
+                    <h3 class="gift-card__name text-name">{{ gift.name }}</h3>
+                    @if (gift.category) {
+                      <p class="gift-card__category text-label">{{ gift.category }}</p>
+                    }
+                    @if (gift.description) {
+                      <p class="gift-card__description text-body">{{ gift.description }}</p>
+                    }
+                  </div>
+                  <ion-button
+                    fill="clear"
+                    color="medium"
+                    class="options-button"
+                    (click)="openGiftOptions(gift)"
+                    [attr.aria-label]="'Opciones de ' + gift.name"
+                  >
+                    <ion-icon
+                      slot="icon-only"
+                      name="ellipsis-vertical-outline"
+                      aria-hidden="true"
+                    ></ion-icon>
+                  </ion-button>
+                </div>
+
+                @if (gift.reservations[0]; as reservation) {
+                  <div class="unique-status-row">
+                    <span class="text-label badge-soft-success">
+                      <ion-icon name="lock-closed" aria-hidden="true"></ion-icon>
+                      Apartado por: {{ reservation.group_name }}
+                    </span>
+                    <ion-button
+                      fill="clear"
+                      color="danger"
+                      size="small"
+                      (click)="confirmRelease(gift, reservation)"
+                      [attr.aria-label]="'Liberar la reserva de ' + reservation.group_name"
+                    >
+                      <ion-icon
+                        slot="start"
+                        name="close-circle-outline"
+                        aria-hidden="true"
+                      ></ion-icon>
+                      Liberar
+                    </ion-button>
+                  </div>
+                } @else {
+                  <div class="unique-status-row">
+                    <span class="text-label badge-soft-medium">Disponible</span>
+                  </div>
+                }
+              </ion-card-content>
+            </ion-card>
+          }
+        </section>
+      }
+    }
+  </div>
+
+  <ion-fab slot="fixed" vertical="bottom" horizontal="end">
+    <ion-fab-button
+      color="primary"
+      aria-label="Nuevo regalo"
+      (click)="openForm()"
+    >
+      <ion-icon name="add" aria-hidden="true"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
+</ion-content>

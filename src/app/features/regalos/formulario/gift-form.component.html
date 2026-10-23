@@ -1,0 +1,128 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar>
+    <ion-title class="text-section">
+      {{ isEditing() ? 'Editar regalo' : 'Nuevo regalo' }}
+    </ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="cancel()" aria-label="Cerrar formulario">
+        <ion-icon slot="icon-only" name="close-outline" aria-hidden="true"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <form class="gift-form" [formGroup]="form" (ngSubmit)="save()" novalidate>
+    <div class="field-group">
+      <span class="field-label text-name" id="gift-name-label">Nombre</span>
+      <ion-input
+        aria-labelledby="gift-name-label"
+        formControlName="name"
+        fill="outline"
+        placeholder="Ej. Coche de paseo"
+        [maxlength]="120"
+        [counter]="true"
+      ></ion-input>
+      @if (nameError; as errorMsg) {
+        <p class="field-error text-label" role="alert">{{ errorMsg }}</p>
+      }
+    </div>
+
+    <div class="field-group">
+      <span class="field-label text-name" id="gift-category-label">Categoría</span>
+      <ion-input
+        aria-labelledby="gift-category-label"
+        formControlName="category"
+        fill="outline"
+        placeholder="Opcional"
+        [maxlength]="60"
+      ></ion-input>
+      <p class="field-help text-label">Por ejemplo: Ropa, Baño, Juguetes</p>
+      @if (categoryError; as errorMsg) {
+        <p class="field-error text-label" role="alert">{{ errorMsg }}</p>
+      }
+    </div>
+
+    <div class="field-group">
+      <span class="field-label text-name" id="gift-description-label">Descripción</span>
+      <ion-textarea
+        aria-labelledby="gift-description-label"
+        formControlName="description"
+        fill="outline"
+        placeholder="Detalles opcionales: talla, color o referencia"
+        [rows]="3"
+        [maxlength]="300"
+        [counter]="true"
+      ></ion-textarea>
+      @if (descriptionError; as errorMsg) {
+        <p class="field-error text-label" role="alert">{{ errorMsg }}</p>
+      }
+    </div>
+
+    <div class="field-group">
+      <span class="field-label text-name">Tipo</span>
+      <ion-segment
+        formControlName="kind"
+        [disabled]="isTypeLocked()"
+        aria-label="Tipo de regalo"
+      >
+        <ion-segment-button value="unique" [disabled]="isTypeLocked()">
+          <ion-label>Único</ion-label>
+        </ion-segment-button>
+        <ion-segment-button value="repeatable" [disabled]="isTypeLocked()">
+          <ion-label>Repetible</ion-label>
+        </ion-segment-button>
+        <ion-segment-button
+          value="free"
+          [disabled]="isTypeLocked() || freeOptionDisabled()"
+        >
+          <ion-label>Regalo libre</ion-label>
+        </ion-segment-button>
+      </ion-segment>
+
+      <p class="field-help text-label">
+        Único: lo aparta una sola familia. Repetible: varias familias pueden elegirlo. Regalo libre: la familia lleva lo que quiera.
+      </p>
+
+      @if (isTypeLocked()) {
+        <p class="field-notice text-label" role="status">
+          No puedes cambiar el tipo porque ya tiene reservas.
+        </p>
+      }
+
+      @if (freeOptionDisabled()) {
+        <p class="field-notice text-label" role="status">
+          El evento ya tiene un regalo libre.
+        </p>
+      }
+    </div>
+  </form>
+</ion-content>
+
+<ion-footer class="ion-no-border">
+  <ion-toolbar class="footer-toolbar">
+    <div class="form-actions">
+      <ion-button
+        fill="outline"
+        color="medium"
+        expand="block"
+        (click)="cancel()"
+        [disabled]="saving()"
+      >
+        Cancelar
+      </ion-button>
+      <ion-button
+        color="primary"
+        expand="block"
+        (click)="save()"
+        [disabled]="saving()"
+      >
+        @if (saving()) {
+          <ion-spinner name="crescent"></ion-spinner>
+        } @else {
+          Guardar
+        }
+      </ion-button>
+    </div>
+  </ion-toolbar>
+</ion-footer>
