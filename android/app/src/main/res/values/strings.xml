@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Convite</string>
+    <string name="title_activity_main">Convite</string>
+    <string name="package_name">com.juanfierro.convite</string>
+    <string name="custom_url_scheme">com.juanfierro.convite</string>
+</resources>
