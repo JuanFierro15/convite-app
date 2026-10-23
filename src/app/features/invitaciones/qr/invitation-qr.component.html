@@ -1,0 +1,57 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar>
+    <ion-title>Código QR</ion-title>
+    <ion-buttons slot="end">
+      <ion-button fill="clear" color="medium" aria-label="Cerrar" (click)="close()">
+        <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <div class="qr-container">
+    <h1 class="text-title qr-group-title">{{ groupName() }}</h1>
+    @if (eventName) {
+      <p class="text-body qr-event-name">{{ eventName }}</p>
+    }
+
+    <ion-card class="qr-card">
+      <ion-card-content class="qr-card-content">
+        @if (loading()) {
+          <div class="qr-spinner">
+            <ion-spinner name="crescent" color="primary"></ion-spinner>
+          </div>
+        } @else if (qrDataUrl(); as dataUrl) {
+          <img
+            class="qr-image"
+            [src]="dataUrl"
+            [alt]="'Código QR de la invitación de ' + groupName()"
+          />
+        }
+
+        <p class="qr-code-value">{{ formattedCode() }}</p>
+        <p class="qr-link text-label">{{ guestUrl() }}</p>
+      </ion-card-content>
+    </ion-card>
+  </div>
+</ion-content>
+
+<ion-footer class="ion-no-border">
+  <ion-toolbar class="qr-footer-toolbar">
+    <div class="qr-footer-actions">
+      <ion-button
+        expand="block"
+        color="primary"
+        [disabled]="loading() || !qrDataUrl() || sharing()"
+        (click)="shareQr()"
+      >
+        <ion-icon slot="start" name="share-social-outline"></ion-icon>
+        Compartir QR
+      </ion-button>
+      <ion-button expand="block" fill="outline" color="medium" (click)="close()">
+        Cerrar
+      </ion-button>
+    </div>
+  </ion-toolbar>
+</ion-footer>

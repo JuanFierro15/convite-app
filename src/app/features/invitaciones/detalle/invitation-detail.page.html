@@ -1,7 +1,113 @@
-<ion-header>
+<ion-header class="ion-no-border">
   <ion-toolbar>
-    <ion-title>Detalle de la invitación</ion-title>
+    <ion-buttons slot="start">
+      <ion-back-button
+        [defaultHref]="defaultBackHref()"
+        text=""
+        aria-label="Volver a invitaciones"
+      ></ion-back-button>
+    </ion-buttons>
+
+    <ion-title>{{ invitation()?.group_name || 'Invitación' }}</ion-title>
+
+    @if (invitation()) {
+      <ion-buttons slot="end">
+        <ion-button aria-label="Editar" (click)="openEditModal()">
+          <ion-icon slot="icon-only" name="create-outline"></ion-icon>
+        </ion-button>
+        <ion-button color="danger" aria-label="Borrar" (click)="onDelete()">
+          <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+        </ion-button>
+      </ion-buttons>
+    }
   </ion-toolbar>
 </ion-header>
 
-<ion-content></ion-content>
+<ion-content>
+  @if (loading()) {
+    <div class="loading-container">
+      <ion-spinner name="crescent" color="primary"></ion-spinner>
+    </div>
+  } @else if (!invitation(); as _) {
+    <app-empty-state
+      message="Esta invitación ya no existe."
+      actionLabel="Volver a invitaciones"
+      (action)="backToList()"
+    />
+  } @else if (invitation(); as inv) {
+    <div class="detail-container">
+      <ion-card class="info-card">
+        <ion-card-content class="info-card-content">
+          <div class="info-header-row">
+            <h1 class="text-title group-title">{{ inv.group_name }}</h1>
+            <app-status-badge [status]="status()" />
+          </div>
+
+          <div class="info-meta-list">
+            <div class="info-meta-item">
+              <ion-icon name="call-outline" color="medium"></ion-icon>
+              <span class="text-body">{{ phoneLabel() }}</span>
+            </div>
+            <div class="info-meta-item">
+              <ion-icon name="key-outline" color="medium"></ion-icon>
+              <span class="text-body code-text">{{ formattedCode() }}</span>
+            </div>
+          </div>
+        </ion-card-content>
+      </ion-card>
+
+      <section class="guests-section">
+        <h2 class="text-section section-title">
+          Personas ({{ inv.guests.length }})
+        </h2>
+
+        <div class="guests-cards">
+          @for (guest of inv.guests; track guest.id) {
+            <ion-card class="guest-card">
+              <ion-card-content class="guest-card-content">
+                <p class="text-name guest-name">{{ guest.full_name }}</p>
+
+                <ion-segment
+                  [value]="guest.rsvp"
+                  (ionChange)="onGuestRsvpChange(guest, $event)"
+                >
+                  <ion-segment-button value="accepted">
+                    <ion-label>Aceptó</ion-label>
+                  </ion-segment-button>
+                  <ion-segment-button value="pending">
+                    <ion-label>Pendiente</ion-label>
+                  </ion-segment-button>
+                  <ion-segment-button value="declined">
+                    <ion-label>No asiste</ion-label>
+                  </ion-segment-button>
+                </ion-segment>
+              </ion-card-content>
+            </ion-card>
+          }
+        </div>
+      </section>
+    </div>
+  }
+</ion-content>
+
+@if (invitation()) {
+  <ion-footer class="ion-no-border">
+    <ion-toolbar class="detail-footer-toolbar">
+      <div class="detail-footer-actions">
+        <ion-button expand="block" color="primary" (click)="onShareWhatsApp()">
+          <ion-icon slot="start" name="logo-whatsapp"></ion-icon>
+          Compartir enlace por WhatsApp
+        </ion-button>
+        <ion-button
+          expand="block"
+          fill="outline"
+          color="secondary"
+          (click)="openQrModal()"
+        >
+          <ion-icon slot="start" name="qr-code-outline"></ion-icon>
+          Mostrar / Descargar QR
+        </ion-button>
+      </div>
+    </ion-toolbar>
+  </ion-footer>
+}

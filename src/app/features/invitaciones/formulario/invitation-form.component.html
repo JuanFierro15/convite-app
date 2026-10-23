@@ -1,0 +1,136 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar>
+    <ion-title>{{ isEdit() ? 'Editar invitación' : 'Nueva invitación' }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button
+        fill="clear"
+        color="medium"
+        aria-label="Cerrar formulario"
+        [disabled]="saving()"
+        (click)="cancel()"
+      >
+        <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <form class="invitation-form" [formGroup]="form" (ngSubmit)="save()">
+    <div class="field-group">
+      <ion-input
+        label="Nombre del grupo"
+        labelPlacement="stacked"
+        fill="outline"
+        formControlName="group_name"
+        maxlength="120"
+        placeholder="Nombre de la familia o grupo"
+      ></ion-input>
+      <p class="field-helper text-label">Por ejemplo: Familia Castro</p>
+      @if (showGroupNameError()) {
+        <p class="field-error text-label" role="alert">{{ groupNameErrorText() }}</p>
+      }
+    </div>
+
+    <div class="field-group">
+      <ion-input
+        label="WhatsApp (opcional)"
+        labelPlacement="stacked"
+        fill="outline"
+        type="tel"
+        inputmode="tel"
+        formControlName="phone"
+        placeholder="300 000 0000"
+      ></ion-input>
+      @if (showPhoneError()) {
+        <p class="field-error text-label" role="alert">
+          Escribe 10 dígitos que empiecen por 3.
+        </p>
+      }
+    </div>
+
+    <div class="guests-section">
+      <div class="guests-header">
+        <h2 class="text-section">Personas</h2>
+        <ion-button
+          type="button"
+          fill="outline"
+          color="secondary"
+          size="small"
+          (click)="addGuest()"
+        >
+          <ion-icon slot="start" name="person-add-outline"></ion-icon>
+          Agregar persona
+        </ion-button>
+      </div>
+
+      @if (showGuestsMinError()) {
+        <p class="field-error text-label" role="alert">Agrega al menos una persona.</p>
+      }
+
+      <ion-list class="guests-list" formArrayName="guests">
+        <ion-reorder-group [disabled]="false" (ionReorderEnd)="onReorder($event)">
+          @for (guestControl of guestsArray.controls; track guestControl; let i = $index) {
+            <div class="guest-row-wrapper" [formGroupName]="i">
+              <ion-item lines="none" class="guest-item">
+                <ion-reorder slot="start"></ion-reorder>
+                <ion-input
+                  aria-label="Nombre de la persona"
+                  fill="outline"
+                  formControlName="full_name"
+                  maxlength="120"
+                  placeholder="Nombre completo"
+                ></ion-input>
+                <ion-button
+                  slot="end"
+                  type="button"
+                  fill="clear"
+                  color="danger"
+                  [attr.aria-label]="removeGuestAriaLabel(i)"
+                  (click)="removeGuest(i)"
+                >
+                  <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+                </ion-button>
+              </ion-item>
+              @if (showGuestNameError(i)) {
+                <p class="field-error guest-error text-label" role="alert">
+                  {{ guestNameErrorText(i) }}
+                </p>
+              }
+            </div>
+          }
+        </ion-reorder-group>
+      </ion-list>
+    </div>
+  </form>
+</ion-content>
+
+<ion-footer class="ion-no-border">
+  <ion-toolbar class="footer-toolbar">
+    <div class="footer-actions">
+      <ion-button
+        type="button"
+        fill="outline"
+        color="medium"
+        expand="block"
+        [disabled]="saving()"
+        (click)="cancel()"
+      >
+        Cancelar
+      </ion-button>
+      <ion-button
+        type="button"
+        color="primary"
+        expand="block"
+        [disabled]="saving()"
+        (click)="save()"
+      >
+        @if (saving()) {
+          <ion-spinner name="crescent"></ion-spinner>
+        } @else {
+          Guardar
+        }
+      </ion-button>
+    </div>
+  </ion-toolbar>
+</ion-footer>

@@ -1,7 +1,114 @@
-<ion-header>
+<ion-header class="ion-no-border">
   <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button
+        [defaultHref]="defaultBackHref()"
+        text=""
+        aria-label="Volver al panel"
+      ></ion-back-button>
+    </ion-buttons>
     <ion-title>Invitaciones</ion-title>
+  </ion-toolbar>
+
+  <ion-toolbar class="filters-toolbar">
+    <ion-searchbar
+      placeholder="Buscar familia o integrante..."
+      [debounce]="200"
+      [value]="searchQuery()"
+      (ionInput)="onSearchInput($event)"
+    ></ion-searchbar>
+
+    <ion-segment
+      scrollable="true"
+      [value]="selectedFilter()"
+      (ionChange)="onFilterChange($event)"
+    >
+      <ion-segment-button value="all">
+        <ion-label>Todas ({{ filterCounts().all }})</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="pending">
+        <ion-label>Pendientes ({{ filterCounts().pending }})</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="partial">
+        <ion-label>Parciales ({{ filterCounts().partial }})</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="accepted">
+        <ion-label>Confirmadas ({{ filterCounts().accepted }})</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="declined">
+        <ion-label>Canceladas ({{ filterCounts().declined }})</ion-label>
+      </ion-segment-button>
+    </ion-segment>
   </ion-toolbar>
 </ion-header>
 
-<ion-content></ion-content>
+<ion-content>
+  @if (loading()) {
+    <div class="loading-container">
+      <ion-spinner name="crescent" color="primary"></ion-spinner>
+    </div>
+  } @else if (invitations().length === 0) {
+    <app-empty-state
+      message="Todavía no hay invitaciones."
+      actionLabel="Crear invitación"
+      (action)="openCreateModal()"
+    />
+  } @else if (filteredItems().length === 0) {
+    <app-empty-state message="No hay invitaciones que coincidan." />
+  } @else {
+    <div class="list-container">
+      <p class="totals-label text-label">{{ totalsLabel() }}</p>
+
+      <div class="cards-list">
+        @for (item of filteredItems(); track item.invitation.id) {
+          <ion-card
+            button="true"
+            class="invitation-card"
+            (click)="openDetail(item.invitation.id)"
+          >
+            <ion-card-content class="invitation-card-content">
+              <div class="invitation-card-main">
+                <div class="invitation-header-row">
+                  <span class="text-name group-name">{{ item.invitation.group_name }}</span>
+                  <app-status-badge [status]="item.status" />
+                </div>
+
+                <p class="text-body summary-text">{{ item.summary }}</p>
+
+                @if (item.invitation.guests.length > 0) {
+                  <div class="guests-chips">
+                    @for (guest of item.invitation.guests; track guest.id) {
+                      <ion-chip outline="true" color="medium" class="guest-chip">
+                        <ion-label>{{ guest.full_name }}</ion-label>
+                      </ion-chip>
+                    }
+                  </div>
+                }
+              </div>
+
+              <ion-button
+                fill="clear"
+                color="success"
+                class="whatsapp-button"
+                [attr.aria-label]="'Enviar por WhatsApp a ' + item.invitation.group_name"
+                (click)="onShareWhatsApp($event, item.invitation)"
+              >
+                <ion-icon slot="icon-only" name="logo-whatsapp"></ion-icon>
+              </ion-button>
+            </ion-card-content>
+          </ion-card>
+        }
+      </div>
+    </div>
+  }
+
+  <ion-fab slot="fixed" vertical="bottom" horizontal="end">
+    <ion-fab-button
+      color="primary"
+      aria-label="Nueva invitación"
+      (click)="openCreateModal()"
+    >
+      <ion-icon name="add"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
+</ion-content>

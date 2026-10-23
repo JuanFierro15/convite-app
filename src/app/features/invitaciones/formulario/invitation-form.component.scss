@@ -1,0 +1,77 @@
+.invitation-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.field-helper {
+  margin: 0;
+  padding-inline: var(--space-xs);
+  color: var(--ion-color-medium);
+}
+
+.field-error {
+  margin: 0;
+  padding-inline: var(--space-xs);
+  color: var(--ion-color-danger);
+}
+
+.guests-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-top: var(--space-xs);
+}
+
+.guests-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+
+  h2 {
+    margin: 0;
+  }
+}
+
+.guests-list {
+  background: transparent;
+  padding: 0;
+}
+
+.guest-row-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-sm);
+}
+
+.guest-item {
+  --padding-start: 0;
+  --inner-padding-end: 0;
+  --background: transparent;
+
+  ion-reorder {
+    margin-inline-end: var(--space-xs);
+  }
+}
+
+.guest-error {
+  padding-inline-start: var(--space-xl);
+}
+
+.footer-toolbar {
+  padding: var(--space-sm) var(--space-md);
+}
+
+.footer-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-sm);
+}
