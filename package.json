@@ -10,7 +10,7 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "lint": "ng lint",
-    "test:reglas": "node --env-file=.env --test scripts/reglas/"
+    "test:reglas": "node --env-file=.env --test \"scripts/reglas/*.test.mjs\""
   },
   "private": true,
   "dependencies": {
