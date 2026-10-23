@@ -836,3 +836,264 @@ test(
     );
   }
 );
+
+test(
+  '17. Un owner del equipo crea un evento: el otro owner y el helper quedan agregados con su rol',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    const now = Date.now();
+    const startsAt = new Date(now + 30 * 24 * 60 * 60 * 1000).toISOString();
+    const rsvpDeadline = new Date(now + 20 * 24 * 60 * 60 * 1000).toISOString();
+
+    const { data: createdEvent, error: insertError } =
+      await ctx.teamOwnerAClient
+        .from('events')
+        .insert({
+          name: `PRUEBA-${ctx.run}-EQUIPO-A`,
+          starts_at: startsAt,
+          rsvp_deadline: rsvpDeadline,
+        })
+        .select()
+        .single();
+
+    assert.equal(
+      insertError,
+      null,
+      'Se esperaba que el owner A del equipo pudiera crear un evento sin enviar created_by'
+    );
+    assert.ok(
+      createdEvent?.id,
+      'Se esperaba que el evento creado por el owner A devolviera su id'
+    );
+    ctx.createdEventIds.push(createdEvent.id);
+
+    const { data: members, error: membersError } = await ctx.adminClient
+      .from('event_members')
+      .select('user_id, role')
+      .eq('event_id', createdEvent.id);
+
+    assert.equal(
+      membersError,
+      null,
+      'Se esperaba consultar event_members del evento de owner A sin error'
+    );
+    assert.equal(
+      members?.length,
+      3,
+      'Se esperaba que el evento creado por owner A tuviera exactamente tres miembros'
+    );
+
+    const actualMembers = (members ?? [])
+      .map((member) => `${member.user_id}:${member.role}`)
+      .sort();
+    const expectedMembers = [
+      `${ctx.teamOwnerAUser.id}:owner`,
+      `${ctx.teamOwnerBUser.id}:owner`,
+      `${ctx.teamHelperUser.id}:helper`,
+    ].sort();
+
+    assert.deepEqual(
+      actualMembers,
+      expectedMembers,
+      'Se esperaba que los miembros del evento fueran owner A, owner B y el ayudante con sus roles del equipo'
+    );
+
+    for (const table of ['team_members', 'teams']) {
+      const { data, error } = await ctx.teamOwnerAClient
+        .from(table)
+        .select('*');
+
+      const rows = data ?? [];
+      assert.equal(
+        rows.length,
+        0,
+        `Se esperaba que la tabla ${table} no devolviera ninguna fila al cliente autenticado`
+      );
+      assert.ok(
+        Boolean(error) || Array.isArray(data),
+        `Se esperaba un error de permisos o una lista vacía al consultar ${table} con un cliente autenticado`
+      );
+    }
+  }
+);
+
+test(
+  '18. El segundo owner del equipo crea un evento: pasa lo mismo',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    const now = Date.now();
+    const startsAt = new Date(now + 30 * 24 * 60 * 60 * 1000).toISOString();
+    const rsvpDeadline = new Date(now + 20 * 24 * 60 * 60 * 1000).toISOString();
+
+    const { data: createdEvent, error: insertError } =
+      await ctx.teamOwnerBClient
+        .from('events')
+        .insert({
+          name: `PRUEBA-${ctx.run}-EQUIPO-B`,
+          starts_at: startsAt,
+          rsvp_deadline: rsvpDeadline,
+        })
+        .select()
+        .single();
+
+    assert.equal(
+      insertError,
+      null,
+      'Se esperaba que el owner B del equipo pudiera crear un evento sin enviar created_by'
+    );
+    assert.ok(
+      createdEvent?.id,
+      'Se esperaba que el evento creado por el owner B devolviera su id'
+    );
+    ctx.createdEventIds.push(createdEvent.id);
+
+    const { data: members, error: membersError } = await ctx.adminClient
+      .from('event_members')
+      .select('user_id, role')
+      .eq('event_id', createdEvent.id);
+
+    assert.equal(
+      membersError,
+      null,
+      'Se esperaba consultar event_members del evento de owner B sin error'
+    );
+    assert.equal(
+      members?.length,
+      3,
+      'Se esperaba que el evento creado por owner B tuviera exactamente tres miembros'
+    );
+
+    const actualMembers = (members ?? [])
+      .map((member) => `${member.user_id}:${member.role}`)
+      .sort();
+    const expectedMembers = [
+      `${ctx.teamOwnerBUser.id}:owner`,
+      `${ctx.teamOwnerAUser.id}:owner`,
+      `${ctx.teamHelperUser.id}:helper`,
+    ].sort();
+
+    assert.deepEqual(
+      actualMembers,
+      expectedMembers,
+      'Se esperaba que los miembros del evento fueran owner B, owner A y el ayudante con sus roles del equipo'
+    );
+  }
+);
+
+test(
+  '19. El helper del equipo crea un evento: solo él queda como miembro',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    const now = Date.now();
+    const startsAt = new Date(now + 30 * 24 * 60 * 60 * 1000).toISOString();
+    const rsvpDeadline = new Date(now + 20 * 24 * 60 * 60 * 1000).toISOString();
+
+    const { data: createdEvent, error: insertError } =
+      await ctx.teamHelperClient
+        .from('events')
+        .insert({
+          name: `PRUEBA-${ctx.run}-EQUIPO-HELPER`,
+          starts_at: startsAt,
+          rsvp_deadline: rsvpDeadline,
+        })
+        .select()
+        .single();
+
+    assert.equal(
+      insertError,
+      null,
+      'Se esperaba que el helper del equipo pudiera crear su propio evento sin enviar created_by'
+    );
+    assert.ok(
+      createdEvent?.id,
+      'Se esperaba que el evento creado por el helper devolviera su id'
+    );
+    ctx.createdEventIds.push(createdEvent.id);
+
+    const { data: members, error: membersError } = await ctx.adminClient
+      .from('event_members')
+      .select('user_id, role')
+      .eq('event_id', createdEvent.id);
+
+    assert.equal(
+      membersError,
+      null,
+      'Se esperaba consultar event_members del evento del helper sin error'
+    );
+    assert.equal(
+      members?.length,
+      1,
+      'Se esperaba que el evento creado por el helper tuviera exactamente un miembro'
+    );
+
+    const actualMembers = (members ?? [])
+      .map((member) => `${member.user_id}:${member.role}`)
+      .sort();
+    const expectedMembers = [`${ctx.teamHelperUser.id}:owner`];
+
+    assert.deepEqual(
+      actualMembers,
+      expectedMembers,
+      'Se esperaba que únicamente el helper quedara como owner de su propio evento'
+    );
+  }
+);
+
+test(
+  '20. Un usuario fuera del equipo crea un evento: solo él queda como miembro',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    const now = Date.now();
+    const startsAt = new Date(now + 30 * 24 * 60 * 60 * 1000).toISOString();
+    const rsvpDeadline = new Date(now + 20 * 24 * 60 * 60 * 1000).toISOString();
+
+    const { data: createdEvent, error: insertError } =
+      await ctx.outsideTeamClient
+        .from('events')
+        .insert({
+          name: `PRUEBA-${ctx.run}-FUERA`,
+          starts_at: startsAt,
+          rsvp_deadline: rsvpDeadline,
+        })
+        .select()
+        .single();
+
+    assert.equal(
+      insertError,
+      null,
+      'Se esperaba que el usuario fuera del equipo pudiera crear un evento sin enviar created_by'
+    );
+    assert.ok(
+      createdEvent?.id,
+      'Se esperaba que el evento creado por el usuario fuera del equipo devolviera su id'
+    );
+    ctx.createdEventIds.push(createdEvent.id);
+
+    const { data: members, error: membersError } = await ctx.adminClient
+      .from('event_members')
+      .select('user_id, role')
+      .eq('event_id', createdEvent.id);
+
+    assert.equal(
+      membersError,
+      null,
+      'Se esperaba consultar event_members del evento del usuario fuera del equipo sin error'
+    );
+    assert.equal(
+      members?.length,
+      1,
+      'Se esperaba que el evento creado por el usuario fuera del equipo tuviera exactamente un miembro'
+    );
+
+    const actualMembers = (members ?? [])
+      .map((member) => `${member.user_id}:${member.role}`)
+      .sort();
+    const expectedMembers = [`${ctx.outsideTeamUser.id}:owner`];
+
+    assert.deepEqual(
+      actualMembers,
+      expectedMembers,
+      'Se esperaba que únicamente el usuario fuera del equipo quedara como owner del evento'
+    );
+  }
+);

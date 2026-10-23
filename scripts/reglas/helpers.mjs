@@ -63,9 +63,18 @@ export function createEmptyContext() {
     ownerXClient: null,
     ownerYClient: null,
     helperXClient: null,
+    teamOwnerAClient: null,
+    teamOwnerBClient: null,
+    teamHelperClient: null,
+    outsideTeamClient: null,
     ownerXUser: null,
     ownerYUser: null,
     helperXUser: null,
+    teamOwnerAUser: null,
+    teamOwnerBUser: null,
+    teamHelperUser: null,
+    outsideTeamUser: null,
+    team: null,
     eventX: null,
     eventY: null,
     eventExpired: null,
@@ -105,6 +114,17 @@ export async function cleanupPreviousRuns(adminClient) {
   if (eventsError) {
     throw new Error(
       `No se pudieron limpiar eventos de corridas previas: ${eventsError.message}`
+    );
+  }
+
+  const { error: teamsError } = await adminClient
+    .from('teams')
+    .delete()
+    .like('name', 'PRUEBA-%');
+
+  if (teamsError) {
+    throw new Error(
+      `No se pudieron limpiar equipos de corridas previas: ${teamsError.message}`
     );
   }
 
@@ -640,6 +660,91 @@ export async function setupTestContext(ctx) {
       );
     }
     ctx.reservationStartedUnique = reservationStartedUnique;
+
+    ctx.teamOwnerAUser = await createTestUser(
+      ctx.adminClient,
+      ctx,
+      'equipo-owner-a'
+    );
+    ctx.teamOwnerBUser = await createTestUser(
+      ctx.adminClient,
+      ctx,
+      'equipo-owner-b'
+    );
+    ctx.teamHelperUser = await createTestUser(
+      ctx.adminClient,
+      ctx,
+      'equipo-helper'
+    );
+    ctx.outsideTeamUser = await createTestUser(
+      ctx.adminClient,
+      ctx,
+      'fuera-equipo'
+    );
+
+    ctx.teamOwnerAClient = await createAuthenticatedClient(
+      url,
+      publishableKey,
+      ctx.teamOwnerAUser.email,
+      ctx.teamOwnerAUser.password
+    );
+    ctx.teamOwnerBClient = await createAuthenticatedClient(
+      url,
+      publishableKey,
+      ctx.teamOwnerBUser.email,
+      ctx.teamOwnerBUser.password
+    );
+    ctx.teamHelperClient = await createAuthenticatedClient(
+      url,
+      publishableKey,
+      ctx.teamHelperUser.email,
+      ctx.teamHelperUser.password
+    );
+    ctx.outsideTeamClient = await createAuthenticatedClient(
+      url,
+      publishableKey,
+      ctx.outsideTeamUser.email,
+      ctx.outsideTeamUser.password
+    );
+
+    const { data: team, error: teamError } = await ctx.adminClient
+      .from('teams')
+      .insert({
+        name: `PRUEBA-${ctx.run}-EQUIPO`,
+      })
+      .select()
+      .single();
+    if (teamError || !team) {
+      throw new Error(
+        `No se pudo crear el equipo de prueba: ${teamError?.message ?? 'sin datos'}`
+      );
+    }
+    ctx.team = team;
+
+    const { error: teamMembersError } = await ctx.adminClient
+      .from('team_members')
+      .insert([
+        {
+          team_id: ctx.team.id,
+          user_id: ctx.teamOwnerAUser.id,
+          role: 'owner',
+        },
+        {
+          team_id: ctx.team.id,
+          user_id: ctx.teamOwnerBUser.id,
+          role: 'owner',
+        },
+        {
+          team_id: ctx.team.id,
+          user_id: ctx.teamHelperUser.id,
+          role: 'helper',
+        },
+      ]);
+    if (teamMembersError) {
+      throw new Error(
+        `No se pudieron registrar los miembros del equipo de prueba: ${teamMembersError.message}`
+      );
+    }
   } catch (err) {
     await teardownTestContext(ctx);
     throw err;
@@ -668,6 +773,15 @@ export async function teardownTestContext(ctx) {
     } catch {
       // Se ignora si los eventos ya fueron eliminados.
     }
+  }
+
+  try {
+    await ctx.adminClient
+      .from('teams')
+      .delete()
+      .like('name', `PRUEBA-${ctx.run}-%`);
+  } catch {
+    // Se ignora si los equipos ya fueron eliminados.
   }
 
   if (Array.isArray(ctx.createdUserIds) && ctx.createdUserIds.length > 0) {
