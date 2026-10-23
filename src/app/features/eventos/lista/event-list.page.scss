@@ -1,0 +1,137 @@
+:host {
+  display: block;
+}
+
+.event-list-container {
+  padding: var(--space-md);
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.event-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.event-card {
+  margin: 0;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  background: var(--ion-card-background);
+  color: var(--ion-text-color);
+}
+
+.event-card__content {
+  padding: var(--space-md);
+}
+
+.event-card__row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+}
+
+.event-card__thumb {
+  width: 84px;
+  height: 84px;
+  min-width: 84px;
+  border-radius: 16px;
+  object-fit: cover;
+  display: block;
+  background-color: var(--ion-color-light);
+}
+
+.event-card__body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.event-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.event-card__name {
+  margin: 0;
+  color: var(--ion-text-color);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.event-card__role-chip {
+  margin: 0;
+  height: 24px;
+  padding-inline: var(--space-sm);
+  flex-shrink: 0;
+}
+
+.event-card__meta {
+  margin: 0;
+  color: var(--ion-color-medium);
+}
+
+.event-card__badges {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-xs);
+  margin-top: var(--space-xs);
+}
+
+.event-card__progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin-top: var(--space-xs);
+
+  ion-progress-bar {
+    height: 6px;
+    border-radius: var(--radius-sm);
+  }
+}
+
+.event-card__progress-label {
+  color: var(--ion-color-medium);
+}
+
+.event-card__thumb-skeleton {
+  width: 84px;
+  height: 84px;
+  min-width: 84px;
+  border-radius: 16px;
+  margin: 0;
+}
+
+.event-card__line-title {
+  width: 70%;
+  height: 18px;
+  border-radius: var(--radius-sm);
+  margin: 0;
+}
+
+.event-card__line-meta {
+  width: 45%;
+  height: 14px;
+  border-radius: var(--radius-sm);
+  margin: 0;
+}
+
+.event-card__line-badge {
+  width: 35%;
+  height: 22px;
+  border-radius: var(--radius-sm);
+  margin: var(--space-xs) 0 0;
+}
+
+.event-card__line-progress {
+  width: 100%;
+  height: 12px;
+  border-radius: var(--radius-sm);
+  margin: var(--space-xs) 0 0;
+}

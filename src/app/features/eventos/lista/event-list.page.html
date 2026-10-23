@@ -1,7 +1,128 @@
-<ion-header>
+<ion-header class="ion-no-border">
   <ion-toolbar>
-    <ion-title>Eventos</ion-title>
+    <ion-title class="text-title">{{ greeting() }}</ion-title>
+    <ion-buttons slot="end">
+      @if (canCreateEvent()) {
+        <ion-button aria-label="Crear evento" (click)="goToCreateEvent()">
+          <ion-icon slot="icon-only" name="add-outline"></ion-icon>
+        </ion-button>
+      }
+      <ion-button aria-label="Más opciones" (click)="openOptionsMenu()">
+        <ion-icon slot="icon-only" name="ellipsis-vertical-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
   </ion-toolbar>
 </ion-header>
 
-<ion-content></ion-content>
+<ion-content>
+  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  <div class="event-list-container">
+    @if (loading() && !hasLoadedOnce()) {
+      <div class="event-list" aria-busy="true" aria-label="Cargando eventos">
+        @for (placeholder of skeletonItems; track placeholder) {
+          <ion-card class="event-card event-card--skeleton">
+            <ion-card-content class="event-card__content">
+              <div class="event-card__row">
+                <ion-skeleton-text
+                  class="event-card__thumb-skeleton"
+                  [animated]="true"
+                ></ion-skeleton-text>
+                <div class="event-card__body">
+                  <ion-skeleton-text
+                    class="event-card__line-title"
+                    [animated]="true"
+                  ></ion-skeleton-text>
+                  <ion-skeleton-text
+                    class="event-card__line-meta"
+                    [animated]="true"
+                  ></ion-skeleton-text>
+                  <ion-skeleton-text
+                    class="event-card__line-badge"
+                    [animated]="true"
+                  ></ion-skeleton-text>
+                  <ion-skeleton-text
+                    class="event-card__line-progress"
+                    [animated]="true"
+                  ></ion-skeleton-text>
+                </div>
+              </div>
+            </ion-card-content>
+          </ion-card>
+        }
+      </div>
+    } @else if (error(); as errorMsg) {
+      <app-empty-state
+        [message]="errorMsg"
+        actionLabel="Reintentar"
+        (action)="retryLoad()"
+      />
+    } @else if (events().length === 0) {
+      <app-empty-state
+        message="Aún no tienes eventos."
+        actionLabel="Crear evento"
+        (action)="goToCreateEvent()"
+      />
+    } @else {
+      <div class="event-list">
+        @for (item of events(); track item.event.id) {
+          <ion-card
+            class="event-card"
+            [attr.data-theme]="item.event.theme_id"
+            [button]="true"
+            (click)="openEvent(item.event.id)"
+          >
+            <ion-card-content class="event-card__content">
+              <div class="event-card__row">
+                <img
+                  class="event-card__thumb"
+                  [src]="coverSrc(item.event.theme_id)"
+                  [alt]="item.event.name"
+                  width="84"
+                  height="84"
+                />
+                <div class="event-card__body">
+                  <div class="event-card__header">
+                    <h2 class="event-card__name text-name">{{ item.event.name }}</h2>
+                    @if (item.role === 'helper') {
+                      <ion-chip class="event-card__role-chip" color="secondary">
+                        <ion-label class="text-label">Ayudante</ion-label>
+                      </ion-chip>
+                    }
+                  </div>
+
+                  <ion-text color="medium">
+                    <p class="event-card__meta text-body">
+                      {{ formatDateAndCity(item.event) }}
+                    </p>
+                  </ion-text>
+
+                  <div class="event-card__badges">
+                    <span
+                      class="event-card__badge text-label"
+                      [class]="daysBadgeClass(item.event.starts_at)"
+                    >
+                      {{ daysBadgeText(item.event.starts_at) }}
+                    </span>
+                  </div>
+
+                  <div class="event-card__progress">
+                    <ion-progress-bar
+                      color="success"
+                      [value]="progressValue(item)"
+                    ></ion-progress-bar>
+                    <span class="event-card__progress-label text-label">
+                      {{ progressPercent(item) }} % confirmó
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </ion-card-content>
+          </ion-card>
+        }
+      </div>
+    }
+  </div>
+</ion-content>

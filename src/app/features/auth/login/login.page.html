@@ -1,7 +1,105 @@
-<ion-header>
-  <ion-toolbar>
-    <ion-title>Iniciar sesión</ion-title>
-  </ion-toolbar>
-</ion-header>
+<ion-content class="login-content">
+  <div class="login-wrapper">
+    <div class="login-hero">
+      <img
+        class="login-hero__logo"
+        [src]="logoSrc()"
+        alt="Convite"
+        width="88"
+        height="88"
+      />
+      <h1 class="login-hero__title text-title">Nuestros Eventos</h1>
+      <ion-text color="medium">
+        <p class="login-hero__subtitle text-body">
+          Inicia sesión para organizar tus eventos
+        </p>
+      </ion-text>
+    </div>
 
-<ion-content></ion-content>
+    <ion-card class="login-card">
+      <ion-card-content class="login-card__content">
+        <form class="login-form" [formGroup]="form" (ngSubmit)="onSubmit()" novalidate>
+          <div class="login-field">
+            <ion-input
+              formControlName="email"
+              label="Correo"
+              labelPlacement="floating"
+              fill="outline"
+              type="email"
+              inputmode="email"
+              autocomplete="email"
+              autocorrect="off"
+              autocapitalize="off"
+              spellcheck="false"
+              required
+              [class.ion-invalid]="!!emailError"
+              [class.ion-touched]="!!emailError"
+              [attr.aria-invalid]="!!emailError"
+              [attr.aria-describedby]="emailError ? 'login-email-error' : null"
+            >
+              <ion-icon slot="start" name="mail-outline" aria-hidden="true"></ion-icon>
+            </ion-input>
+            @if (emailError; as error) {
+              <ion-text color="danger">
+                <p id="login-email-error" class="login-field__error text-label" aria-live="polite">
+                  {{ error }}
+                </p>
+              </ion-text>
+            }
+          </div>
+
+          <div class="login-field">
+            <ion-input
+              formControlName="password"
+              label="Contraseña"
+              labelPlacement="floating"
+              fill="outline"
+              type="password"
+              autocomplete="current-password"
+              enterkeyhint="go"
+              required
+              [class.ion-invalid]="!!passwordError"
+              [class.ion-touched]="!!passwordError"
+              [attr.aria-invalid]="!!passwordError"
+              [attr.aria-describedby]="passwordError ? 'login-password-error' : null"
+              (keydown.enter)="onPasswordEnter($event)"
+            >
+              <ion-icon slot="start" name="lock-closed-outline" aria-hidden="true"></ion-icon>
+              <ion-input-password-toggle slot="end"></ion-input-password-toggle>
+            </ion-input>
+            @if (passwordError; as error) {
+              <ion-text color="danger">
+                <p
+                  id="login-password-error"
+                  class="login-field__error text-label"
+                  aria-live="polite"
+                >
+                  {{ error }}
+                </p>
+              </ion-text>
+            }
+          </div>
+
+          @if (errorMessage(); as error) {
+            <ion-text color="danger">
+              <p class="login-form__alert text-body" role="alert">{{ error }}</p>
+            </ion-text>
+          }
+
+          <ion-button
+            type="submit"
+            expand="block"
+            color="primary"
+            class="login-form__submit"
+            [disabled]="submitting()"
+          >
+            @if (submitting()) {
+              <ion-spinner name="crescent" slot="start" aria-hidden="true"></ion-spinner>
+            }
+            <span>Iniciar sesión</span>
+          </ion-button>
+        </form>
+      </ion-card-content>
+    </ion-card>
+  </div>
+</ion-content>
