@@ -624,3 +624,215 @@ test(
     );
   }
 );
+
+test(
+  '13. RN-12: un propietario y un ayudante cambian la respuesta de una persona con la fecha límite vencida',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    const { data: ownerRows, error: ownerError } = await ctx.ownerXClient
+      .from('guests')
+      .update({ rsvp: 'accepted' })
+      .eq('id', ctx.guestExpired.id)
+      .select();
+
+    assert.equal(
+      ownerError,
+      null,
+      'Se esperaba que el propietario X pudiera actualizar la respuesta con la fecha límite vencida'
+    );
+    assert.equal(
+      ownerRows?.length,
+      1,
+      'Se esperaba que la actualización del propietario X devolviera exactamente una fila'
+    );
+    assert.equal(
+      ownerRows[0].rsvp,
+      'accepted',
+      'Se esperaba que el rsvp quedara en accepted tras la actualización del propietario X'
+    );
+
+    const { data: helperRows, error: helperError } = await ctx.helperXClient
+      .from('guests')
+      .update({ rsvp: 'declined' })
+      .eq('id', ctx.guestExpired.id)
+      .select();
+
+    assert.equal(
+      helperError,
+      null,
+      'Se esperaba que el ayudante pudiera actualizar la respuesta con la fecha límite vencida'
+    );
+    assert.equal(
+      helperRows?.length,
+      1,
+      'Se esperaba que la actualización del ayudante devolviera exactamente una fila'
+    );
+    assert.equal(
+      helperRows[0].rsvp,
+      'declined',
+      'Se esperaba que el rsvp quedara en declined tras la actualización del ayudante'
+    );
+  }
+);
+
+test(
+  '14. RN-13: reserve_gift y release_gift fallan con gifts_closed en un evento que ya empezó',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    const { error: reserveError } = await ctx.anonClient.rpc('reserve_gift', {
+      p_code: ctx.invitationStarted.code,
+      p_gift_id: ctx.giftStartedRepeatable.id,
+    });
+
+    assert.ok(
+      reserveError,
+      'Se esperaba un error al apartar un regalo en un evento que ya empezó'
+    );
+    assert.equal(
+      reserveError.message,
+      'gifts_closed',
+      `Se esperaba el error gifts_closed en reserve_gift, pero se recibió: ${reserveError.message}`
+    );
+
+    const { error: releaseError } = await ctx.anonClient.rpc('release_gift', {
+      p_code: ctx.invitationStarted.code,
+      p_gift_id: ctx.giftStartedUnique.id,
+    });
+
+    assert.ok(
+      releaseError,
+      'Se esperaba un error al liberar un regalo en un evento que ya empezó'
+    );
+    assert.equal(
+      releaseError.message,
+      'gifts_closed',
+      `Se esperaba el error gifts_closed en release_gift, pero se recibió: ${releaseError.message}`
+    );
+
+    const { data: remainingReservations, error: checkError } =
+      await ctx.adminClient
+        .from('gift_reservations')
+        .select('id, gift_id, invitation_id')
+        .eq('id', ctx.reservationStartedUnique.id);
+
+    assert.equal(
+      checkError,
+      null,
+      'Se esperaba consultar con el administrador la reserva del evento iniciado sin error'
+    );
+    assert.equal(
+      remainingReservations?.length,
+      1,
+      'Se esperaba que la reserva del regalo único en el evento iniciado siguiera existiendo'
+    );
+  }
+);
+
+test(
+  '15. RN-15: cambiar el tipo de un regalo que ya tiene reservas falla',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    const { error: updateError } = await ctx.ownerXClient
+      .from('gifts')
+      .update({ kind: 'repeatable' })
+      .eq('id', ctx.giftXReserved.id);
+
+    assert.ok(
+      updateError,
+      'Se esperaba un error al cambiar el tipo de un regalo con reservas existentes'
+    );
+    assert.equal(
+      updateError.message,
+      'gift_has_reservations',
+      `Se esperaba el mensaje de error gift_has_reservations, pero se recibió: ${updateError.message}`
+    );
+
+    const { data: storedGift, error: checkError } = await ctx.adminClient
+      .from('gifts')
+      .select('id, kind')
+      .eq('id', ctx.giftXReserved.id)
+      .single();
+
+    assert.equal(
+      checkError,
+      null,
+      'Se esperaba consultar con el administrador el regalo reservado sin error'
+    );
+    assert.equal(
+      storedGift?.kind,
+      'unique',
+      'Se esperaba que el regalo conservara su tipo unique tras el intento fallido'
+    );
+  }
+);
+
+test(
+  '16. Cambiar el event_id de una invitación o de un regalo falla',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    const { error: invUpdateError } = await ctx.ownerXClient
+      .from('invitations')
+      .update({ event_id: ctx.eventExpired.id })
+      .eq('id', ctx.invitationA.id);
+
+    assert.ok(
+      invUpdateError,
+      'Se esperaba un error al intentar cambiar el event_id de la invitación A'
+    );
+    assert.equal(
+      invUpdateError.message,
+      'event_id_immutable',
+      `Se esperaba el mensaje de error event_id_immutable al mover la invitación, pero se recibió: ${invUpdateError.message}`
+    );
+
+    const { error: giftUpdateError } = await ctx.ownerXClient
+      .from('gifts')
+      .update({ event_id: ctx.eventExpired.id })
+      .eq('id', ctx.giftXRepeatable.id);
+
+    assert.ok(
+      giftUpdateError,
+      'Se esperaba un error al intentar cambiar el event_id del regalo repetible de X'
+    );
+    assert.equal(
+      giftUpdateError.message,
+      'event_id_immutable',
+      `Se esperaba el mensaje de error event_id_immutable al mover el regalo, pero se recibió: ${giftUpdateError.message}`
+    );
+
+    const { data: storedInvitation, error: checkInvError } =
+      await ctx.adminClient
+        .from('invitations')
+        .select('id, event_id')
+        .eq('id', ctx.invitationA.id)
+        .single();
+
+    assert.equal(
+      checkInvError,
+      null,
+      'Se esperaba consultar con el administrador la invitación A sin error'
+    );
+    assert.equal(
+      storedInvitation?.event_id,
+      ctx.eventX.id,
+      'Se esperaba que la invitación A siguiera perteneciendo al evento X'
+    );
+
+    const { data: storedGift, error: checkGiftError } = await ctx.adminClient
+      .from('gifts')
+      .select('id, event_id')
+      .eq('id', ctx.giftXRepeatable.id)
+      .single();
+
+    assert.equal(
+      checkGiftError,
+      null,
+      'Se esperaba consultar con el administrador el regalo repetible de X sin error'
+    );
+    assert.equal(
+      storedGift?.event_id,
+      ctx.eventX.id,
+      'Se esperaba que el regalo repetible siguiera perteneciendo al evento X'
+    );
+  }
+);

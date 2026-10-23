@@ -69,18 +69,26 @@ export function createEmptyContext() {
     eventX: null,
     eventY: null,
     eventExpired: null,
+    eventStarted: null,
     invitationA: null,
     invitationB: null,
     invitationY: null,
     invitationExpired: null,
+    invitationStarted: null,
     guestsA: [],
     guestB: null,
     guestY: null,
     guestExpired: null,
+    guestStarted: null,
     giftXUnique: null,
     giftXRepeatable: null,
     giftXFree: null,
+    giftXReserved: null,
     giftYUnique: null,
+    giftStartedUnique: null,
+    giftStartedRepeatable: null,
+    reservationStartedUnique: null,
+    reservationXReserved: null,
     uniqueGiftWinnerCode: null,
     uniqueGiftLoserCode: null,
     createdEventIds: [],
@@ -194,6 +202,8 @@ export async function setupTestContext(ctx) {
     const in20Days = new Date(now + 20 * DAY_MS).toISOString();
     const in10Days = new Date(now + 10 * DAY_MS).toISOString();
     const yesterday = new Date(now - 1 * DAY_MS).toISOString();
+    const twoDaysAgo = new Date(now - 2 * DAY_MS).toISOString();
+    const threeDaysAgo = new Date(now - 3 * DAY_MS).toISOString();
 
     const { data: eventX, error: eventXError } = await ctx.adminClient
       .from('events')
@@ -250,6 +260,25 @@ export async function setupTestContext(ctx) {
     ctx.eventExpired = eventExpired;
     ctx.createdEventIds.push(eventExpired.id);
 
+    const { data: eventStarted, error: eventStartedError } =
+      await ctx.adminClient
+        .from('events')
+        .insert({
+          name: `PRUEBA-${ctx.run}-INICIADO`,
+          starts_at: twoDaysAgo,
+          rsvp_deadline: threeDaysAgo,
+          created_by: ctx.ownerXUser.id,
+        })
+        .select()
+        .single();
+    if (eventStartedError || !eventStarted) {
+      throw new Error(
+        `No se pudo crear el evento iniciado: ${eventStartedError?.message ?? 'sin datos'}`
+      );
+    }
+    ctx.eventStarted = eventStarted;
+    ctx.createdEventIds.push(eventStarted.id);
+
     const { error: helperMemberError } = await ctx.adminClient
       .from('event_members')
       .insert({
@@ -260,6 +289,19 @@ export async function setupTestContext(ctx) {
     if (helperMemberError) {
       throw new Error(
         `No se pudo registrar al ayudante en el evento X: ${helperMemberError.message}`
+      );
+    }
+
+    const { error: helperExpiredMemberError } = await ctx.adminClient
+      .from('event_members')
+      .insert({
+        event_id: ctx.eventExpired.id,
+        user_id: ctx.helperXUser.id,
+        role: 'helper',
+      });
+    if (helperExpiredMemberError) {
+      throw new Error(
+        `No se pudo registrar al ayudante en el evento vencido: ${helperExpiredMemberError.message}`
       );
     }
 
@@ -327,6 +369,23 @@ export async function setupTestContext(ctx) {
       );
     }
     ctx.invitationExpired = invitationExpired;
+
+    const { data: invitationStarted, error: invStartedError } =
+      await ctx.adminClient
+        .from('invitations')
+        .insert({
+          event_id: ctx.eventStarted.id,
+          group_name: 'Familia Prueba Iniciada',
+          phone: '+573000000005',
+        })
+        .select()
+        .single();
+    if (invStartedError || !invitationStarted) {
+      throw new Error(
+        `No se pudo crear la invitación del evento iniciado: ${invStartedError?.message ?? 'sin datos'}`
+      );
+    }
+    ctx.invitationStarted = invitationStarted;
 
     const { data: guestsA, error: guestsAError } = await ctx.adminClient
       .from('guests')
@@ -398,6 +457,23 @@ export async function setupTestContext(ctx) {
     }
     ctx.guestExpired = guestExpired;
 
+    const { data: guestStarted, error: guestStartedError } =
+      await ctx.adminClient
+        .from('guests')
+        .insert({
+          invitation_id: ctx.invitationStarted.id,
+          full_name: 'Integrante Iniciado Uno',
+          sort_order: 1,
+        })
+        .select()
+        .single();
+    if (guestStartedError || !guestStarted) {
+      throw new Error(
+        `No se pudo crear la persona del evento iniciado: ${guestStartedError?.message ?? 'sin datos'}`
+      );
+    }
+    ctx.guestStarted = guestStarted;
+
     const { data: giftXUnique, error: giftXUniqueError } = await ctx.adminClient
       .from('gifts')
       .insert({
@@ -450,6 +526,40 @@ export async function setupTestContext(ctx) {
     }
     ctx.giftXFree = giftXFree;
 
+    const { data: giftXReserved, error: giftXReservedError } =
+      await ctx.adminClient
+        .from('gifts')
+        .insert({
+          event_id: ctx.eventX.id,
+          name: 'Regalo Reservado Evento X',
+          kind: 'unique',
+          sort_order: 4,
+        })
+        .select()
+        .single();
+    if (giftXReservedError || !giftXReserved) {
+      throw new Error(
+        `No se pudo crear el regalo reservado en X: ${giftXReservedError?.message ?? 'sin datos'}`
+      );
+    }
+    ctx.giftXReserved = giftXReserved;
+
+    const { data: reservationXReserved, error: reservationXReservedError } =
+      await ctx.adminClient
+        .from('gift_reservations')
+        .insert({
+          gift_id: ctx.giftXReserved.id,
+          invitation_id: ctx.invitationA.id,
+        })
+        .select()
+        .single();
+    if (reservationXReservedError || !reservationXReserved) {
+      throw new Error(
+        `No se pudo crear la reserva del regalo reservado en X: ${reservationXReservedError?.message ?? 'sin datos'}`
+      );
+    }
+    ctx.reservationXReserved = reservationXReserved;
+
     const { data: giftYUnique, error: giftYUniqueError } = await ctx.adminClient
       .from('gifts')
       .insert({
@@ -476,6 +586,60 @@ export async function setupTestContext(ctx) {
         `No se pudo apartar el regalo del evento Y: ${reserveYError.message}`
       );
     }
+
+    const { data: giftStartedUnique, error: giftStartedUniqueError } =
+      await ctx.adminClient
+        .from('gifts')
+        .insert({
+          event_id: ctx.eventStarted.id,
+          name: 'Regalo Único Evento Iniciado',
+          kind: 'unique',
+          sort_order: 1,
+        })
+        .select()
+        .single();
+    if (giftStartedUniqueError || !giftStartedUnique) {
+      throw new Error(
+        `No se pudo crear el regalo único en el evento iniciado: ${giftStartedUniqueError?.message ?? 'sin datos'}`
+      );
+    }
+    ctx.giftStartedUnique = giftStartedUnique;
+
+    const { data: giftStartedRepeatable, error: giftStartedRepeatableError } =
+      await ctx.adminClient
+        .from('gifts')
+        .insert({
+          event_id: ctx.eventStarted.id,
+          name: 'Regalo Repetible Evento Iniciado',
+          kind: 'repeatable',
+          sort_order: 2,
+        })
+        .select()
+        .single();
+    if (giftStartedRepeatableError || !giftStartedRepeatable) {
+      throw new Error(
+        `No se pudo crear el regalo repetible en el evento iniciado: ${giftStartedRepeatableError?.message ?? 'sin datos'}`
+      );
+    }
+    ctx.giftStartedRepeatable = giftStartedRepeatable;
+
+    const {
+      data: reservationStartedUnique,
+      error: reservationStartedUniqueError,
+    } = await ctx.adminClient
+      .from('gift_reservations')
+      .insert({
+        gift_id: ctx.giftStartedUnique.id,
+        invitation_id: ctx.invitationStarted.id,
+      })
+      .select()
+      .single();
+    if (reservationStartedUniqueError || !reservationStartedUnique) {
+      throw new Error(
+        `No se pudo crear la reserva en el evento iniciado: ${reservationStartedUniqueError?.message ?? 'sin datos'}`
+      );
+    }
+    ctx.reservationStartedUnique = reservationStartedUnique;
   } catch (err) {
     await teardownTestContext(ctx);
     throw err;
