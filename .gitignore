@@ -78,3 +78,8 @@ Thumbs.db
 CLAUDE.md
 CLAUDE.local.md
 .claude/
+.mcp.json
+skills-lock.json
+
+# Planificación
+/planificacion/
