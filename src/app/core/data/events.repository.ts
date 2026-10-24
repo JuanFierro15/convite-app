@@ -3,7 +3,7 @@ import { AuthService } from '../auth/auth.service';
 import { EventInput, EventRole, EventRow, EventSummary, RsvpCounts } from '../models/events';
 import { SupabaseService } from '../supabase/supabase.service';
 import { rsvpCounts } from '../utils/invitation-status';
-import { toUserError } from './errors';
+import { LOAD_ERROR_MESSAGE, toUserError } from './errors';
 
 @Injectable({ providedIn: 'root' })
 export class EventsRepository {
@@ -27,13 +27,13 @@ export class EventsRepository {
     ]);
 
     if (eventsResult.error) {
-      throw toUserError(eventsResult.error);
+      throw toUserError(eventsResult.error, LOAD_ERROR_MESSAGE);
     }
     if (membersResult.error) {
-      throw toUserError(membersResult.error);
+      throw toUserError(membersResult.error, LOAD_ERROR_MESSAGE);
     }
     if (guestsResult.error) {
-      throw toUserError(guestsResult.error);
+      throw toUserError(guestsResult.error, LOAD_ERROR_MESSAGE);
     }
 
     const roleByEventId = new Map<string, EventRole>();
@@ -77,7 +77,7 @@ export class EventsRepository {
       .maybeSingle();
 
     if (error) {
-      throw toUserError(error);
+      throw toUserError(error, LOAD_ERROR_MESSAGE);
     }
     return data;
   }
@@ -134,7 +134,7 @@ export class EventsRepository {
       .eq('event_id', eventId);
 
     if (error) {
-      throw toUserError(error);
+      throw toUserError(error, LOAD_ERROR_MESSAGE);
     }
     return rsvpCounts(data ?? []);
   }

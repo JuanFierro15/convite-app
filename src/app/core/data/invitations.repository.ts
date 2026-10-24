@@ -4,7 +4,7 @@ import { Rsvp } from '../models/events';
 import { GuestRow, InvitationInput, InvitationWithGuests } from '../models/invitations';
 import { SupabaseService } from '../supabase/supabase.service';
 import { normalizePhone } from '../utils/phone';
-import { toUserError } from './errors';
+import { LOAD_ERROR_MESSAGE, toUserError } from './errors';
 
 function sortGuests(guests: GuestRow[]): GuestRow[] {
   return [...guests].sort((a, b) => {
@@ -26,7 +26,7 @@ export class InvitationsRepository {
       .eq('event_id', eventId);
 
     if (error) {
-      throw toUserError(error);
+      throw toUserError(error, LOAD_ERROR_MESSAGE);
     }
 
     const items: InvitationWithGuests[] = (data ?? []).map((row) => ({
@@ -51,7 +51,7 @@ export class InvitationsRepository {
       .maybeSingle();
 
     if (error) {
-      throw toUserError(error);
+      throw toUserError(error, LOAD_ERROR_MESSAGE);
     }
     if (!data) {
       return null;
@@ -69,7 +69,11 @@ export class InvitationsRepository {
     };
   }
 
-  async create(eventId: string, input: InvitationInput): Promise<InvitationWithGuests> {
+  async save(
+    eventId: string,
+    invitationId: string,
+    input: InvitationInput,
+  ): Promise<InvitationWithGuests> {
     let phone: string | null;
     try {
       phone = normalizePhone(input.phone);
@@ -77,143 +81,28 @@ export class InvitationsRepository {
       throw toUserError(err);
     }
 
-    const { data: invitation, error: invError } = await this.supabase.client
-      .from('invitations')
-      .insert({
-        event_id: eventId,
-        group_name: input.group_name.trim(),
-        phone,
-      })
-      .select('*')
-      .single();
-
-    if (invError) {
-      throw toUserError(invError);
-    }
-
-    let guests: GuestRow[] = [];
-    if (input.guests.length > 0) {
-      const rows = input.guests.map((guest, index) => ({
-        invitation_id: invitation.id,
-        event_id: eventId,
-        full_name: guest.full_name.trim(),
-        sort_order: index,
-      }));
-
-      const { data: insertedGuests, error: guestsError } = await this.supabase.client
-        .from('guests')
-        .insert(rows)
-        .select('*');
-
-      if (guestsError) {
-        throw toUserError(guestsError);
-      }
-      guests = sortGuests(insertedGuests ?? []);
-    }
-
-    return {
-      ...invitation,
-      guests,
-    };
-  }
-
-  async update(invitationId: string, input: InvitationInput): Promise<InvitationWithGuests> {
-    let phone: string | null;
-    try {
-      phone = normalizePhone(input.phone);
-    } catch (err) {
-      throw toUserError(err);
-    }
-
-    const { data: invitation, error: invError } = await this.supabase.client
-      .from('invitations')
-      .update({
-        group_name: input.group_name.trim(),
-        phone,
-      })
-      .eq('id', invitationId)
-      .select('*')
-      .single();
-
-    if (invError) {
-      throw toUserError(invError);
-    }
-
-    const { data: existingGuests, error: existingError } = await this.supabase.client
-      .from('guests')
-      .select('id')
-      .eq('invitation_id', invitationId);
-
-    if (existingError) {
-      throw toUserError(existingError);
-    }
-
-    const existingIds = new Set((existingGuests ?? []).map((g) => g.id));
-    const incomingIds = new Set(
-      input.guests.map((g) => g.id).filter((id): id is string => Boolean(id)),
-    );
-
-    const idsToDelete = [...existingIds].filter((id) => !incomingIds.has(id));
-    if (idsToDelete.length > 0) {
-      const { error: deleteError } = await this.supabase.client
-        .from('guests')
-        .delete()
-        .in('id', idsToDelete);
-
-      if (deleteError) {
-        throw toUserError(deleteError);
-      }
-    }
-
-    const indexedGuests = input.guests.map((guest, index) => ({
+    const guests = input.guests.map((guest) => ({
       id: guest.id,
       full_name: guest.full_name.trim(),
-      sort_order: index,
     }));
 
-    const existingToUpdate = indexedGuests.filter(
-      (guest): guest is { id: string; full_name: string; sort_order: number } =>
-        Boolean(guest.id && existingIds.has(guest.id)),
-    );
+    const { data, error } = await this.supabase.client.rpc('save_invitation', {
+      p_invitation_id: invitationId,
+      p_event_id: eventId,
+      p_group_name: input.group_name.trim(),
+      p_phone: phone ?? '',
+      p_guests: guests,
+    });
 
-    for (const guest of existingToUpdate) {
-      const { error: updateError } = await this.supabase.client
-        .from('guests')
-        .update({
-          full_name: guest.full_name,
-          sort_order: guest.sort_order,
-        })
-        .eq('id', guest.id);
-
-      if (updateError) {
-        throw toUserError(updateError);
-      }
+    if (error) {
+      throw toUserError(error);
     }
 
-    const newToInsert = indexedGuests
-      .filter((guest) => !guest.id || !existingIds.has(guest.id))
-      .map((guest) => ({
-        invitation_id: invitationId,
-        event_id: invitation.event_id,
-        full_name: guest.full_name,
-        sort_order: guest.sort_order,
-      }));
-
-    if (newToInsert.length > 0) {
-      const { error: insertError } = await this.supabase.client
-        .from('guests')
-        .insert(newToInsert);
-
-      if (insertError) {
-        throw toUserError(insertError);
-      }
-    }
-
-    const updated = await this.get(invitationId);
-    if (!updated) {
-      throw toUserError(new Error('not_found'));
-    }
-    return updated;
+    const saved = data as unknown as InvitationWithGuests;
+    return {
+      ...saved,
+      guests: sortGuests(saved.guests ?? []),
+    };
   }
 
   async remove(invitationId: string): Promise<void> {

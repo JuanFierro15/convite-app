@@ -9,7 +9,7 @@ export interface InvitationWithGuests extends InvitationRow {
 }
 
 export interface InvitationGuestInput {
-  id?: string;
+  id: string;
   full_name: string;
 }
 

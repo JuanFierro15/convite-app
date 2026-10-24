@@ -1,6 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { AuthService } from '../auth/auth.service';
-import { toUserError } from '../data/errors';
+import { LOAD_ERROR_MESSAGE, toUserError } from '../data/errors';
 import { EventRole, EventRow } from '../models/events';
 import { SupabaseService } from '../supabase/supabase.service';
 import { ThemeService } from '../theme/theme.service';
@@ -54,7 +54,7 @@ export class EventContextService {
       ]);
 
       if (eventResult.error || memberResult.error) {
-        const err = toUserError(eventResult.error ?? memberResult.error);
+        const err = toUserError(eventResult.error ?? memberResult.error, LOAD_ERROR_MESSAGE);
         this.eventSignal.set(null);
         this.roleSignal.set(null);
         this.errorSignal.set(err.message);
@@ -78,7 +78,7 @@ export class EventContextService {
     } catch (err) {
       this.eventSignal.set(null);
       this.roleSignal.set(null);
-      this.errorSignal.set(toUserError(err).message);
+      this.errorSignal.set(toUserError(err, LOAD_ERROR_MESSAGE).message);
     } finally {
       this.loadingSignal.set(false);
     }

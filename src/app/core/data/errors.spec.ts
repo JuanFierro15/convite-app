@@ -1,17 +1,22 @@
 import {
   AuthService,
+  CONNECTION_ERROR_MESSAGE,
   EventContextService,
   EventsRepository,
+  GUEST_ERROR_MESSAGES,
   GiftsRepository,
   GuestApiError,
   GuestApiService,
   InvitationsRepository,
+  LOAD_ERROR_MESSAGE,
   RealtimeService,
   SupabaseService,
   ThemeService,
   authGuard,
   guestErrorMessage,
+  isConnectionError,
   roleGuard,
+  toGuestApiError,
   toUserError,
 } from '../index';
 
@@ -30,7 +35,7 @@ describe('core exports and error translation', () => {
     expect(ThemeService).toBeDefined();
   });
 
-  describe('toUserError', () => {
+  describe('toUserError and isConnectionError', () => {
     it('translates gift_has_reservations', () => {
       const err = toUserError({ message: 'gift_has_reservations' });
       expect(err.message).toBe('Este regalo ya tiene reservas, así que no se puede cambiar su tipo.');
@@ -61,13 +66,54 @@ describe('core exports and error translation', () => {
       expect(err.message).toBe('La fecha límite debe ser anterior o igual a la fecha del evento.');
     });
 
-    it('translates unknown errors to default message', () => {
+    it('recognizes connection errors and translates them to CONNECTION_ERROR_MESSAGE', () => {
+      const failedFetch = { message: 'TypeError: Failed to fetch' };
+      const requestTimeout = { message: 'TimeoutError: request_timeout' };
+      const cloudflareHtml = {
+        message: '  <!DOCTYPE html><html><head><title>522</title></head><body></body></html>',
+      };
+      const timeoutErrorInstance = new Error('operation timed out');
+      timeoutErrorInstance.name = 'TimeoutError';
+
+      expect(isConnectionError(failedFetch)).toBe(true);
+      expect(isConnectionError(requestTimeout)).toBe(true);
+      expect(isConnectionError(cloudflareHtml)).toBe(true);
+      expect(isConnectionError(timeoutErrorInstance)).toBe(true);
+
+      expect(toUserError(failedFetch).message).toBe(CONNECTION_ERROR_MESSAGE);
+      expect(toUserError(requestTimeout).message).toBe(CONNECTION_ERROR_MESSAGE);
+      expect(toUserError(cloudflareHtml).message).toBe(CONNECTION_ERROR_MESSAGE);
+      expect(toUserError(timeoutErrorInstance, LOAD_ERROR_MESSAGE).message).toBe(
+        CONNECTION_ERROR_MESSAGE,
+      );
+    });
+
+    it('translates guests_required', () => {
+      const err = toUserError({ message: 'guests_required' });
+      expect(err.message).toBe('Agrega al menos una persona.');
+    });
+
+    it('translates invitation_event_mismatch and guest_not_in_invitation to generic save message', () => {
+      expect(toUserError({ message: 'invitation_event_mismatch' }).message).toBe(
+        'No pudimos guardar el cambio. Inténtalo de nuevo.',
+      );
+      expect(toUserError({ message: 'guest_not_in_invitation' }).message).toBe(
+        'No pudimos guardar el cambio. Inténtalo de nuevo.',
+      );
+    });
+
+    it('uses fallback when provided for unknown errors', () => {
+      const err = toUserError({ message: 'unexpected_db_error' }, LOAD_ERROR_MESSAGE);
+      expect(err.message).toBe(LOAD_ERROR_MESSAGE);
+    });
+
+    it('translates unknown errors without fallback to default message', () => {
       const err = toUserError({ message: 'unexpected_db_error' });
       expect(err.message).toBe('No pudimos guardar el cambio. Inténtalo de nuevo.');
     });
   });
 
-  describe('guestErrorMessage and GuestApiError', () => {
+  describe('guestErrorMessage, GuestApiError and toGuestApiError', () => {
     it('translates known guest RPC error codes and falls back for unknown codes', () => {
       expect(guestErrorMessage('invalid_code')).toBe(
         'No encontramos esta invitación. Revisa el enlace que te enviaron.',
@@ -79,6 +125,20 @@ describe('core exports and error translation', () => {
         'Otra familia acaba de apartar este regalo. Elige otro de la lista.',
       );
       expect(guestErrorMessage('gifts_closed')).toBe('La lista de regalos ya está cerrada.');
+      expect(GUEST_ERROR_MESSAGES['network_error']).toBe(CONNECTION_ERROR_MESSAGE);
+      expect(GUEST_ERROR_MESSAGES['not_reserved_by_you']).toBe(
+        'Este regalo ya no está apartado por tu familia.',
+      );
+      expect(GUEST_ERROR_MESSAGES['load_failed']).toBe(
+        'No pudimos cargar tu invitación. Inténtalo de nuevo.',
+      );
+      expect(guestErrorMessage('network_error')).toBe(CONNECTION_ERROR_MESSAGE);
+      expect(guestErrorMessage('not_reserved_by_you')).toBe(
+        'Este regalo ya no está apartado por tu familia.',
+      );
+      expect(guestErrorMessage('load_failed')).toBe(
+        'No pudimos cargar tu invitación. Inténtalo de nuevo.',
+      );
       expect(guestErrorMessage('other_code')).toBe(
         'No pudimos guardar el cambio. Inténtalo de nuevo.',
       );
@@ -92,6 +152,32 @@ describe('core exports and error translation', () => {
       expect(error.message).toBe(
         'Otra familia acaba de apartar este regalo. Elige otro de la lista.',
       );
+    });
+
+    it('converts connection errors to network_error in toGuestApiError', () => {
+      const err1 = toGuestApiError({ message: 'TypeError: Failed to fetch' }, 'load_failed');
+      expect(err1.code).toBe('network_error');
+      expect(err1.message).toBe(CONNECTION_ERROR_MESSAGE);
+
+      const err2 = toGuestApiError({ message: '<html><body>524</body></html>' });
+      expect(err2.code).toBe('network_error');
+      expect(err2.message).toBe(CONNECTION_ERROR_MESSAGE);
+    });
+
+    it('uses fallbackCode for unknown errors in toGuestApiError while keeping known codes', () => {
+      const loadErr = toGuestApiError({ message: 'some_db_failure' }, 'load_failed');
+      expect(loadErr.code).toBe('load_failed');
+      expect(loadErr.message).toBe('No pudimos cargar tu invitación. Inténtalo de nuevo.');
+
+      const invalidCodeErr = toGuestApiError({ message: 'invalid_code' }, 'load_failed');
+      expect(invalidCodeErr.code).toBe('invalid_code');
+      expect(invalidCodeErr.message).toBe(
+        'No encontramos esta invitación. Revisa el enlace que te enviaron.',
+      );
+
+      const writeErr = toGuestApiError({ message: 'some_db_failure' });
+      expect(writeErr.code).toBe('some_db_failure');
+      expect(writeErr.message).toBe('No pudimos guardar el cambio. Inténtalo de nuevo.');
     });
   });
 });

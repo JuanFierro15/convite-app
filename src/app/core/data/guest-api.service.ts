@@ -6,6 +6,7 @@ import {
   guestErrorMessage,
 } from '../models/guest';
 import { SupabaseService } from '../supabase/supabase.service';
+import { isConnectionError } from './errors';
 
 export { GuestApiError, guestErrorMessage } from '../models/guest';
 
@@ -20,9 +21,13 @@ const KNOWN_RPC_CODES = [
   'not_reserved_by_you',
 ] as const;
 
-function toGuestApiError(error: unknown): GuestApiError {
+export function toGuestApiError(error: unknown, fallbackCode?: string): GuestApiError {
   if (error instanceof GuestApiError) {
     return error;
+  }
+
+  if (isConnectionError(error)) {
+    return new GuestApiError('network_error', guestErrorMessage('network_error'));
   }
 
   const rawMessage =
@@ -35,7 +40,7 @@ function toGuestApiError(error: unknown): GuestApiError {
         : 'unknown_error';
 
   const matchedCode = KNOWN_RPC_CODES.find((c) => rawMessage === c || rawMessage.includes(c));
-  const code = matchedCode ?? (rawMessage || 'unknown_error');
+  const code = matchedCode ?? fallbackCode ?? (rawMessage || 'unknown_error');
   return new GuestApiError(code, guestErrorMessage(code));
 }
 
@@ -49,7 +54,7 @@ export class GuestApiService {
     });
 
     if (error) {
-      throw toGuestApiError(error);
+      throw toGuestApiError(error, 'load_failed');
     }
     return (data as unknown as GuestInvitation | null) ?? null;
   }
@@ -77,7 +82,7 @@ export class GuestApiService {
     });
 
     if (error) {
-      throw toGuestApiError(error);
+      throw toGuestApiError(error, 'load_failed');
     }
     return (data as unknown as GuestGift[] | null) ?? [];
   }

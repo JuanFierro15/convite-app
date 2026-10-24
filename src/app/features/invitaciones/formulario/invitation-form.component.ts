@@ -42,11 +42,12 @@ import {
   InvitationsRepository,
   formatPhone,
   isValidPhone,
+  newId,
 } from '../../../core';
 import { InvitationActionsService } from '../invitation-actions.service';
 
 interface GuestControlMap {
-  id: FormControl<string | undefined>;
+  id: FormControl<string>;
   full_name: FormControl<string>;
 }
 
@@ -107,6 +108,8 @@ export class InvitationFormComponent implements OnInit {
   readonly saving = signal<boolean>(false);
   readonly submitted = signal<boolean>(false);
 
+  private invitationId = '';
+
   readonly form = this.fb.nonNullable.group({
     group_name: ['', [Validators.required, Validators.maxLength(120), notBlankValidator]],
     phone: ['', [optionalPhoneValidator]],
@@ -125,6 +128,7 @@ export class InvitationFormComponent implements OnInit {
     const existing = this.invitation;
     if (existing) {
       this.isEdit.set(true);
+      this.invitationId = existing.id;
       this.form.controls.group_name.setValue(existing.group_name);
       this.form.controls.phone.setValue(formatPhone(existing.phone));
       this.guestsArray.clear();
@@ -137,6 +141,7 @@ export class InvitationFormComponent implements OnInit {
       }
     } else {
       this.isEdit.set(false);
+      this.invitationId = newId();
       this.guestsArray.clear();
       this.guestsArray.push(this.createGuestControl(''));
     }
@@ -239,18 +244,20 @@ export class InvitationFormComponent implements OnInit {
     const payload: InvitationInput = {
       group_name: raw.group_name.trim(),
       phone: raw.phone,
-      guests: raw.guests.map((guest) =>
-        guest.id
-          ? { id: guest.id, full_name: guest.full_name.trim() }
-          : { full_name: guest.full_name.trim() },
-      ),
+      guests: raw.guests.map((guest) => ({
+        id: guest.id,
+        full_name: guest.full_name.trim(),
+      })),
     };
 
+    const targetEventId = this.invitation ? this.invitation.event_id : this.eventId;
+
     try {
-      const existing = this.invitation;
-      const saved = existing
-        ? await this.invitationsRepository.update(existing.id, payload)
-        : await this.invitationsRepository.create(this.eventId, payload);
+      const saved = await this.invitationsRepository.save(
+        targetEventId,
+        this.invitationId,
+        payload,
+      );
       await this.modalController.dismiss(saved, 'saved');
     } catch (err) {
       await this.invitationActions.showError(err);
@@ -259,9 +266,9 @@ export class InvitationFormComponent implements OnInit {
     }
   }
 
-  private createGuestControl(fullName: string, id?: string): GuestFormGroup {
+  private createGuestControl(fullName: string, id: string = newId()): GuestFormGroup {
     return this.fb.group<GuestControlMap>({
-      id: this.fb.nonNullable.control<string | undefined>(id),
+      id: this.fb.nonNullable.control(id),
       full_name: this.fb.nonNullable.control(fullName, [
         Validators.required,
         Validators.maxLength(120),

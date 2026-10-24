@@ -7,7 +7,7 @@ import {
   GiftWithReservations,
 } from '../models/gifts';
 import { SupabaseService } from '../supabase/supabase.service';
-import { toUserError } from './errors';
+import { LOAD_ERROR_MESSAGE, toUserError } from './errors';
 
 const KIND_ORDER: Record<string, number> = {
   repeatable: 0,
@@ -44,7 +44,7 @@ export class GiftsRepository {
       .eq('event_id', eventId);
 
     if (error) {
-      throw toUserError(error);
+      throw toUserError(error, LOAD_ERROR_MESSAGE);
     }
 
     const items: GiftWithReservations[] = (data ?? []).map((row) => {
