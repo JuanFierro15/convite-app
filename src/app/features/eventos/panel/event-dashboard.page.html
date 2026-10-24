@@ -24,6 +24,14 @@
       <ion-spinner name="crescent" color="primary"></ion-spinner>
       <p class="text-body dashboard-loading__text">Cargando evento...</p>
     </div>
+  } @else if (error(); as errorMsg) {
+    <div class="dashboard-empty">
+      <app-empty-state
+        [message]="errorMsg"
+        actionLabel="Reintentar"
+        (action)="retryLoad()"
+      />
+    </div>
   } @else if (!event()) {
     <div class="dashboard-empty">
       <app-empty-state

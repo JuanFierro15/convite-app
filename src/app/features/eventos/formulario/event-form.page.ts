@@ -49,6 +49,7 @@ import {
   toBogotaDateInput,
   toBogotaDateTimeInput,
 } from '../../../core';
+import { EmptyStateComponent } from '../../../shared';
 
 function requiredTrimmedValidator(
   control: AbstractControl<string>,
@@ -144,6 +145,7 @@ function toNullableBudget(value: string | number | null | undefined): number | n
     IonSelectOption,
     IonTextarea,
     IonButton,
+    EmptyStateComponent,
   ],
 })
 export class EventFormPage implements ViewWillEnter {
@@ -159,6 +161,7 @@ export class EventFormPage implements ViewWillEnter {
 
   readonly themes = THEMES;
   readonly loading = signal<boolean>(false);
+  readonly loadError = signal<string | null>(null);
   readonly submitting = signal<boolean>(false);
 
   readonly isEditMode = computed<boolean>(() => Boolean(this.id()));
@@ -207,6 +210,13 @@ export class EventFormPage implements ViewWillEnter {
       return;
     }
     void this.loadForEdit(eventId);
+  }
+
+  retryLoad(): void {
+    const eventId = this.id();
+    if (eventId) {
+      void this.loadForEdit(eventId);
+    }
   }
 
   onThemeChange(themeId: string | null | undefined): void {
@@ -263,6 +273,7 @@ export class EventFormPage implements ViewWillEnter {
 
   private resetForCreate(): void {
     this.loading.set(false);
+    this.loadError.set(null);
     this.form.reset({
       name: '',
       theme_id: DEFAULT_THEME,
@@ -280,8 +291,15 @@ export class EventFormPage implements ViewWillEnter {
 
   private async loadForEdit(eventId: string): Promise<void> {
     this.loading.set(true);
+    this.loadError.set(null);
     try {
       await this.eventContext.load(eventId, { force: true });
+      const contextError = this.eventContext.error();
+      if (contextError) {
+        this.loadError.set(contextError);
+        return;
+      }
+
       const currentEvent = this.eventContext.event();
       const currentRole = this.eventContext.role();
 
@@ -315,10 +333,10 @@ export class EventFormPage implements ViewWillEnter {
       });
     } catch (err) {
       const message =
-        err instanceof Error
+        err instanceof Error && err.message
           ? err.message
           : 'No pudimos cargar los datos del evento.';
-      await this.showErrorToast(message);
+      this.loadError.set(message);
     } finally {
       this.loading.set(false);
     }

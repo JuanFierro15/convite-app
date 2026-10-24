@@ -83,6 +83,9 @@
                           [disabled]="!inv.gifts_open || processingGiftId() !== null"
                           (click)="onToggleUnlimitedGift(gift)"
                         >
+                          @if (processingGiftId() === gift.id) {
+                            <ion-spinner slot="start" name="crescent"></ion-spinner>
+                          }
                           Quitar mi elección
                         </ion-button>
                       } @else {
@@ -92,6 +95,9 @@
                           [disabled]="!inv.gifts_open || processingGiftId() !== null"
                           (click)="onToggleUnlimitedGift(gift)"
                         >
+                          @if (processingGiftId() === gift.id) {
+                            <ion-spinner slot="start" name="crescent"></ion-spinner>
+                          }
                           Elegir esta opción
                         </ion-button>
                       }
@@ -121,6 +127,9 @@
                         [disabled]="!inv.gifts_open || processingGiftId() !== null"
                         (click)="onConfirmReserveUnique(gift)"
                       >
+                        @if (processingGiftId() === gift.id) {
+                          <ion-spinner slot="start" name="crescent"></ion-spinner>
+                        }
                         Apartar este regalo
                       </ion-button>
                     </ion-card-content>
@@ -153,6 +162,9 @@
                         [disabled]="!inv.gifts_open || processingGiftId() !== null"
                         (click)="onConfirmReleaseUnique(gift)"
                       >
+                        @if (processingGiftId() === gift.id) {
+                          <ion-spinner slot="start" name="crescent"></ion-spinner>
+                        }
                         Liberar
                       </ion-button>
                     </ion-card-content>
@@ -191,6 +203,8 @@
       <div class="empty-wrapper">
         <app-empty-state
           [message]="error() ?? 'No encontramos esta invitación. Revisa el enlace que te enviaron.'"
+          [actionLabel]="canRetry() ? 'Reintentar' : undefined"
+          (action)="retryLoad()"
         />
       </div>
     }

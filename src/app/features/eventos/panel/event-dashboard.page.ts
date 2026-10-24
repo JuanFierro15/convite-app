@@ -102,6 +102,7 @@ export class EventDashboardPage implements ViewWillEnter, ViewWillLeave {
 
   readonly event = this.eventContext.event;
   readonly isOwner = this.eventContext.isOwner;
+  readonly error = this.eventContext.error;
   readonly counts = signal<RsvpCounts>({
     accepted: 0,
     pending: 0,
@@ -111,7 +112,7 @@ export class EventDashboardPage implements ViewWillEnter, ViewWillLeave {
   private readonly initialLoading = signal<boolean>(true);
 
   readonly loading = computed<boolean>(
-    () => this.initialLoading() && this.event() === null,
+    () => (this.initialLoading() || this.eventContext.loading()) && this.event() === null,
   );
 
   readonly countdownTitle = computed<string>(() => {
@@ -194,13 +195,18 @@ export class EventDashboardPage implements ViewWillEnter, ViewWillLeave {
     await this.router.navigate(['/eventos']);
   }
 
+  async retryLoad(): Promise<void> {
+    this.initialLoading.set(true);
+    await this.loadDashboard(this.id(), true);
+  }
+
   private async loadDashboard(
     eventId: string,
     isInitial: boolean,
   ): Promise<void> {
     try {
       const [, countsResult] = await Promise.allSettled([
-        this.eventContext.load(eventId, { force: true }),
+        this.eventContext.load(eventId, { force: isInitial }),
         this.eventsRepo.countsFor(eventId),
       ]);
 

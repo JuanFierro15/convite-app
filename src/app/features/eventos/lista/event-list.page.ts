@@ -20,6 +20,7 @@ import {
   IonTitle,
   IonToolbar,
   RefresherCustomEvent,
+  ToastController,
   ViewWillEnter,
 } from '@ionic/angular';
 import { addIcons } from 'ionicons';
@@ -68,6 +69,7 @@ export class EventListPage implements ViewWillEnter {
   private readonly theme = inject(ThemeService);
   private readonly router = inject(Router);
   private readonly actionSheetCtrl = inject(ActionSheetController);
+  private readonly toastCtrl = inject(ToastController);
   private readonly authReady$ = toObservable(this.auth.ready);
 
   readonly events = signal<EventSummary[]>([]);
@@ -123,7 +125,12 @@ export class EventListPage implements ViewWillEnter {
         err instanceof Error && err.message
           ? err.message
           : 'No pudimos cargar tus eventos. Inténtalo de nuevo.';
-      this.error.set(message);
+      if (this.hasLoadedOnce() && this.events().length > 0) {
+        await this.showErrorToast(message);
+      } else {
+        this.hasLoadedOnce.set(false);
+        this.error.set(message);
+      }
     } finally {
       this.loading.set(false);
     }
@@ -226,5 +233,15 @@ export class EventListPage implements ViewWillEnter {
       return 0;
     }
     return Math.round((accepted / total) * 100);
+  }
+
+  private async showErrorToast(message: string): Promise<void> {
+    const toast = await this.toastCtrl.create({
+      message,
+      duration: 3000,
+      color: 'danger',
+      position: 'bottom',
+    });
+    await toast.present();
   }
 }

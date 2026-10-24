@@ -15,8 +15,17 @@
         <ion-button aria-label="Editar" (click)="openEditModal()">
           <ion-icon slot="icon-only" name="create-outline"></ion-icon>
         </ion-button>
-        <ion-button color="danger" aria-label="Borrar" (click)="onDelete()">
-          <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+        <ion-button
+          color="danger"
+          aria-label="Borrar"
+          [disabled]="deleting()"
+          (click)="onDelete()"
+        >
+          @if (deleting()) {
+            <ion-spinner slot="icon-only" name="crescent"></ion-spinner>
+          } @else {
+            <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+          }
         </ion-button>
       </ion-buttons>
     }
@@ -28,6 +37,12 @@
     <div class="loading-container">
       <ion-spinner name="crescent" color="primary"></ion-spinner>
     </div>
+  } @else if (error(); as errorMsg) {
+    <app-empty-state
+      [message]="errorMsg"
+      actionLabel="Reintentar"
+      (action)="retryLoad()"
+    />
   } @else if (!invitation(); as _) {
     <app-empty-state
       message="Esta invitación ya no existe."

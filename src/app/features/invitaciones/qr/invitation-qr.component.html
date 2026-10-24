@@ -22,6 +22,12 @@
           <div class="qr-spinner">
             <ion-spinner name="crescent" color="primary"></ion-spinner>
           </div>
+        } @else if (error(); as errorMsg) {
+          <app-empty-state
+            [message]="errorMsg"
+            actionLabel="Reintentar"
+            (action)="retryGenerate()"
+          />
         } @else if (qrDataUrl(); as dataUrl) {
           <img
             class="qr-image"
@@ -46,7 +52,11 @@
         [disabled]="loading() || !qrDataUrl() || sharing()"
         (click)="shareQr()"
       >
-        <ion-icon slot="start" name="share-social-outline"></ion-icon>
+        @if (sharing()) {
+          <ion-spinner slot="start" name="crescent"></ion-spinner>
+        } @else {
+          <ion-icon slot="start" name="share-social-outline"></ion-icon>
+        }
         Compartir QR
       </ion-button>
       <ion-button expand="block" fill="outline" color="medium" (click)="close()">

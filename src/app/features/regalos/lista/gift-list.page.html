@@ -25,7 +25,11 @@
         (click)="addSuggestedGifts()"
         [disabled]="addingSuggested()"
       >
-        <ion-icon slot="start" name="sparkles-outline" aria-hidden="true"></ion-icon>
+        @if (addingSuggested()) {
+          <ion-spinner slot="start" name="crescent"></ion-spinner>
+        } @else {
+          <ion-icon slot="start" name="sparkles-outline" aria-hidden="true"></ion-icon>
+        }
         Agregar opciones sugeridas
       </ion-button>
     </div>
@@ -55,6 +59,12 @@
         <ion-spinner name="crescent" color="primary"></ion-spinner>
         <p class="text-body">Cargando lista de regalos...</p>
       </div>
+    } @else if (error(); as errorMsg) {
+      <app-empty-state
+        [message]="errorMsg"
+        actionLabel="Reintentar"
+        (action)="retryLoad()"
+      />
     } @else if (gifts().length === 0) {
       <app-empty-state
         message="Todavía no hay regalos en la lista."
@@ -83,13 +93,18 @@
                     color="medium"
                     class="options-button"
                     (click)="openGiftOptions(gift)"
+                    [disabled]="deletingGiftId() === gift.id"
                     [attr.aria-label]="'Opciones de ' + gift.name"
                   >
-                    <ion-icon
-                      slot="icon-only"
-                      name="ellipsis-vertical-outline"
-                      aria-hidden="true"
-                    ></ion-icon>
+                    @if (deletingGiftId() === gift.id) {
+                      <ion-spinner slot="icon-only" name="crescent"></ion-spinner>
+                    } @else {
+                      <ion-icon
+                        slot="icon-only"
+                        name="ellipsis-vertical-outline"
+                        aria-hidden="true"
+                      ></ion-icon>
+                    }
                   </ion-button>
                 </div>
 
@@ -116,13 +131,18 @@
                               color="danger"
                               size="small"
                               (click)="confirmRelease(gift, res)"
+                              [disabled]="releasingReservationId() !== null"
                               [attr.aria-label]="'Liberar la reserva de ' + res.group_name"
                             >
-                              <ion-icon
-                                slot="start"
-                                name="close-circle-outline"
-                                aria-hidden="true"
-                              ></ion-icon>
+                              @if (releasingReservationId() === res.id) {
+                                <ion-spinner slot="start" name="crescent"></ion-spinner>
+                              } @else {
+                                <ion-icon
+                                  slot="start"
+                                  name="close-circle-outline"
+                                  aria-hidden="true"
+                                ></ion-icon>
+                              }
                               Liberar
                             </ion-button>
                           </div>
@@ -159,13 +179,18 @@
                     color="medium"
                     class="options-button"
                     (click)="openGiftOptions(gift)"
+                    [disabled]="deletingGiftId() === gift.id"
                     [attr.aria-label]="'Opciones de ' + gift.name"
                   >
-                    <ion-icon
-                      slot="icon-only"
-                      name="ellipsis-vertical-outline"
-                      aria-hidden="true"
-                    ></ion-icon>
+                    @if (deletingGiftId() === gift.id) {
+                      <ion-spinner slot="icon-only" name="crescent"></ion-spinner>
+                    } @else {
+                      <ion-icon
+                        slot="icon-only"
+                        name="ellipsis-vertical-outline"
+                        aria-hidden="true"
+                      ></ion-icon>
+                    }
                   </ion-button>
                 </div>
 
@@ -192,13 +217,18 @@
                               color="danger"
                               size="small"
                               (click)="confirmRelease(gift, res)"
+                              [disabled]="releasingReservationId() !== null"
                               [attr.aria-label]="'Liberar la reserva de ' + res.group_name"
                             >
-                              <ion-icon
-                                slot="start"
-                                name="close-circle-outline"
-                                aria-hidden="true"
-                              ></ion-icon>
+                              @if (releasingReservationId() === res.id) {
+                                <ion-spinner slot="start" name="crescent"></ion-spinner>
+                              } @else {
+                                <ion-icon
+                                  slot="start"
+                                  name="close-circle-outline"
+                                  aria-hidden="true"
+                                ></ion-icon>
+                              }
                               Liberar
                             </ion-button>
                           </div>
@@ -235,13 +265,18 @@
                     color="medium"
                     class="options-button"
                     (click)="openGiftOptions(gift)"
+                    [disabled]="deletingGiftId() === gift.id"
                     [attr.aria-label]="'Opciones de ' + gift.name"
                   >
-                    <ion-icon
-                      slot="icon-only"
-                      name="ellipsis-vertical-outline"
-                      aria-hidden="true"
-                    ></ion-icon>
+                    @if (deletingGiftId() === gift.id) {
+                      <ion-spinner slot="icon-only" name="crescent"></ion-spinner>
+                    } @else {
+                      <ion-icon
+                        slot="icon-only"
+                        name="ellipsis-vertical-outline"
+                        aria-hidden="true"
+                      ></ion-icon>
+                    }
                   </ion-button>
                 </div>
 
@@ -256,13 +291,18 @@
                       color="danger"
                       size="small"
                       (click)="confirmRelease(gift, reservation)"
+                      [disabled]="releasingReservationId() !== null"
                       [attr.aria-label]="'Liberar la reserva de ' + reservation.group_name"
                     >
-                      <ion-icon
-                        slot="start"
-                        name="close-circle-outline"
-                        aria-hidden="true"
-                      ></ion-icon>
+                      @if (releasingReservationId() === reservation.id) {
+                        <ion-spinner slot="start" name="crescent"></ion-spinner>
+                      } @else {
+                        <ion-icon
+                          slot="start"
+                          name="close-circle-outline"
+                          aria-hidden="true"
+                        ></ion-icon>
+                      }
                       Liberar
                     </ion-button>
                   </div>

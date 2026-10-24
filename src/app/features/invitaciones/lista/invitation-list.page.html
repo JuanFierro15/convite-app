@@ -47,6 +47,12 @@
     <div class="loading-container">
       <ion-spinner name="crescent" color="primary"></ion-spinner>
     </div>
+  } @else if (error(); as errorMsg) {
+    <app-empty-state
+      [message]="errorMsg"
+      actionLabel="Reintentar"
+      (action)="retryLoad()"
+    />
   } @else if (invitations().length === 0) {
     <app-empty-state
       message="Todavía no hay invitaciones."

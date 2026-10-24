@@ -102,11 +102,15 @@ export class GiftListPage implements ViewWillEnter {
 
   readonly gifts = signal<GiftWithReservations[]>([]);
   readonly loading = signal<boolean>(true);
+  readonly error = signal<string | null>(null);
   readonly addingSuggested = signal<boolean>(false);
+  readonly deletingGiftId = signal<string | null>(null);
+  readonly releasingReservationId = signal<string | null>(null);
   readonly filter = signal<GiftFilter>('all');
 
   private stopRealtime: (() => void) | null = null;
   private watchedEventId: string | null = null;
+  private hasLoadedOnce = false;
 
   readonly repeatableGifts = computed<GiftWithReservations[]>(() =>
     this.gifts().filter((g) => g.kind === 'repeatable'),
@@ -169,19 +173,49 @@ export class GiftListPage implements ViewWillEnter {
   }
 
   async ionViewWillEnter(): Promise<void> {
+    await this.initializePage(false);
+  }
+
+  retryLoad(): void {
+    void this.initializePage(true);
+  }
+
+  private async initializePage(forceContext: boolean): Promise<void> {
     const eventId = this.id();
-    this.loading.set(true);
-
-    await this.eventContext.load(eventId);
-
-    if (this.eventContext.role() !== 'owner') {
-      await this.showToast('Solo los propietarios ven la lista de regalos.', 'danger');
-      await this.router.navigate(['/eventos', eventId, 'panel'], { replaceUrl: true });
-      return;
+    if (this.watchedEventId !== null && this.watchedEventId !== eventId) {
+      this.hasLoadedOnce = false;
+      this.gifts.set([]);
+      this.error.set(null);
     }
 
-    this.setupRealtime(eventId);
-    await this.loadGifts(true);
+    if (!this.hasLoadedOnce) {
+      this.loading.set(true);
+      this.error.set(null);
+    }
+
+    try {
+      await this.eventContext.load(eventId, { force: forceContext });
+      const contextError = this.eventContext.error();
+      if (contextError) {
+        if (!this.hasLoadedOnce) {
+          this.error.set(contextError);
+        } else {
+          await this.showToast(contextError, 'danger');
+        }
+        return;
+      }
+
+      if (this.eventContext.role() !== 'owner') {
+        await this.showToast('Solo los propietarios ven la lista de regalos.', 'danger');
+        await this.router.navigate(['/eventos', eventId, 'panel'], { replaceUrl: true });
+        return;
+      }
+
+      this.setupRealtime(eventId);
+      await this.loadGifts(!this.hasLoadedOnce);
+    } finally {
+      this.loading.set(false);
+    }
   }
 
   onFilterChange(event: CustomEvent): void {
@@ -320,6 +354,10 @@ export class GiftListPage implements ViewWillEnter {
   }
 
   private async deleteGift(giftId: string): Promise<void> {
+    if (this.deletingGiftId() !== null) {
+      return;
+    }
+    this.deletingGiftId.set(giftId);
     try {
       await this.giftsRepo.remove(giftId);
       await this.loadGifts(false);
@@ -327,10 +365,16 @@ export class GiftListPage implements ViewWillEnter {
       const message =
         err instanceof Error ? err.message : 'No pudimos borrar el regalo.';
       await this.showToast(message, 'danger');
+    } finally {
+      this.deletingGiftId.set(null);
     }
   }
 
   private async releaseReservation(reservationId: string): Promise<void> {
+    if (this.releasingReservationId() !== null) {
+      return;
+    }
+    this.releasingReservationId.set(reservationId);
     try {
       await this.giftsRepo.releaseReservation(reservationId);
       await this.loadGifts(false);
@@ -338,6 +382,8 @@ export class GiftListPage implements ViewWillEnter {
       const message =
         err instanceof Error ? err.message : 'No pudimos liberar la reserva.';
       await this.showToast(message, 'danger');
+    } finally {
+      this.releasingReservationId.set(null);
     }
   }
 
@@ -360,14 +406,23 @@ export class GiftListPage implements ViewWillEnter {
   private async loadGifts(showSpinner: boolean): Promise<void> {
     if (showSpinner) {
       this.loading.set(true);
+      this.error.set(null);
     }
     try {
       const list = await this.giftsRepo.list(this.id());
       this.gifts.set(list);
+      this.error.set(null);
+      this.hasLoadedOnce = true;
     } catch (err) {
       const message =
-        err instanceof Error ? err.message : 'No pudimos cargar la lista de regalos.';
-      await this.showToast(message, 'danger');
+        err instanceof Error && err.message
+          ? err.message
+          : 'No pudimos cargar la lista de regalos.';
+      if (!this.hasLoadedOnce) {
+        this.error.set(message);
+      } else {
+        await this.showToast(message, 'danger');
+      }
     } finally {
       if (showSpinner) {
         this.loading.set(false);

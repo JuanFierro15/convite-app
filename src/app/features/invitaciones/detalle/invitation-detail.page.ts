@@ -98,9 +98,12 @@ export class InvitationDetailPage implements ViewWillEnter {
 
   readonly invitation = signal<InvitationWithGuests | null>(null);
   readonly loading = signal<boolean>(true);
+  readonly error = signal<string | null>(null);
+  readonly deleting = signal<boolean>(false);
 
   private stopRealtime: (() => void) | null = null;
   private watchedEventId: string | null = null;
+  private loadedInvitationId: string | null = null;
   private hasLoadedOnce = false;
 
   readonly defaultBackHref = computed(() => `/eventos/${this.id()}/invitaciones`);
@@ -136,6 +139,15 @@ export class InvitationDetailPage implements ViewWillEnter {
     void this.initializePage();
   }
 
+  async retryLoad(): Promise<void> {
+    this.loading.set(true);
+    this.error.set(null);
+    await Promise.all([
+      this.eventContext.load(this.id(), { force: true }),
+      this.reloadInvitation(),
+    ]);
+  }
+
   async backToList(): Promise<void> {
     await this.router.navigate(['/eventos', this.id(), 'invitaciones']);
   }
@@ -169,13 +181,18 @@ export class InvitationDetailPage implements ViewWillEnter {
 
   async onDelete(): Promise<void> {
     const current = this.invitation();
-    if (!current) {
+    if (!current || this.deleting()) {
       return;
     }
 
-    const deleted = await this.invitationActions.confirmDelete(current);
-    if (deleted) {
-      await this.backToList();
+    this.deleting.set(true);
+    try {
+      const deleted = await this.invitationActions.confirmDelete(current);
+      if (deleted) {
+        await this.backToList();
+      }
+    } finally {
+      this.deleting.set(false);
     }
   }
 
@@ -213,10 +230,15 @@ export class InvitationDetailPage implements ViewWillEnter {
 
     let currentEvent = this.eventContext.event();
     if (!currentEvent) {
-      await this.eventContext.load(this.id());
+      await this.eventContext.load(this.id(), { force: true });
       currentEvent = this.eventContext.event();
     }
     if (!currentEvent) {
+      await this.invitationActions.showError(
+        new Error(
+          this.eventContext.error() ?? 'No pudimos cargar la información. Inténtalo de nuevo.',
+        ),
+      );
       return;
     }
 
@@ -259,11 +281,19 @@ export class InvitationDetailPage implements ViewWillEnter {
     const eventId = this.id();
     const invId = this.invitationId();
     if (!eventId || !invId) {
+      this.loading.set(false);
       return;
+    }
+
+    if (this.loadedInvitationId !== null && this.loadedInvitationId !== invId) {
+      this.hasLoadedOnce = false;
+      this.invitation.set(null);
+      this.error.set(null);
     }
 
     if (!this.hasLoadedOnce) {
       this.loading.set(true);
+      this.error.set(null);
     }
 
     this.ensureRealtime(eventId);
@@ -273,7 +303,7 @@ export class InvitationDetailPage implements ViewWillEnter {
       this.reloadInvitation(),
     ]);
 
-    if (!this.auth.session() && !this.eventContext.role()) {
+    if (!this.auth.session() && !this.eventContext.role() && !this.eventContext.error()) {
       await this.router.navigate(['/login']);
     }
   }
@@ -281,15 +311,26 @@ export class InvitationDetailPage implements ViewWillEnter {
   private async reloadInvitation(): Promise<void> {
     const invId = this.invitationId();
     if (!invId) {
+      this.loading.set(false);
       return;
     }
 
     try {
       const data = await this.invitationsRepository.get(invId);
       this.invitation.set(data);
+      this.error.set(null);
       this.hasLoadedOnce = true;
+      this.loadedInvitationId = invId;
     } catch (err) {
-      await this.invitationActions.showError(err);
+      const message =
+        err instanceof Error && err.message
+          ? err.message
+          : 'No pudimos cargar la invitación. Inténtalo de nuevo.';
+      if (!this.invitation()) {
+        this.error.set(message);
+      } else {
+        await this.invitationActions.showError(err);
+      }
     } finally {
       this.loading.set(false);
     }

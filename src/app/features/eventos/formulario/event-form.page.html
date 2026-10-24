@@ -13,6 +13,12 @@
       <ion-spinner name="crescent" color="primary"></ion-spinner>
       <p class="text-body form-loading__text">Cargando evento...</p>
     </div>
+  } @else if (loadError(); as errorMsg) {
+    <app-empty-state
+      [message]="errorMsg"
+      actionLabel="Reintentar"
+      (action)="retryLoad()"
+    />
   } @else {
     <form
       class="event-form"

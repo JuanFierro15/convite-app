@@ -128,7 +128,11 @@
                       [attr.aria-pressed]="guest.rsvp === 'accepted'"
                       (click)="onSelectRsvp(guest, 'accepted')"
                     >
-                      <ion-icon slot="start" name="checkmark-outline" aria-hidden="true"></ion-icon>
+                      @if (savingGuestId() === guest.id && savingRsvp() === 'accepted') {
+                        <ion-spinner slot="start" name="crescent"></ion-spinner>
+                      } @else {
+                        <ion-icon slot="start" name="checkmark-outline" aria-hidden="true"></ion-icon>
+                      }
                       Acepto
                     </ion-button>
 
@@ -141,7 +145,11 @@
                       [attr.aria-pressed]="guest.rsvp === 'declined'"
                       (click)="onSelectRsvp(guest, 'declined')"
                     >
-                      <ion-icon slot="start" name="close-outline" aria-hidden="true"></ion-icon>
+                      @if (savingGuestId() === guest.id && savingRsvp() === 'declined') {
+                        <ion-spinner slot="start" name="crescent"></ion-spinner>
+                      } @else {
+                        <ion-icon slot="start" name="close-outline" aria-hidden="true"></ion-icon>
+                      }
                       No acepto
                     </ion-button>
                   </div>
@@ -196,6 +204,8 @@
       <div class="empty-wrapper">
         <app-empty-state
           [message]="error() ?? 'No encontramos esta invitación. Revisa el enlace que te enviaron.'"
+          [actionLabel]="canRetry() ? 'Reintentar' : undefined"
+          (action)="retryLoad()"
         />
       </div>
     }

@@ -31,6 +31,7 @@ import {
   InvitationsRepository,
   formatInvitationCode,
 } from '../../../core';
+import { EmptyStateComponent } from '../../../shared';
 import { InvitationActionsService } from '../invitation-actions.service';
 
 @Component({
@@ -51,6 +52,7 @@ import { InvitationActionsService } from '../invitation-actions.service';
     IonCardContent,
     IonIcon,
     IonSpinner,
+    EmptyStateComponent,
   ],
 })
 export class InvitationQrComponent implements OnInit {
@@ -63,6 +65,7 @@ export class InvitationQrComponent implements OnInit {
 
   readonly qrDataUrl = signal<string | null>(null);
   readonly loading = signal<boolean>(true);
+  readonly error = signal<string | null>(null);
   readonly sharing = signal<boolean>(false);
   readonly groupName = signal<string>('');
   readonly formattedCode = signal<string>('');
@@ -127,8 +130,13 @@ export class InvitationQrComponent implements OnInit {
     await this.modalController.dismiss();
   }
 
+  retryGenerate(): void {
+    void this.generateQr(this.guestUrl());
+  }
+
   private async generateQr(link: string): Promise<void> {
     this.loading.set(true);
+    this.error.set(null);
     try {
       const styles = getComputedStyle(document.documentElement);
       const dark = styles.getPropertyValue('--ion-color-dark').trim();
@@ -145,7 +153,11 @@ export class InvitationQrComponent implements OnInit {
       });
       this.qrDataUrl.set(dataUrl);
     } catch (err) {
-      await this.invitationActions.showError(err);
+      const message =
+        err instanceof Error && err.message
+          ? err.message
+          : 'No pudimos generar el código QR. Inténtalo de nuevo.';
+      this.error.set(message);
     } finally {
       this.loading.set(false);
     }

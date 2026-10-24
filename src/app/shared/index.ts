@@ -1,3 +1,4 @@
+export { ConnectionBannerComponent } from './components/connection-banner/connection-banner.component';
 export {
   IllustrationComponent,
   type IllustrationName,

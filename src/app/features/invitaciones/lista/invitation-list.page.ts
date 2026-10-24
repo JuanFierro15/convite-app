@@ -135,6 +135,7 @@ export class InvitationListPage implements ViewWillEnter {
 
   readonly invitations = signal<InvitationWithGuests[]>([]);
   readonly loading = signal<boolean>(true);
+  readonly error = signal<string | null>(null);
   readonly searchQuery = signal<string>('');
   readonly selectedFilter = signal<InvitationFilter>('all');
 
@@ -226,6 +227,15 @@ export class InvitationListPage implements ViewWillEnter {
     void this.initializePage();
   }
 
+  async retryLoad(): Promise<void> {
+    this.loading.set(true);
+    this.error.set(null);
+    await Promise.all([
+      this.eventContext.load(this.id(), { force: true }),
+      this.reloadInvitations(),
+    ]);
+  }
+
   onSearchInput(event: SearchbarCustomEvent): void {
     this.searchQuery.set(event.detail.value ?? '');
   }
@@ -250,10 +260,15 @@ export class InvitationListPage implements ViewWillEnter {
 
     let currentEvent = this.eventContext.event();
     if (!currentEvent) {
-      await this.eventContext.load(this.id());
+      await this.eventContext.load(this.id(), { force: true });
       currentEvent = this.eventContext.event();
     }
     if (!currentEvent) {
+      await this.invitationActions.showError(
+        new Error(
+          this.eventContext.error() ?? 'No pudimos cargar la información. Inténtalo de nuevo.',
+        ),
+      );
       return;
     }
 
@@ -280,11 +295,19 @@ export class InvitationListPage implements ViewWillEnter {
   private async initializePage(): Promise<void> {
     const eventId = this.id();
     if (!eventId) {
+      this.loading.set(false);
       return;
+    }
+
+    if (this.watchedEventId !== null && this.watchedEventId !== eventId) {
+      this.hasLoadedOnce = false;
+      this.invitations.set([]);
+      this.error.set(null);
     }
 
     if (!this.hasLoadedOnce) {
       this.loading.set(true);
+      this.error.set(null);
     }
 
     this.ensureRealtime(eventId);
@@ -294,7 +317,7 @@ export class InvitationListPage implements ViewWillEnter {
       this.reloadInvitations(),
     ]);
 
-    if (!this.auth.session() && !this.eventContext.role()) {
+    if (!this.auth.session() && !this.eventContext.role() && !this.eventContext.error()) {
       await this.router.navigate(['/login']);
     }
   }
@@ -302,15 +325,25 @@ export class InvitationListPage implements ViewWillEnter {
   private async reloadInvitations(): Promise<void> {
     const eventId = this.id();
     if (!eventId) {
+      this.loading.set(false);
       return;
     }
 
     try {
       const items = await this.invitationsRepository.list(eventId);
       this.invitations.set(items);
+      this.error.set(null);
       this.hasLoadedOnce = true;
     } catch (err) {
-      await this.invitationActions.showError(err);
+      const message =
+        err instanceof Error && err.message
+          ? err.message
+          : 'No pudimos cargar las invitaciones. Inténtalo de nuevo.';
+      if (!this.hasLoadedOnce) {
+        this.error.set(message);
+      } else {
+        await this.invitationActions.showError(err);
+      }
     } finally {
       this.loading.set(false);
     }

@@ -73,9 +73,15 @@ export class GuestInvitationPage implements OnInit, ViewWillEnter {
 
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
+  readonly errorCode = signal<string | null>(null);
   readonly invitation = signal<GuestInvitation | null>(null);
   readonly savingGuestId = signal<string | null>(null);
+  readonly savingRsvp = signal<'accepted' | 'declined' | null>(null);
   readonly hasRespondedInVisit = signal(false);
+
+  readonly canRetry = computed(
+    () => this.error() !== null && this.errorCode() !== 'invalid_code',
+  );
 
   private fetching = false;
 
@@ -160,9 +166,16 @@ export class GuestInvitationPage implements OnInit, ViewWillEnter {
   }
 
   async onRefresh(event: Event): Promise<void> {
-    await this.loadInvitation(true);
-    const refresher = event.target as HTMLIonRefresherElement | null;
-    await refresher?.complete();
+    try {
+      await this.loadInvitation(true);
+    } finally {
+      const refresher = event.target as HTMLIonRefresherElement | null;
+      await refresher?.complete();
+    }
+  }
+
+  retryLoad(): void {
+    void this.loadInvitation(false);
   }
 
   async loadInvitation(isRefresh = false): Promise<void> {
@@ -174,24 +187,30 @@ export class GuestInvitationPage implements OnInit, ViewWillEnter {
       this.loading.set(true);
     }
     this.error.set(null);
+    this.errorCode.set(null);
 
     try {
       const data = await this.guestApi.getInvitation(this.code());
       if (!data) {
         this.invitation.set(null);
+        this.errorCode.set('invalid_code');
         this.error.set(guestErrorMessage('invalid_code'));
         return;
       }
       this.themeService.apply(data.event.theme_id);
       this.invitation.set(data);
     } catch (err) {
-      const apiErr =
-        err instanceof GuestApiError ? err : new GuestApiError('unknown_error');
-      if (apiErr.code === 'invalid_code' || !this.invitation()) {
+      const code = err instanceof GuestApiError ? err.code : 'load_failed';
+      const message =
+        err instanceof Error && err.message
+          ? err.message
+          : guestErrorMessage('load_failed');
+      if (code === 'invalid_code' || !this.invitation()) {
         this.invitation.set(null);
-        this.error.set(apiErr.message);
+        this.errorCode.set(code);
+        this.error.set(message);
       } else {
-        await this.showErrorToast(apiErr.message);
+        await this.showErrorToast(message);
       }
     } finally {
       this.loading.set(false);
@@ -212,6 +231,7 @@ export class GuestInvitationPage implements OnInit, ViewWillEnter {
       return;
     }
     this.savingGuestId.set(guest.id);
+    this.savingRsvp.set(value);
     try {
       const updated = await this.guestApi.setRsvp(this.code(), guest.id, value);
       this.themeService.apply(updated.event.theme_id);
@@ -219,7 +239,12 @@ export class GuestInvitationPage implements OnInit, ViewWillEnter {
       this.hasRespondedInVisit.set(true);
     } catch (err) {
       const apiErr =
-        err instanceof GuestApiError ? err : new GuestApiError('unknown_error');
+        err instanceof GuestApiError
+          ? err
+          : new GuestApiError(
+              'unknown_error',
+              err instanceof Error && err.message ? err.message : undefined,
+            );
       if (apiErr.code === 'deadline_passed') {
         this.invitation.update((current) =>
           current ? { ...current, can_respond: false } : null,
@@ -228,6 +253,7 @@ export class GuestInvitationPage implements OnInit, ViewWillEnter {
       await this.showErrorToast(apiErr.message);
     } finally {
       this.savingGuestId.set(null);
+      this.savingRsvp.set(null);
     }
   }
 
