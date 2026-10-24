@@ -1,7 +1,7 @@
+import { CONNECTION_ERROR_MESSAGE } from '../utils/messages';
+
 const DEFAULT_USER_ERROR_MESSAGE = 'No pudimos guardar el cambio. Inténtalo de nuevo.';
 export const LOAD_ERROR_MESSAGE = 'No pudimos cargar la información. Inténtalo de nuevo.';
-export const CONNECTION_ERROR_MESSAGE =
-  'No pudimos conectarnos. Revisa tu conexión e inténtalo de nuevo.';
 
 const CONNECTION_SUBSTRINGS = [
   'TimeoutError',

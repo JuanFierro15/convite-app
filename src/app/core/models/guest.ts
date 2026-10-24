@@ -1,4 +1,4 @@
-import { CONNECTION_ERROR_MESSAGE } from '../data/errors';
+import { CONNECTION_ERROR_MESSAGE } from '../utils/messages';
 import { Rsvp } from './events';
 import { GiftKind } from './gifts';
 

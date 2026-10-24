@@ -5,12 +5,17 @@ import { ConnectionStatusService } from '../../../core';
   selector: 'app-connection-banner',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
+  // La región role="status" queda siempre en el DOM: si se insertara ya con
+  // el texto, algunos lectores de pantalla no anunciarían el aviso.
   template: `
-    @if (visible()) {
-      <div class="connection-banner text-label" role="status" aria-live="polite">
-        La conexión está lenta, reintentando...
-      </div>
-    }
+    <div
+      class="connection-banner text-label"
+      [class.connection-banner--visible]="visible()"
+      role="status"
+      aria-live="polite"
+    >
+      {{ message() }}
+    </div>
   `,
   styles: [
     `
@@ -26,12 +31,15 @@ import { ConnectionStatusService } from '../../../core';
         right: 0;
         width: 100%;
         z-index: 10000;
+        text-align: center;
+        pointer-events: none;
+      }
+
+      .connection-banner--visible {
         padding: calc(var(--space-xs) + env(safe-area-inset-top, 0px)) var(--space-md)
           var(--space-xs);
         background-color: var(--ion-color-warning);
         color: var(--ion-color-warning-contrast);
-        text-align: center;
-        pointer-events: none;
       }
     `,
   ],
@@ -41,5 +49,9 @@ export class ConnectionBannerComponent {
 
   readonly visible = computed<boolean>(
     () => this.connectionStatus.retrying() || this.connectionStatus.slow(),
+  );
+
+  readonly message = computed<string>(() =>
+    this.visible() ? 'La conexión está lenta, reintentando...' : '',
   );
 }

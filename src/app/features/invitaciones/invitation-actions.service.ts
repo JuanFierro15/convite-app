@@ -68,6 +68,7 @@ export class InvitationActionsService {
 
   async confirmDelete(
     invitation: Pick<InvitationRow, 'id' | 'group_name'>,
+    onDeleting?: () => void,
   ): Promise<boolean> {
     const alert = await this.alertController.create({
       header: 'Borrar invitación',
@@ -90,6 +91,7 @@ export class InvitationActionsService {
       return false;
     }
 
+    onDeleting?.();
     try {
       await this.invitationsRepository.remove(invitation.id);
       return true;

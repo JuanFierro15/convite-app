@@ -185,9 +185,10 @@ export class InvitationDetailPage implements ViewWillEnter {
       return;
     }
 
-    this.deleting.set(true);
     try {
-      const deleted = await this.invitationActions.confirmDelete(current);
+      const deleted = await this.invitationActions.confirmDelete(current, () =>
+        this.deleting.set(true),
+      );
       if (deleted) {
         await this.backToList();
       }
