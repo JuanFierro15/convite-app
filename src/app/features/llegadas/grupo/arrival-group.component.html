@@ -1,0 +1,86 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-title>
+      <div class="header-group-info">
+        <span class="group-name text-section">{{ invitation()?.group_name }}</span>
+        <span class="group-code text-label">{{ formattedCode() }}</span>
+      </div>
+    </ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="close()" aria-label="Cerrar">
+        <ion-icon slot="icon-only" name="close-outline" aria-hidden="true"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="group-content">
+  @if (invitation(); as inv) {
+    <ion-list class="guests-list" lines="full">
+      @for (guest of inv.guests; track guest.id) {
+        <ion-item class="guest-item">
+          <div class="guest-item__content">
+            <div class="guest-item__main">
+              <span class="guest-name text-name">{{ guest.full_name }}</span>
+              <app-status-badge [status]="guest.rsvp" />
+            </div>
+
+            @if (guest.arrivedAt !== null) {
+              <div class="guest-item__arrived-info">
+                <span class="arrived-time text-body">
+                  Llegó a las {{ formatGuestTime(guest.arrivedAt) }}{{ !guest.synced ? ' · sin sincronizar' : '' }}
+                </span>
+                <ion-button
+                  size="small"
+                  fill="outline"
+                  color="medium"
+                  class="undo-button"
+                  (click)="onUndo(guest, $event)"
+                >
+                  Deshacer
+                </ion-button>
+              </div>
+            }
+          </div>
+
+          @if (guest.arrivedAt === null) {
+            <ion-checkbox
+              slot="end"
+              [checked]="isGuestSelected(guest.id)"
+              (ionChange)="onToggleGuest(guest, $event)"
+              aria-label="Registrar llegada"
+            ></ion-checkbox>
+          }
+        </ion-item>
+      }
+    </ion-list>
+  } @else {
+    <div class="group-loading" role="status">
+      <ion-spinner name="crescent" color="primary"></ion-spinner>
+    </div>
+  }
+</ion-content>
+
+<ion-footer class="group-footer ion-no-border">
+  <div class="footer-container">
+    @if (allArrived()) {
+      <p class="all-arrived-message text-body">
+        Todas las personas de esta invitación ya llegaron.
+      </p>
+      <ion-button expand="block" fill="outline" (click)="close()">
+        Cerrar
+      </ion-button>
+    } @else {
+      <ion-button
+        expand="block"
+        (click)="onRegister()"
+        [disabled]="pendingSelectedCount() === 0 || saving()"
+      >
+        @if (saving()) {
+          <ion-spinner slot="start" name="crescent"></ion-spinner>
+        }
+        Registrar llegada ({{ pendingSelectedCount() }})
+      </ion-button>
+    }
+  </div>
+</ion-footer>

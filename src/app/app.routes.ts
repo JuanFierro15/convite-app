@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard, roleGuard } from './core';
+import { arrivalsGuard, authGuard, roleGuard } from './core';
 
 export const routes: Routes = [
   {
@@ -34,6 +34,12 @@ export const routes: Routes = [
     canActivate: [authGuard],
     loadComponent: () =>
       import('./features/eventos/panel/event-dashboard.page').then((m) => m.EventDashboardPage),
+  },
+  {
+    path: 'eventos/:id/llegadas',
+    canActivate: [arrivalsGuard],
+    loadComponent: () =>
+      import('./features/llegadas/registro/arrivals.page').then((m) => m.ArrivalsPage),
   },
   {
     path: 'eventos/:id/invitaciones',

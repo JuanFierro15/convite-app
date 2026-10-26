@@ -1,0 +1,101 @@
+.header-group-info {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  min-width: 0;
+  padding-block: var(--space-xs);
+}
+
+.group-name {
+  color: var(--ion-text-color);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.group-code {
+  color: var(--ion-color-medium);
+}
+
+.group-content {
+  --background: var(--ion-background-color);
+}
+
+.guests-list {
+  background: transparent;
+  padding: 0;
+}
+
+.guest-item {
+  --padding-start: var(--space-md);
+  --padding-end: var(--space-md);
+  --padding-top: var(--space-sm);
+  --padding-bottom: var(--space-sm);
+  --inner-padding-end: 0;
+  --background: var(--ion-item-background);
+  min-height: 54px;
+
+  &__content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    width: 100%;
+    padding-block: var(--space-xs);
+  }
+
+  &__main {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+  }
+
+  &__arrived-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-sm);
+    margin-top: var(--space-xs);
+  }
+}
+
+.guest-name {
+  color: var(--ion-text-color);
+}
+
+.arrived-time {
+  color: var(--ion-color-medium);
+}
+
+.undo-button {
+  margin: 0;
+  --border-radius: var(--radius-sm);
+  --min-height: 44px;
+  min-height: 44px;
+}
+
+.group-footer {
+  padding: var(--space-sm) var(--space-md);
+  background: var(--ion-card-background);
+  border-top: 1px solid var(--ion-border-color);
+}
+
+.footer-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.all-arrived-message {
+  text-align: center;
+  margin: 0 0 var(--space-sm);
+  color: var(--ion-color-medium);
+}
+
+.group-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-xl);
+}

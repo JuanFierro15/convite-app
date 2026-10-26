@@ -1,0 +1,155 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button [defaultHref]="'/eventos/' + id() + '/panel'" text=""></ion-back-button>
+    </ion-buttons>
+
+    <ion-title>{{ headerTitle() }}</ion-title>
+
+    <ion-buttons slot="end" class="header-indicators">
+      @if (session.online()) {
+        <span class="badge-soft-success text-label">En línea</span>
+      } @else {
+        <span class="badge-soft-warning text-label">Sin conexión</span>
+      }
+
+      @if (session.pendingCount() > 0) {
+        <span class="badge-soft-warning text-label pending-badge">
+          @if (session.syncing()) {
+            <ion-spinner name="crescent" class="syncing-spinner" aria-label="Sincronizando"></ion-spinner>
+          }
+          {{ session.pendingCount() }} por sincronizar
+        </span>
+      }
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="arrivals-content">
+  @if (session.loading()) {
+    <div class="loading-state" role="status">
+      <ion-spinner name="crescent" color="primary"></ion-spinner>
+    </div>
+  } @else if (!session.snapshot()) {
+    @if (!session.online()) {
+      <div class="empty-state-wrapper">
+        <app-empty-state message="Descarga la lista con conexión antes del evento." />
+      </div>
+    } @else if (session.error(); as err) {
+      <div class="empty-state-wrapper">
+        <app-empty-state
+          [message]="err"
+          actionLabel="Reintentar"
+          (action)="session.refresh()"
+        />
+      </div>
+    } @else {
+      <div class="loading-state" role="status">
+        <ion-spinner name="crescent" color="primary"></ion-spinner>
+        <p class="text-body loading-text">Descargando la lista...</p>
+      </div>
+    }
+  } @else {
+    <div class="arrivals-container">
+      <ion-card class="counter-card">
+        <ion-card-content class="counter-card__content">
+          <p class="counter-lead text-body">Llegaron</p>
+          <div class="counter-number">
+            {{ session.counts().arrivedConfirmed }} de {{ session.counts().confirmed }}
+          </div>
+          <p class="counter-unit text-body">personas confirmadas</p>
+
+          @if (unconfirmedText(); as unconfirmed) {
+            <p class="counter-unconfirmed text-body">{{ unconfirmed }}</p>
+          }
+
+          @if (!session.online()) {
+            <p class="counter-offline text-label">Según este celular</p>
+          }
+        </ion-card-content>
+      </ion-card>
+
+      @if (session.notices().length > 0) {
+        <ion-card class="notices-card">
+          <ion-card-content class="notices-card__content">
+            @for (notice of session.notices(); track notice.guestId) {
+              <p class="notice-message text-body">{{ notice.message }}</p>
+            }
+            <div class="notice-actions">
+              <ion-button fill="outline" color="warning" (click)="session.dismissNotices()">
+                Entendido
+              </ion-button>
+            </div>
+          </ion-card-content>
+        </ion-card>
+      }
+
+      <ion-button
+        class="scan-button"
+        expand="block"
+        size="large"
+        (click)="onScanQr()"
+      >
+        <ion-icon slot="start" name="qr-code-outline" aria-hidden="true"></ion-icon>
+        Escanear QR
+      </ion-button>
+
+      <div class="search-section">
+        <ion-searchbar
+          #searchbar
+          [debounce]="150"
+          placeholder="Buscar por nombre o código"
+          [value]="searchQuery()"
+          (ionInput)="onSearchInput($event)"
+        ></ion-searchbar>
+
+        @if (searchQuery().trim()) {
+          @if (searchResults().length > 0) {
+            <ion-list class="search-results-list" lines="full">
+              @for (item of searchResults(); track item.id) {
+                <ion-item button [detail]="true" (click)="openGroup(item.id)">
+                  <ion-label>
+                    <h3 class="text-name">{{ item.group_name }}</h3>
+                    <p class="text-label search-item-code">{{ formatCode(item.code) }}</p>
+                  </ion-label>
+                  <span slot="end" class="text-body search-item-count">
+                    {{ formatArrivedSummary(item.arrivedCount, item.totalCount) }}
+                  </span>
+                </ion-item>
+              }
+            </ion-list>
+          } @else {
+            <p class="search-no-results text-body">No encontramos coincidencias.</p>
+          }
+        }
+      </div>
+
+      <div class="list-status-section">
+        @if (session.downloadedAtText(); as downloadedAt) {
+          <p class="downloaded-at-text text-body">Lista descargada {{ downloadedAt }}</p>
+        }
+
+        <ion-button
+          fill="outline"
+          (click)="session.refresh()"
+          [disabled]="!session.online() || !session.hasSession() || session.refreshing()"
+        >
+          @if (session.refreshing()) {
+            <ion-spinner slot="start" name="crescent"></ion-spinner>
+          }
+          Actualizar lista
+        </ion-button>
+
+        @if (session.stale()) {
+          <p class="stale-warning text-label">
+            La lista tiene más de 12 horas. Actualízala si hay conexión.
+          </p>
+        }
+
+        @if (session.error(); as listError) {
+          <p class="list-error text-label">{{ listError }}</p>
+        }
+      </div>
+    </div>
+  }
+</ion-content>
