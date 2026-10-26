@@ -101,6 +101,12 @@ export function createEmptyContext() {
     uniqueGiftWinnerCode: null,
     uniqueGiftLoserCode: null,
     savedInvitationPayload: null,
+    test27InvitationId: null,
+    test27GuestId: null,
+    test27Code: null,
+    test29ArrivalsPayload: null,
+    test29GuestIds: [],
+    test29RecordedAt: null,
     createdEventIds: [],
     createdUserIds: [],
   };

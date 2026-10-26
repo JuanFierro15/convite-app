@@ -1885,3 +1885,1030 @@ test(
     );
   }
 );
+
+test(
+  '26. El teléfono solo acepta celulares colombianos',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    const invalidPhoneDirectId = crypto.randomUUID();
+    const { error: directError } = await ctx.adminClient
+      .from('invitations')
+      .insert({
+        id: invalidPhoneDirectId,
+        event_id: ctx.eventX.id,
+        group_name: `PRUEBA-${ctx.run}-TEL-DIRECTO`,
+        phone: '+576011234567',
+      });
+
+    assert.ok(
+      directError,
+      'Se esperaba un error al insertar directamente una invitación con teléfono no celular'
+    );
+    assert.ok(
+      directError.message.includes('invitations_phone_format'),
+      `Se esperaba que el error contuviera invitations_phone_format, pero se recibió: ${directError.message}`
+    );
+
+    const rpcInvalidInvId = crypto.randomUUID();
+    const rpcInvalidGuestId = crypto.randomUUID();
+
+    const { error: rpcInvalidError } = await ctx.ownerXClient.rpc(
+      'save_invitation',
+      {
+        p_invitation_id: rpcInvalidInvId,
+        p_event_id: ctx.eventX.id,
+        p_group_name: `PRUEBA-${ctx.run}-TEL-RPC-INVALIDO`,
+        p_phone: '+576011234567',
+        p_guests: [
+          { id: rpcInvalidGuestId, full_name: 'Persona Telefono Invalido' },
+        ],
+      }
+    );
+
+    assert.ok(
+      rpcInvalidError,
+      'Se esperaba un error al llamar a save_invitation con teléfono no celular'
+    );
+    assert.ok(
+      rpcInvalidError.message.includes('invitations_phone_format'),
+      `Se esperaba que el error de save_invitation contuviera invitations_phone_format, pero se recibió: ${rpcInvalidError.message}`
+    );
+
+    const { data: storedInvalidInv, error: checkInvalidInvError } =
+      await ctx.adminClient
+        .from('invitations')
+        .select('id')
+        .eq('id', rpcInvalidInvId);
+
+    assert.equal(
+      checkInvalidInvError,
+      null,
+      'Se esperaba consultar con el administrador sin error'
+    );
+    assert.equal(
+      storedInvalidInv?.length,
+      0,
+      'Se esperaba que la invitación con teléfono no celular no se creara'
+    );
+
+    const validInvId = crypto.randomUUID();
+    const validGuestId = crypto.randomUUID();
+    const validPhone = '+573001234567';
+
+    const { data: validData, error: validError } = await ctx.ownerXClient.rpc(
+      'save_invitation',
+      {
+        p_invitation_id: validInvId,
+        p_event_id: ctx.eventX.id,
+        p_group_name: `PRUEBA-${ctx.run}-TEL-VALIDO`,
+        p_phone: validPhone,
+        p_guests: [
+          { id: validGuestId, full_name: 'Persona Telefono Valido' },
+        ],
+      }
+    );
+
+    assert.equal(
+      validError,
+      null,
+      'Se esperaba que save_invitation con celular colombiano funcionara sin error'
+    );
+    assert.equal(
+      validData?.phone,
+      validPhone,
+      'Se esperaba que el teléfono retornado por save_invitation fuera el celular enviado'
+    );
+
+    const { data: storedValidInv, error: checkValidInvError } =
+      await ctx.adminClient
+        .from('invitations')
+        .select('phone')
+        .eq('id', validInvId)
+        .single();
+
+    assert.equal(
+      checkValidInvError,
+      null,
+      'Se esperaba consultar la invitación válida con el administrador sin error'
+    );
+    assert.equal(
+      storedValidInv?.phone,
+      validPhone,
+      'Se esperaba que el celular guardado en la base de datos coincidiera con el enviado'
+    );
+  }
+);
+
+test(
+  '27. save_invitation crea una invitación individual y get_invitation devuelve su tipo y su código',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    const individualInvId = crypto.randomUUID();
+    const individualGuestId = crypto.randomUUID();
+    const individualGroupName = `PRUEBA-${ctx.run}-Persona`;
+    const differentGuestName = 'Nombre Diferente Que Debe Cambiar';
+
+    const { data: savedData, error: saveError } = await ctx.ownerXClient.rpc(
+      'save_invitation',
+      {
+        p_invitation_id: individualInvId,
+        p_event_id: ctx.eventX.id,
+        p_group_name: individualGroupName,
+        p_phone: '+573001234567',
+        p_guests: [
+          { id: individualGuestId, full_name: differentGuestName },
+        ],
+        p_kind: 'individual',
+      }
+    );
+
+    assert.equal(
+      saveError,
+      null,
+      'Se esperaba que save_invitation con kind individual se creara sin error'
+    );
+    assert.equal(
+      savedData?.kind,
+      'individual',
+      'Se esperaba que la respuesta de save_invitation indicara kind = individual'
+    );
+    assert.equal(
+      savedData?.guests?.length,
+      1,
+      'Se esperaba que la respuesta contuviera exactamente una persona'
+    );
+    assert.equal(
+      savedData?.guests?.[0]?.full_name,
+      individualGroupName,
+      'Se esperaba que el nombre de la persona en la respuesta fuera igual a group_name'
+    );
+
+    ctx.test27InvitationId = individualInvId;
+    ctx.test27GuestId = individualGuestId;
+
+    const { data: storedInv, error: checkInvError } = await ctx.adminClient
+      .from('invitations')
+      .select('id, kind, code')
+      .eq('id', individualInvId)
+      .single();
+
+    assert.equal(
+      checkInvError,
+      null,
+      'Se esperaba consultar con el administrador la invitación individual sin error'
+    );
+    assert.equal(
+      storedInv?.kind,
+      'individual',
+      'Se esperaba que la base de datos confirmara kind = individual'
+    );
+
+    const { data: storedGuests, error: checkGuestsError } = await ctx.adminClient
+      .from('guests')
+      .select('id, full_name')
+      .eq('invitation_id', individualInvId);
+
+    assert.equal(
+      checkGuestsError,
+      null,
+      'Se esperaba consultar con el administrador las personas de la invitación individual'
+    );
+    assert.equal(
+      storedGuests?.length,
+      1,
+      'Se esperaba exactamente una persona en la base de datos'
+    );
+    assert.equal(
+      storedGuests?.[0]?.full_name,
+      individualGroupName,
+      'Se esperaba que el full_name de la persona en la base de datos fuera igual a group_name'
+    );
+
+    const lowerCaseCode = storedInv.code.toLowerCase();
+    const { data: getInvData, error: getInvError } = await ctx.anonClient.rpc(
+      'get_invitation',
+      {
+        p_code: lowerCaseCode,
+      }
+    );
+
+    assert.equal(
+      getInvError,
+      null,
+      'Se esperaba que get_invitation con código en minúsculas funcionara sin error'
+    );
+    assert.ok(
+      getInvData?.invitation,
+      'Se esperaba recibir el objeto de invitación desde get_invitation'
+    );
+    assert.equal(
+      getInvData.invitation.kind,
+      'individual',
+      'Se esperaba que get_invitation devolviera kind = individual'
+    );
+    assert.equal(
+      getInvData.invitation.code,
+      storedInv.code,
+      'Se esperaba que get_invitation devolviera el código guardado en mayúsculas'
+    );
+  }
+);
+
+test(
+  '28. save_invitation valida el tipo y conserva el tipo existente si no se envía',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    const twoGuestsInvId = crypto.randomUUID();
+    const { error: twoGuestsError } = await ctx.ownerXClient.rpc(
+      'save_invitation',
+      {
+        p_invitation_id: twoGuestsInvId,
+        p_event_id: ctx.eventX.id,
+        p_group_name: `PRUEBA-${ctx.run}-DOS-PERSONAS`,
+        p_phone: '+573001234567',
+        p_guests: [
+          { id: crypto.randomUUID(), full_name: 'Persona 1' },
+          { id: crypto.randomUUID(), full_name: 'Persona 2' },
+        ],
+        p_kind: 'individual',
+      }
+    );
+
+    assert.ok(
+      twoGuestsError,
+      'Se esperaba un error al crear una invitación individual con dos personas'
+    );
+    assert.ok(
+      twoGuestsError.message.includes('individual_requires_one_guest'),
+      `Se esperaba el código individual_requires_one_guest, pero se recibió: ${twoGuestsError.message}`
+    );
+
+    const { data: twoGuestsRows, error: checkTwoGuestsError } =
+      await ctx.adminClient
+        .from('invitations')
+        .select('id')
+        .eq('id', twoGuestsInvId);
+
+    assert.equal(
+      checkTwoGuestsError,
+      null,
+      'Se esperaba consultar con el administrador sin error'
+    );
+    assert.equal(
+      twoGuestsRows?.length,
+      0,
+      'Se esperaba que no se hubiera creado la invitación con dos personas'
+    );
+
+    const invalidKindInvId = crypto.randomUUID();
+    const { error: invalidKindError } = await ctx.ownerXClient.rpc(
+      'save_invitation',
+      {
+        p_invitation_id: invalidKindInvId,
+        p_event_id: ctx.eventX.id,
+        p_group_name: `PRUEBA-${ctx.run}-TIPO-INVALIDO`,
+        p_phone: '+573001234567',
+        p_guests: [
+          { id: crypto.randomUUID(), full_name: 'Persona Tipo Invalido' },
+        ],
+        p_kind: 'otro',
+      }
+    );
+
+    assert.ok(
+      invalidKindError,
+      'Se esperaba un error al enviar p_kind no reconocido'
+    );
+    assert.ok(
+      invalidKindError.message.includes('invalid_kind'),
+      `Se esperaba el código invalid_kind, pero se recibió: ${invalidKindError.message}`
+    );
+
+    const updatedGroupName = `PRUEBA-${ctx.run}-Persona-Renombrada`;
+    const { data: updateData, error: updateError } = await ctx.ownerXClient.rpc(
+      'save_invitation',
+      {
+        p_invitation_id: ctx.test27InvitationId,
+        p_event_id: ctx.eventX.id,
+        p_group_name: updatedGroupName,
+        p_phone: '+573001234567',
+        p_guests: [
+          { id: ctx.test27GuestId, full_name: 'Nombre Que Se Debe Sobrescribir' },
+        ],
+      }
+    );
+
+    assert.equal(
+      updateError,
+      null,
+      'Se esperaba que actualizar la invitación individual sin enviar p_kind no diera error'
+    );
+    assert.equal(
+      updateData?.kind,
+      'individual',
+      'Se esperaba que se conservara el kind individual al omitir p_kind'
+    );
+    assert.equal(
+      updateData?.guests?.[0]?.full_name,
+      updatedGroupName,
+      'Se esperaba que el nombre de la persona cambiara al nuevo group_name'
+    );
+
+    const { data: storedUpdatedInv, error: checkUpdatedInvError } =
+      await ctx.adminClient
+        .from('invitations')
+        .select('kind, group_name')
+        .eq('id', ctx.test27InvitationId)
+        .single();
+
+    assert.equal(
+      checkUpdatedInvError,
+      null,
+      'Se esperaba consultar la invitación actualizada con el administrador sin error'
+    );
+    assert.equal(
+      storedUpdatedInv?.kind,
+      'individual',
+      'Se esperaba que en base de datos continuara con kind individual'
+    );
+
+    const { data: storedUpdatedGuest, error: checkUpdatedGuestError } =
+      await ctx.adminClient
+        .from('guests')
+        .select('full_name')
+        .eq('id', ctx.test27GuestId)
+        .single();
+
+    assert.equal(
+      checkUpdatedGuestError,
+      null,
+      'Se esperaba consultar la persona de la invitación con el administrador sin error'
+    );
+    assert.equal(
+      storedUpdatedGuest?.full_name,
+      updatedGroupName,
+      'Se esperaba que en base de datos la persona tuviera el nuevo nombre'
+    );
+
+    const newGroupInvId = crypto.randomUUID();
+    const newGroupGuestId = crypto.randomUUID();
+    const { data: newGroupData, error: newGroupError } =
+      await ctx.ownerXClient.rpc('save_invitation', {
+        p_invitation_id: newGroupInvId,
+        p_event_id: ctx.eventX.id,
+        p_group_name: `PRUEBA-${ctx.run}-GRUPO-NUEVO`,
+        p_phone: '+573001234567',
+        p_guests: [
+          { id: newGroupGuestId, full_name: 'Persona Grupo Nuevo' },
+        ],
+      });
+
+    assert.equal(
+      newGroupError,
+      null,
+      'Se esperaba crear una invitación nueva sin p_kind sin error'
+    );
+    assert.equal(
+      newGroupData?.kind,
+      'group',
+      'Se esperaba que la nueva invitación tuviera kind = group por defecto'
+    );
+
+    const { data: storedNewGroupInv, error: checkNewGroupInvError } =
+      await ctx.adminClient
+        .from('invitations')
+        .select('kind')
+        .eq('id', newGroupInvId)
+        .single();
+
+    assert.equal(
+      checkNewGroupInvError,
+      null,
+      'Se esperaba consultar con el administrador la nueva invitación grupal sin error'
+    );
+    assert.equal(
+      storedNewGroupInv?.kind,
+      'group',
+      'Se esperaba que la base de datos confirmara kind = group para la nueva invitación'
+    );
+  }
+);
+
+test(
+  '29. Un ayudante registra llegadas con record_arrivals',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    const inv29Id = crypto.randomUUID();
+    const guest1Id = crypto.randomUUID();
+    const guest2Id = crypto.randomUUID();
+
+    const { error: inv29Error } = await ctx.adminClient
+      .from('invitations')
+      .insert({
+        id: inv29Id,
+        event_id: ctx.eventX.id,
+        group_name: `PRUEBA-${ctx.run}-LLEGADAS-29`,
+      });
+
+    assert.equal(
+      inv29Error,
+      null,
+      'Se esperaba crear la invitación para la prueba 29 sin error'
+    );
+
+    const { error: guests29Error } = await ctx.adminClient
+      .from('guests')
+      .insert([
+        { id: guest1Id, invitation_id: inv29Id, full_name: 'Persona Llegada 1', sort_order: 1 },
+        { id: guest2Id, invitation_id: inv29Id, full_name: 'Persona Llegada 2', sort_order: 2 },
+      ]);
+
+    assert.equal(
+      guests29Error,
+      null,
+      'Se esperaba crear las personas para la prueba 29 sin error'
+    );
+
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    const arrivalsPayload = [
+      { guest_id: guest1Id, arrived_at: fiveMinutesAgo },
+      { guest_id: guest2Id, arrived_at: fiveMinutesAgo },
+    ];
+
+    const { data: arrivalsData, error: arrivalsError } =
+      await ctx.helperXClient.rpc('record_arrivals', {
+        p_event_id: ctx.eventX.id,
+        p_arrivals: arrivalsPayload,
+      });
+
+    assert.equal(
+      arrivalsError,
+      null,
+      'Se esperaba que el ayudante llamara a record_arrivals sin error'
+    );
+    assert.ok(
+      Array.isArray(arrivalsData),
+      'Se esperaba que record_arrivals devolviera un arreglo'
+    );
+    assert.equal(
+      arrivalsData.length,
+      2,
+      'Se esperaba que se devolvieran exactamente dos resultados de llegada'
+    );
+
+    const expectedTime = new Date(fiveMinutesAgo).getTime();
+
+    for (let i = 0; i < arrivalsData.length; i += 1) {
+      const item = arrivalsData[i];
+      assert.equal(
+        item.status,
+        'recorded',
+        `Se esperaba status = recorded para el elemento ${i}`
+      );
+      assert.equal(
+        item.arrived_by,
+        ctx.helperXUser.id,
+        `Se esperaba que arrived_by fuera el id del ayudante para el elemento ${i}`
+      );
+      assert.equal(
+        new Date(item.arrived_at).getTime(),
+        expectedTime,
+        `Se esperaba que arrived_at coincidiera con la hora enviada para el elemento ${i}`
+      );
+    }
+
+    const { data: storedGuests, error: checkGuestsError } = await ctx.adminClient
+      .from('guests')
+      .select('id, arrived_at, arrived_by')
+      .in('id', [guest1Id, guest2Id]);
+
+    assert.equal(
+      checkGuestsError,
+      null,
+      'Se esperaba consultar con el administrador los invitados en guests sin error'
+    );
+    assert.equal(
+      storedGuests?.length,
+      2,
+      'Se esperaba encontrar los dos invitados en la base de datos'
+    );
+
+    for (const guest of storedGuests ?? []) {
+      assert.equal(
+        guest.arrived_by,
+        ctx.helperXUser.id,
+        'Se esperaba que arrived_by en base de datos fuera el id del ayudante'
+      );
+      assert.equal(
+        new Date(guest.arrived_at).getTime(),
+        expectedTime,
+        'Se esperaba que arrived_at en base de datos fuera la hora enviada'
+      );
+    }
+
+    ctx.test29ArrivalsPayload = arrivalsPayload;
+    ctx.test29GuestIds = [guest1Id, guest2Id];
+    ctx.test29RecordedAt = fiveMinutesAgo;
+  }
+);
+
+test(
+  '30. record_arrivals no pisa una llegada ya guardada, recorta horas futuras e ignora personas de otro evento',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    const { data: repeatData, error: repeatError } =
+      await ctx.helperXClient.rpc('record_arrivals', {
+        p_event_id: ctx.eventX.id,
+        p_arrivals: ctx.test29ArrivalsPayload,
+      });
+
+    assert.equal(
+      repeatError,
+      null,
+      'Se esperaba que repetir la llamada de llegadas no diera error'
+    );
+    assert.equal(
+      repeatData?.length,
+      2,
+      'Se esperaba recibir dos resultados al repetir la llamada'
+    );
+
+    const originalTime = new Date(ctx.test29RecordedAt).getTime();
+
+    for (const item of repeatData ?? []) {
+      assert.equal(
+        item.status,
+        'already_arrived',
+        'Se esperaba status = already_arrived al repetir la llamada'
+      );
+      assert.equal(
+        item.arrived_by,
+        ctx.helperXUser.id,
+        'Se esperaba que arrived_by mantuviera el id original del ayudante'
+      );
+      assert.equal(
+        new Date(item.arrived_at).getTime(),
+        originalTime,
+        'Se esperaba que arrived_at mantuviera la hora original'
+      );
+    }
+
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString();
+    const otherTimePayload = ctx.test29GuestIds.map((guestId) => ({
+      guest_id: guestId,
+      arrived_at: tenMinutesAgo,
+    }));
+
+    const { data: ownerAttemptData, error: ownerAttemptError } =
+      await ctx.ownerXClient.rpc('record_arrivals', {
+        p_event_id: ctx.eventX.id,
+        p_arrivals: otherTimePayload,
+      });
+
+    assert.equal(
+      ownerAttemptError,
+      null,
+      'Se esperaba que ownerXClient al llamar con otra hora no diera error'
+    );
+
+    for (const item of ownerAttemptData ?? []) {
+      assert.equal(
+        item.status,
+        'already_arrived',
+        'Se esperaba status = already_arrived con otra hora'
+      );
+      assert.equal(
+        item.arrived_by,
+        ctx.helperXUser.id,
+        'Se esperaba que arrived_by no fuera pisado por el propietario'
+      );
+      assert.equal(
+        new Date(item.arrived_at).getTime(),
+        originalTime,
+        'Se esperaba que arrived_at no fuera cambiado'
+      );
+    }
+
+    const { data: storedAfterOwner, error: checkAfterOwnerError } =
+      await ctx.adminClient
+        .from('guests')
+        .select('id, arrived_at, arrived_by')
+        .in('id', ctx.test29GuestIds);
+
+    assert.equal(
+      checkAfterOwnerError,
+      null,
+      'Se esperaba consultar con el administrador sin error'
+    );
+
+    for (const guest of storedAfterOwner ?? []) {
+      assert.equal(
+        guest.arrived_by,
+        ctx.helperXUser.id,
+        'Se esperaba que la base de datos conservara arrived_by del ayudante'
+      );
+      assert.equal(
+        new Date(guest.arrived_at).getTime(),
+        originalTime,
+        'Se esperaba que la base de datos conservara arrived_at original'
+      );
+    }
+
+    const futureGuestInvId = crypto.randomUUID();
+    const futureGuestId = crypto.randomUUID();
+
+    await ctx.adminClient.from('invitations').insert({
+      id: futureGuestInvId,
+      event_id: ctx.eventX.id,
+      group_name: `PRUEBA-${ctx.run}-FUTURA`,
+    });
+    await ctx.adminClient.from('guests').insert({
+      id: futureGuestId,
+      invitation_id: futureGuestInvId,
+      full_name: 'Persona Hora Futura',
+    });
+
+    const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+    const beforeCallTime = Date.now();
+
+    const { data: futureData, error: futureError } = await ctx.ownerXClient.rpc(
+      'record_arrivals',
+      {
+        p_event_id: ctx.eventX.id,
+        p_arrivals: [{ guest_id: futureGuestId, arrived_at: tomorrow }],
+      }
+    );
+
+    const afterCallTime = Date.now();
+
+    assert.equal(
+      futureError,
+      null,
+      'Se esperaba que registrar llegada con hora futura no diera error'
+    );
+    assert.equal(
+      futureData?.[0]?.status,
+      'recorded',
+      'Se esperaba status = recorded para la persona con hora futura'
+    );
+
+    const recordedFutureTime = new Date(futureData?.[0]?.arrived_at).getTime();
+    const toleranceMs = 2 * 60 * 1000;
+    assert.ok(
+      recordedFutureTime <= afterCallTime + toleranceMs,
+      `Se esperaba que la hora registrada no fuera posterior al momento de la llamada: ${recordedFutureTime} > ${afterCallTime + toleranceMs}`
+    );
+    assert.ok(
+      recordedFutureTime >= beforeCallTime - toleranceMs,
+      `Se esperaba que la hora registrada fuera cercana al momento de la llamada: ${recordedFutureTime} < ${beforeCallTime - toleranceMs}`
+    );
+
+    const guestYId = ctx.guestY.id;
+
+    const { data: foreignResult, error: foreignError } =
+      await ctx.ownerXClient.rpc('record_arrivals', {
+        p_event_id: ctx.eventX.id,
+        p_arrivals: [{ guest_id: guestYId, arrived_at: new Date().toISOString() }],
+      });
+
+    assert.equal(
+      foreignError,
+      null,
+      'Se esperaba que llamar con una persona de otro evento no lanzara excepción'
+    );
+    assert.equal(
+      foreignResult?.[0]?.status,
+      'not_found',
+      'Se esperaba status = not_found para una persona de otro evento'
+    );
+    assert.equal(
+      foreignResult?.[0]?.arrived_at,
+      null,
+      'Se esperaba arrived_at en null para la persona de otro evento'
+    );
+    assert.equal(
+      foreignResult?.[0]?.arrived_by,
+      null,
+      'Se esperaba arrived_by en null para la persona de otro evento'
+    );
+
+    const { data: storedGuestY, error: checkGuestYError } =
+      await ctx.adminClient
+        .from('guests')
+        .select('arrived_at, arrived_by')
+        .eq('id', guestYId)
+        .single();
+
+    assert.equal(
+      checkGuestYError,
+      null,
+      'Se esperaba consultar con el administrador la persona del evento Y sin error'
+    );
+    assert.equal(
+      storedGuestY?.arrived_at,
+      null,
+      'Se esperaba que la persona del evento Y siguiera con arrived_at nulo'
+    );
+    assert.equal(
+      storedGuestY?.arrived_by,
+      null,
+      'Se esperaba que la persona del evento Y siguiera con arrived_by nulo'
+    );
+  }
+);
+
+test(
+  '31. record_arrivals rechaza a quien no es miembro, a clientes sin sesión y entradas inválidas',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    const { error: nonMemberError } = await ctx.ownerYClient.rpc(
+      'record_arrivals',
+      {
+        p_event_id: ctx.eventX.id,
+        p_arrivals: [{ guest_id: crypto.randomUUID() }],
+      }
+    );
+
+    assert.ok(
+      nonMemberError,
+      'Se esperaba un error cuando un usuario que no es miembro del evento intenta registrar llegadas'
+    );
+    assert.ok(
+      nonMemberError.message.includes('not_event_member'),
+      `Se esperaba el código not_event_member, pero se recibió: ${nonMemberError.message}`
+    );
+
+    const anonTestInvId = crypto.randomUUID();
+    const anonTestGuestId = crypto.randomUUID();
+    await ctx.adminClient.from('invitations').insert({
+      id: anonTestInvId,
+      event_id: ctx.eventX.id,
+      group_name: `PRUEBA-${ctx.run}-ANON-LLEGADA`,
+    });
+    await ctx.adminClient.from('guests').insert({
+      id: anonTestGuestId,
+      invitation_id: anonTestInvId,
+      full_name: 'Persona Prueba Anon',
+    });
+
+    const { error: anonError } = await ctx.anonClient.rpc('record_arrivals', {
+      p_event_id: ctx.eventX.id,
+      p_arrivals: [{ guest_id: anonTestGuestId }],
+    });
+
+    assert.ok(
+      anonError,
+      'Se esperaba un error al intentar llamar a record_arrivals sin sesión'
+    );
+
+    const { data: storedAnonGuest, error: checkAnonGuestError } =
+      await ctx.adminClient
+        .from('guests')
+        .select('arrived_at, arrived_by')
+        .eq('id', anonTestGuestId)
+        .single();
+
+    assert.equal(
+      checkAnonGuestError,
+      null,
+      'Se esperaba consultar con el administrador sin error'
+    );
+    assert.equal(
+      storedAnonGuest?.arrived_at,
+      null,
+      'Se esperaba que arrived_at siguiera en nulo tras el intento anónimo'
+    );
+    assert.equal(
+      storedAnonGuest?.arrived_by,
+      null,
+      'Se esperaba que arrived_by siguiera en nulo tras el intento anónimo'
+    );
+
+    const { error: emptyError } = await ctx.ownerXClient.rpc(
+      'record_arrivals',
+      {
+        p_event_id: ctx.eventX.id,
+        p_arrivals: [],
+      }
+    );
+
+    assert.ok(
+      emptyError,
+      'Se esperaba un error al llamar a record_arrivals con arreglo vacío'
+    );
+    assert.ok(
+      emptyError.message.includes('arrivals_required'),
+      `Se esperaba el código arrivals_required, pero se recibió: ${emptyError.message}`
+    );
+
+    const arrivals501 = Array.from({ length: 501 }, () => ({
+      guest_id: crypto.randomUUID(),
+    }));
+
+    const { error: tooManyError } = await ctx.ownerXClient.rpc(
+      'record_arrivals',
+      {
+        p_event_id: ctx.eventX.id,
+        p_arrivals: arrivals501,
+      }
+    );
+
+    assert.ok(
+      tooManyError,
+      'Se esperaba un error al llamar a record_arrivals con más de 500 elementos'
+    );
+    assert.ok(
+      tooManyError.message.includes('too_many_arrivals'),
+      `Se esperaba el código too_many_arrivals, pero se recibió: ${tooManyError.message}`
+    );
+
+    const { error: invalidArrivalError } = await ctx.ownerXClient.rpc(
+      'record_arrivals',
+      {
+        p_event_id: ctx.eventX.id,
+        p_arrivals: [{ guest_id: 'no-es-uuid' }],
+      }
+    );
+
+    assert.ok(
+      invalidArrivalError,
+      'Se esperaba un error al enviar un guest_id que no es un UUID'
+    );
+    assert.ok(
+      invalidArrivalError.message.includes('invalid_arrival'),
+      `Se esperaba el código invalid_arrival, pero se recibió: ${invalidArrivalError.message}`
+    );
+  }
+);
+
+test(
+  '32. Deshacer una llegada y reglas del disparador',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    const inv32Id = crypto.randomUUID();
+    const guest32Id = crypto.randomUUID();
+
+    await ctx.adminClient.from('invitations').insert({
+      id: inv32Id,
+      event_id: ctx.eventX.id,
+      group_name: `PRUEBA-${ctx.run}-LLEGADA-32`,
+    });
+    await ctx.adminClient.from('guests').insert({
+      id: guest32Id,
+      invitation_id: inv32Id,
+      full_name: 'Persona Prueba 32',
+    });
+
+    const initialTime = new Date(Date.now() - 20 * 60 * 1000).toISOString();
+    const { data: initialRecordData, error: initialRecordError } =
+      await ctx.helperXClient.rpc('record_arrivals', {
+        p_event_id: ctx.eventX.id,
+        p_arrivals: [{ guest_id: guest32Id, arrived_at: initialTime }],
+      });
+
+    assert.equal(
+      initialRecordError,
+      null,
+      'Se esperaba registrar la llegada inicial sin error'
+    );
+    assert.equal(
+      initialRecordData?.[0]?.status,
+      'recorded',
+      'Se esperaba status = recorded en el registro inicial'
+    );
+
+    const { error: undoError } = await ctx.helperXClient
+      .from('guests')
+      .update({ arrived_at: null })
+      .eq('id', guest32Id);
+
+    assert.equal(
+      undoError,
+      null,
+      'Se esperaba que el ayudante pudiera deshacer la llegada actualizando arrived_at a null'
+    );
+
+    const { data: storedAfterUndo, error: checkAfterUndoError } =
+      await ctx.adminClient
+        .from('guests')
+        .select('arrived_at, arrived_by')
+        .eq('id', guest32Id)
+        .single();
+
+    assert.equal(
+      checkAfterUndoError,
+      null,
+      'Se esperaba consultar con el administrador la persona tras deshacer llegada'
+    );
+    assert.equal(
+      storedAfterUndo?.arrived_at,
+      null,
+      'Se esperaba que arrived_at fuera nulo en la base de datos'
+    );
+    assert.equal(
+      storedAfterUndo?.arrived_by,
+      null,
+      'Se esperaba que arrived_by fuera nulo en la base de datos'
+    );
+
+    const secondTime = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+    const { data: secondRecordData, error: secondRecordError } =
+      await ctx.helperXClient.rpc('record_arrivals', {
+        p_event_id: ctx.eventX.id,
+        p_arrivals: [{ guest_id: guest32Id, arrived_at: secondTime }],
+      });
+
+    assert.equal(
+      secondRecordError,
+      null,
+      'Se esperaba volver a registrar la llegada sin error'
+    );
+    assert.equal(
+      secondRecordData?.[0]?.status,
+      'recorded',
+      'Se esperaba status = recorded al registrar nuevamente tras deshacer'
+    );
+
+    const secondTimeMs = new Date(secondTime).getTime();
+    assert.equal(
+      new Date(secondRecordData?.[0]?.arrived_at).getTime(),
+      secondTimeMs,
+      'Se esperaba que la nueva hora de llegada fuera la enviada'
+    );
+
+    const attemptTime = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+    const { error: updateAttemptError } = await ctx.ownerXClient
+      .from('guests')
+      .update({ arrived_at: attemptTime })
+      .eq('id', guest32Id);
+
+    assert.equal(
+      updateAttemptError,
+      null,
+      'Se esperaba que el update no fallara pero el disparador protegiera los valores'
+    );
+
+    const { data: storedAfterAttempt, error: checkAfterAttemptError } =
+      await ctx.adminClient
+        .from('guests')
+        .select('arrived_at, arrived_by')
+        .eq('id', guest32Id)
+        .single();
+
+    assert.equal(
+      checkAfterAttemptError,
+      null,
+      'Se esperaba consultar con el administrador tras el intento de sobrescritura'
+    );
+    assert.equal(
+      new Date(storedAfterAttempt?.arrived_at).getTime(),
+      secondTimeMs,
+      'Se esperaba que arrived_at no cambiara tras el intento de sobrescritura'
+    );
+    assert.equal(
+      storedAfterAttempt?.arrived_by,
+      ctx.helperXUser.id,
+      'Se esperaba que arrived_by no cambiara tras el intento de sobrescritura'
+    );
+
+    const newGuestWithArrivalId = crypto.randomUUID();
+    const { error: insertWithArrivalError } = await ctx.adminClient
+      .from('guests')
+      .insert({
+        id: newGuestWithArrivalId,
+        invitation_id: inv32Id,
+        full_name: 'Persona Nueva Con Llegada Forzada',
+        arrived_at: new Date().toISOString(),
+        arrived_by: ctx.ownerXUser.id,
+      });
+
+    assert.equal(
+      insertWithArrivalError,
+      null,
+      'Se esperaba insertar la persona con el administrador sin error'
+    );
+
+    const { data: storedInsertedGuest, error: checkInsertedGuestError } =
+      await ctx.adminClient
+        .from('guests')
+        .select('arrived_at, arrived_by')
+        .eq('id', newGuestWithArrivalId)
+        .single();
+
+    assert.equal(
+      checkInsertedGuestError,
+      null,
+      'Se esperaba consultar la persona recién insertada con el administrador'
+    );
+    assert.equal(
+      storedInsertedGuest?.arrived_at,
+      null,
+      'Se esperaba que arrived_at quedara en nulo por regla del disparador en INSERT'
+    );
+    assert.equal(
+      storedInsertedGuest?.arrived_by,
+      null,
+      'Se esperaba que arrived_by quedara en nulo por regla del disparador en INSERT'
+    );
+  }
+);
