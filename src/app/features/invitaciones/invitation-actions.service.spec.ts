@@ -74,7 +74,7 @@ describe('InvitationActionsService', () => {
 
     expect(openSpy).toHaveBeenCalled();
     const openedUrl = openSpy.mock.calls[0][0] as string;
-    expect(decodeURIComponent(openedUrl)).toContain('Hola, Familia Ejemplo. Les invitamos');
+    expect(decodeURIComponent(openedUrl)).toContain('Hola, Familia Ejemplo. Queremos que nos acompañen en');
     openSpy.mockRestore();
   });
 });

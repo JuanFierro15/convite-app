@@ -10,11 +10,11 @@ describe('whatsapp utils', () => {
     };
 
     expect(invitationMessage(params)).toBe(
-      'Hola, Familia Ejemplo. Les invitamos a Baby shower de prueba el domingo, 29 de noviembre de 2026. Confirmen su asistencia aquí: http://localhost:8100/i/ABCDEFGHJK',
+      'Hola, Familia Ejemplo. Queremos que nos acompañen en Baby shower de prueba el domingo, 29 de noviembre de 2026. Confirmen su asistencia aquí: http://localhost:8100/i/ABCDEFGHJK',
     );
 
     expect(invitationMessage({ ...params, kind: 'group' })).toBe(
-      'Hola, Familia Ejemplo. Les invitamos a Baby shower de prueba el domingo, 29 de noviembre de 2026. Confirmen su asistencia aquí: http://localhost:8100/i/ABCDEFGHJK',
+      'Hola, Familia Ejemplo. Queremos que nos acompañen en Baby shower de prueba el domingo, 29 de noviembre de 2026. Confirmen su asistencia aquí: http://localhost:8100/i/ABCDEFGHJK',
     );
   });
 

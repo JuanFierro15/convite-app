@@ -209,7 +209,7 @@ export class ArrivalsPage implements ViewWillEnter, ViewWillLeave {
       await this.showToast(
         'No encontramos esta invitación en la lista descargada. Si es nueva, actualiza la lista con conexión o búscala por nombre.',
         'danger',
-        3000,
+        5000,
       );
       return;
     }

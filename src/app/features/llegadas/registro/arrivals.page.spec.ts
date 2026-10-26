@@ -458,6 +458,7 @@ describe('ArrivalsPage', () => {
         message:
           'No encontramos esta invitación en la lista descargada. Si es nueva, actualiza la lista con conexión o búscala por nombre.',
         color: 'danger',
+        duration: 5000,
       }),
     );
   });

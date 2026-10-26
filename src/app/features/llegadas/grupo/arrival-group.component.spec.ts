@@ -319,6 +319,26 @@ describe('ArrivalGroupComponent', () => {
     );
   });
 
+  it('tells that the guests were already registered when no new arrival is added', async () => {
+    mockSession.register.mockResolvedValue(0);
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    await component.onRegister();
+
+    expect(mockToastCtrl.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Estas personas ya estaban registradas',
+      }),
+    );
+    expect(mockToastCtrl.create).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Llegada registrada: 0 personas',
+      }),
+    );
+  });
+
   it('shows danger toast and leaves modal open when register fails', async () => {
     mockSession.register.mockRejectedValue(new Error('Error al registrar'));
 

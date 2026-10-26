@@ -19,7 +19,7 @@ export function invitationMessage({
   if (kind === 'individual') {
     return `Hola, ${groupName}. Te invitamos a ${eventName} el ${dateText}. Confirma tu asistencia aquí: ${link}`;
   }
-  return `Hola, ${groupName}. Les invitamos a ${eventName} el ${dateText}. Confirmen su asistencia aquí: ${link}`;
+  return `Hola, ${groupName}. Queremos que nos acompañen en ${eventName} el ${dateText}. Confirmen su asistencia aquí: ${link}`;
 }
 
 export function whatsappUrl(phone: string | null | undefined, message: string): string | null {

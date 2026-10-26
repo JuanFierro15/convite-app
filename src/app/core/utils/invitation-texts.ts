@@ -34,7 +34,7 @@ function resolveWelcomeTitle(kind: InvitationKind, groupName: string): string {
     return `La familia ${match[1].trim()} está invitada`;
   }
 
-  return `${trimmed}, les invitamos`;
+  return `${trimmed}, queremos que nos acompañen`;
 }
 
 export function guestTexts(kind: InvitationKind, groupName: string): GuestTexts {

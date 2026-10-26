@@ -248,9 +248,11 @@ export class ArrivalGroupComponent implements OnInit {
       }
 
       const toastMessage =
-        added === 1
-          ? 'Llegada registrada: 1 persona'
-          : `Llegada registrada: ${added} personas`;
+        added === 0
+          ? 'Estas personas ya estaban registradas'
+          : added === 1
+            ? 'Llegada registrada: 1 persona'
+            : `Llegada registrada: ${added} personas`;
 
       await this.showToast(toastMessage, 'success');
       await this.modalCtrl.dismiss(null, 'registered');

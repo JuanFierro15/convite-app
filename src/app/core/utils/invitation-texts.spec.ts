@@ -32,7 +32,7 @@ describe('invitation-texts utils', () => {
 
     it('formats group invitations that do not start with Familia', () => {
       expect(guestTexts('group', 'Amigos del trabajo').welcomeTitle).toBe(
-        'Amigos del trabajo, les invitamos',
+        'Amigos del trabajo, queremos que nos acompañen',
       );
     });
 
