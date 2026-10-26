@@ -37,6 +37,7 @@ import {
   GuestInvitation,
   ThemeService,
   guestErrorMessage,
+  guestTexts,
 } from '../../../core';
 import { EmptyStateComponent, IllustrationComponent } from '../../../shared';
 
@@ -85,6 +86,13 @@ export class GuestGiftsPage implements OnInit, ViewWillEnter {
   private fetching = false;
 
   readonly eventName = computed(() => this.invitation()?.event.name ?? 'Lista de regalos');
+
+  readonly texts = computed(() => {
+    const inv = this.invitation();
+    const kind = inv?.invitation.kind ?? 'group';
+    const groupName = inv?.invitation.group_name ?? '';
+    return guestTexts(kind, groupName);
+  });
 
   readonly unlimitedGifts = computed(() =>
     this.gifts().filter((gift) => gift.kind === 'repeatable' || gift.kind === 'free'),
@@ -199,7 +207,7 @@ export class GuestGiftsPage implements OnInit, ViewWillEnter {
 
     const alert = await this.alertController.create({
       header: 'Confirmar regalo',
-      message: `¿Desean apartar ${gift.name} a nombre de ${inv.invitation.group_name}?`,
+      message: this.texts().reserveGiftConfirm(gift.name),
       buttons: [
         {
           text: 'Cancelar',
@@ -226,7 +234,7 @@ export class GuestGiftsPage implements OnInit, ViewWillEnter {
 
     const alert = await this.alertController.create({
       header: 'Liberar regalo',
-      message: `¿Liberar ${gift.name}? Otra familia podrá apartarlo.`,
+      message: `¿Liberar ${gift.name}? Alguien más podrá apartarlo.`,
       buttons: [
         {
           text: 'Cancelar',

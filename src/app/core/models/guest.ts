@@ -1,4 +1,5 @@
 import { CONNECTION_ERROR_MESSAGE } from '../utils/messages';
+import { InvitationKind } from '../utils/invitation-texts';
 import { Rsvp } from './events';
 import { GiftKind } from './gifts';
 
@@ -24,6 +25,8 @@ export interface GuestInvitation {
   invitation: {
     id: string;
     group_name: string;
+    code: string;
+    kind: InvitationKind;
   };
   event: GuestInvitationEvent;
   guests: GuestInvitationPerson[];
@@ -45,10 +48,10 @@ export const GUEST_ERROR_MESSAGES: Record<string, string> = {
   invalid_code: 'No encontramos esta invitación. Revisa el enlace que te enviaron.',
   deadline_passed:
     'El plazo para responder ya terminó. Si necesitas cambiar tu respuesta, escríbenos.',
-  already_reserved: 'Otra familia acaba de apartar este regalo. Elige otro de la lista.',
+  already_reserved: 'Alguien acaba de apartar este regalo. Elige otro de la lista.',
   gifts_closed: 'La lista de regalos ya está cerrada.',
   network_error: CONNECTION_ERROR_MESSAGE,
-  not_reserved_by_you: 'Este regalo ya no está apartado por tu familia.',
+  not_reserved_by_you: 'Este regalo ya no está apartado para esta invitación.',
   load_failed: 'No pudimos cargar tu invitación. Inténtalo de nuevo.',
 };
 

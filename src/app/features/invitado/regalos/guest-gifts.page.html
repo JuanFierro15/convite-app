@@ -74,7 +74,7 @@
                       @if (gift.reserved_by_me) {
                         <div class="chosen-badge badge-soft-success">
                           <ion-icon name="checkmark-circle" aria-hidden="true"></ion-icon>
-                          <span>Ustedes eligieron esta opción</span>
+                          <span>{{ texts().giftChosenBadge }}</span>
                         </div>
                         <ion-button
                           fill="outline"
@@ -142,7 +142,7 @@
           @if (myUniqueGifts().length > 0) {
             <section class="gift-section" aria-labelledby="section-mine">
               <h2 id="section-mine" class="text-section gift-section__title">
-                Apartados por ustedes
+                {{ texts().giftsMineHeading }}
               </h2>
               <div class="gift-list">
                 @for (gift of myUniqueGifts(); track gift.id) {
@@ -150,7 +150,7 @@
                     <ion-card-content class="gift-card__content">
                       <div class="gift-card__header">
                         <p class="text-name gift-card__name">{{ gift.name }}</p>
-                        <span class="badge-soft-success">Apartado por ustedes</span>
+                        <span class="badge-soft-success">{{ texts().giftMineBadge }}</span>
                       </div>
                       @if (gift.description; as desc) {
                         <p class="text-body gift-card__description">{{ desc }}</p>

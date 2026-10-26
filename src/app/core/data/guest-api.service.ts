@@ -6,6 +6,7 @@ import {
   guestErrorMessage,
 } from '../models/guest';
 import { SupabaseService } from '../supabase/supabase.service';
+import { toInvitationKind } from '../utils/invitation-texts';
 import { isConnectionError } from './errors';
 
 export { GuestApiError, guestErrorMessage } from '../models/guest';
@@ -44,6 +45,30 @@ export function toGuestApiError(error: unknown, fallbackCode?: string): GuestApi
   return new GuestApiError(code, guestErrorMessage(code));
 }
 
+function normalizeInvitationResponse(data: unknown): GuestInvitation | null {
+  if (!data || typeof data !== 'object') {
+    return null;
+  }
+  const payload = data as GuestInvitation & {
+    invitation?: {
+      id?: string;
+      group_name?: string;
+      code?: unknown;
+      kind?: unknown;
+    };
+  };
+  const rawInv = payload.invitation;
+  return {
+    ...payload,
+    invitation: {
+      id: rawInv?.id ?? '',
+      group_name: rawInv?.group_name ?? '',
+      code: typeof rawInv?.code === 'string' ? rawInv.code : '',
+      kind: toInvitationKind(rawInv?.kind),
+    },
+  };
+}
+
 @Injectable({ providedIn: 'root' })
 export class GuestApiService {
   private readonly supabase = inject(SupabaseService);
@@ -56,7 +81,7 @@ export class GuestApiService {
     if (error) {
       throw toGuestApiError(error, 'load_failed');
     }
-    return (data as unknown as GuestInvitation | null) ?? null;
+    return normalizeInvitationResponse(data);
   }
 
   async setRsvp(
@@ -73,7 +98,7 @@ export class GuestApiService {
     if (error) {
       throw toGuestApiError(error);
     }
-    return data as unknown as GuestInvitation;
+    return normalizeInvitationResponse(data) as GuestInvitation;
   }
 
   async getGifts(code: string): Promise<GuestGift[]> {

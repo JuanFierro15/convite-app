@@ -59,6 +59,10 @@ describe('invitation-texts utils', () => {
       expect(texts.tableNote).toBe('Su mesa se asignará pronto');
       expect(texts.giftsMineHeading).toBe('Apartados por ustedes');
       expect(texts.giftMineBadge).toBe('Apartado por ustedes');
+      expect(texts.giftChosenBadge).toBe('Ustedes eligieron esta opción');
+      expect(texts.reserveGiftConfirm('Pañales')).toBe(
+        '¿Desean apartar Pañales a nombre de Familia Ejemplo?',
+      );
       expect(texts.entryCodeTitle).toBe('Código de entrada');
       expect(texts.entryCodeInstruction).toBe('Muestra este código en la entrada');
       expect(texts.entryCodeTip).toBe(
@@ -79,6 +83,8 @@ describe('invitation-texts utils', () => {
       expect(texts.tableNote).toBe('Tu mesa se asignará pronto');
       expect(texts.giftsMineHeading).toBe('Apartados por ti');
       expect(texts.giftMineBadge).toBe('Apartado por ti');
+      expect(texts.giftChosenBadge).toBe('Elegiste esta opción');
+      expect(texts.reserveGiftConfirm('Pañales')).toBe('¿Quieres apartar Pañales a tu nombre?');
       expect(texts.entryCodeTitle).toBe('Código de entrada');
       expect(texts.entryCodeInstruction).toBe('Muestra este código en la entrada');
       expect(texts.entryCodeTip).toBe(

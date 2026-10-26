@@ -3,6 +3,7 @@ import {
   Component,
   OnInit,
   computed,
+  effect,
   inject,
   input,
   signal,
@@ -29,6 +30,7 @@ import {
   giftOutline,
   locationOutline,
   mapOutline,
+  qrCodeOutline,
   restaurantOutline,
   timeOutline,
 } from 'ionicons/icons';
@@ -38,9 +40,14 @@ import {
   GuestInvitation,
   GuestInvitationPerson,
   ThemeService,
+  formatInvitationCode,
   formatLongDate,
   formatTime,
   guestErrorMessage,
+  guestInvitationUrl,
+  guestTexts,
+  normalizeInvitationCode,
+  qrImageDataUrl,
   toBogotaDateInput,
 } from '../../../core';
 import { EmptyStateComponent, IllustrationComponent } from '../../../shared';
@@ -75,6 +82,7 @@ export class GuestInvitationPage implements OnInit, ViewWillEnter {
   readonly error = signal<string | null>(null);
   readonly errorCode = signal<string | null>(null);
   readonly invitation = signal<GuestInvitation | null>(null);
+  readonly qrCodeDataUrl = signal<string | null>(null);
   readonly savingGuestId = signal<string | null>(null);
   readonly savingRsvp = signal<'accepted' | 'declined' | null>(null);
   readonly hasRespondedInVisit = signal(false);
@@ -84,22 +92,26 @@ export class GuestInvitationPage implements OnInit, ViewWillEnter {
   );
 
   private fetching = false;
+  private lastLoadedCode: string | null = null;
 
   readonly heroCoverUrl = computed(() => {
     const inv = this.invitation();
     return this.themeService.asset(inv?.event.theme_id, 'hero-cover.webp');
   });
 
-  readonly welcomeTitle = computed(() => {
-    const groupName = this.invitation()?.invitation.group_name.trim() ?? '';
-    if (!groupName) {
-      return '';
-    }
-    if (/^familia\s+/i.test(groupName)) {
-      const rest = groupName.replace(/^familia\s+/i, '').trim();
-      return `La familia ${rest} está invitada`;
-    }
-    return `${groupName}, están invitados`;
+  readonly texts = computed(() => {
+    const inv = this.invitation();
+    const kind = inv?.invitation.kind ?? 'group';
+    const groupName = inv?.invitation.group_name ?? '';
+    return guestTexts(kind, groupName);
+  });
+
+  readonly welcomeTitle = computed(() => this.texts().welcomeTitle);
+
+  readonly formattedInvitationCode = computed(() => {
+    const inv = this.invitation();
+    const rawCode = inv?.invitation.code || normalizeInvitationCode(this.code());
+    return formatInvitationCode(rawCode);
   });
 
   readonly formattedEventDate = computed(() => {
@@ -154,6 +166,15 @@ export class GuestInvitationPage implements OnInit, ViewWillEnter {
       'close-outline': closeOutline,
       'restaurant-outline': restaurantOutline,
       'gift-outline': giftOutline,
+      'qr-code-outline': qrCodeOutline,
+    });
+
+    effect(() => {
+      const currentCode = this.code();
+      if (this.lastLoadedCode !== null && this.lastLoadedCode !== currentCode) {
+        this.lastLoadedCode = currentCode;
+        void this.loadInvitation();
+      }
     });
   }
 
@@ -190,15 +211,18 @@ export class GuestInvitationPage implements OnInit, ViewWillEnter {
     this.errorCode.set(null);
 
     try {
+      this.lastLoadedCode = this.code();
       const data = await this.guestApi.getInvitation(this.code());
       if (!data) {
         this.invitation.set(null);
+        this.qrCodeDataUrl.set(null);
         this.errorCode.set('invalid_code');
         this.error.set(guestErrorMessage('invalid_code'));
         return;
       }
       this.themeService.apply(data.event.theme_id);
       this.invitation.set(data);
+      await this.generateQr(data.invitation.code);
     } catch (err) {
       const code = err instanceof GuestApiError ? err.code : 'load_failed';
       const message =
@@ -207,6 +231,7 @@ export class GuestInvitationPage implements OnInit, ViewWillEnter {
           : guestErrorMessage('load_failed');
       if (code === 'invalid_code' || !this.invitation()) {
         this.invitation.set(null);
+        this.qrCodeDataUrl.set(null);
         this.errorCode.set(code);
         this.error.set(message);
       } else {
@@ -236,6 +261,7 @@ export class GuestInvitationPage implements OnInit, ViewWillEnter {
       const updated = await this.guestApi.setRsvp(this.code(), guest.id, value);
       this.themeService.apply(updated.event.theme_id);
       this.invitation.set(updated);
+      await this.generateQr(updated.invitation.code);
       this.hasRespondedInVisit.set(true);
     } catch (err) {
       const apiErr =
@@ -254,6 +280,21 @@ export class GuestInvitationPage implements OnInit, ViewWillEnter {
     } finally {
       this.savingGuestId.set(null);
       this.savingRsvp.set(null);
+    }
+  }
+
+  private async generateQr(invitationCode?: string): Promise<void> {
+    const rawCode = invitationCode || normalizeInvitationCode(this.code());
+    if (!rawCode) {
+      this.qrCodeDataUrl.set(null);
+      return;
+    }
+    try {
+      const url = guestInvitationUrl(rawCode);
+      const dataUrl = await qrImageDataUrl(url);
+      this.qrCodeDataUrl.set(dataUrl);
+    } catch {
+      this.qrCodeDataUrl.set(null);
     }
   }
 

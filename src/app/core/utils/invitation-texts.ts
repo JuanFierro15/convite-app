@@ -12,6 +12,8 @@ export interface GuestTexts {
   tableNote: string;
   giftsMineHeading: string;
   giftMineBadge: string;
+  giftChosenBadge: string;
+  reserveGiftConfirm(giftName: string): string;
   entryCodeTitle: string;
   entryCodeInstruction: string;
   entryCodeTip: string;
@@ -54,6 +56,11 @@ export function guestTexts(kind: InvitationKind, groupName: string): GuestTexts 
     tableNote: isIndividual ? 'Tu mesa se asignará pronto' : 'Su mesa se asignará pronto',
     giftsMineHeading: isIndividual ? 'Apartados por ti' : 'Apartados por ustedes',
     giftMineBadge: isIndividual ? 'Apartado por ti' : 'Apartado por ustedes',
+    giftChosenBadge: isIndividual ? 'Elegiste esta opción' : 'Ustedes eligieron esta opción',
+    reserveGiftConfirm: (giftName: string) =>
+      isIndividual
+        ? `¿Quieres apartar ${giftName} a tu nombre?`
+        : `¿Desean apartar ${giftName} a nombre de ${groupName.trim()}?`,
     entryCodeTitle: 'Código de entrada',
     entryCodeInstruction: 'Muestra este código en la entrada',
     entryCodeTip: 'Tómale una captura de pantalla para tenerlo a mano, aunque no haya señal.',

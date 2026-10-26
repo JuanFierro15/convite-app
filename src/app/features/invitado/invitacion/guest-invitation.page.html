@@ -98,7 +98,7 @@
                 name="alarm-outline"
                 aria-hidden="true"
               ></ion-icon>
-              <span>Por favor respondan antes del {{ formattedDeadline() }}</span>
+              <span>{{ texts().deadlineReminder(formattedDeadline()) }}</span>
             </div>
           } @else {
             <div class="deadline-banner deadline-banner--closed" role="status">
@@ -107,9 +107,7 @@
                 name="alarm-outline"
                 aria-hidden="true"
               ></ion-icon>
-              <span>
-                El plazo para responder ya terminó. Si necesitas cambiar tu respuesta, escríbenos.
-              </span>
+              <span>{{ texts().deadlinePassed }}</span>
             </div>
           }
 
@@ -169,12 +167,42 @@
                   />
                 </div>
                 <p class="text-body confirmation-card__text">
-                  ¡Gracias! Recibimos su respuesta. Pueden cambiarla hasta el {{ formattedDeadline() }}.
+                  {{ texts().rsvpThanks(formattedDeadline()) }}
                 </p>
               </ion-card-content>
             </ion-card>
           }
         </section>
+
+        <ion-card class="section-card entry-code-card">
+          <ion-card-content class="entry-code-card__content">
+            <h2 class="text-section entry-code-card__title">{{ texts().entryCodeTitle }}</h2>
+
+            @if (qrCodeDataUrl(); as qrUrl) {
+              <div class="entry-code-card__qr-wrapper">
+                <img
+                  class="entry-code-card__qr-image"
+                  [src]="qrUrl"
+                  alt="Código QR de la invitación"
+                  width="220"
+                  height="220"
+                />
+              </div>
+            }
+
+            <p class="entry-code-card__code" aria-label="Código de invitación">
+              {{ formattedInvitationCode() }}
+            </p>
+
+            <p class="entry-code-card__instruction">
+              {{ texts().entryCodeInstruction }}
+            </p>
+
+            <p class="entry-code-card__tip">
+              {{ texts().entryCodeTip }}
+            </p>
+          </ion-card-content>
+        </ion-card>
 
         <ion-card class="section-card">
           <ion-card-content class="section-card__content">
@@ -196,7 +224,7 @@
               name="restaurant-outline"
               aria-hidden="true"
             ></ion-icon>
-            <span class="text-body table-card__text">Tu mesa se asignará pronto</span>
+            <span class="text-body table-card__text">{{ texts().tableNote }}</span>
           </ion-card-content>
         </ion-card>
       </div>
