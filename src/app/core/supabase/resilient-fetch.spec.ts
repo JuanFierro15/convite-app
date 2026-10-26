@@ -196,6 +196,29 @@ describe('resilient-fetch', () => {
     expect(response.status).toBe(200);
   });
 
+  it('8b. POST /rest/v1/rpc/record_arrivals with 503 then 200 is retryable and makes 2 calls', async () => {
+    const fetchImpl = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response('Service Unavailable', { status: 503 }))
+      .mockResolvedValueOnce(jsonResponse([{ guest_id: 'guest-1', status: 'recorded' }], 200));
+    const sleep = vi.fn<(ms: number) => Promise<void>>().mockResolvedValue(undefined);
+
+    const resilientFetch = createResilientFetch(null, {
+      fetchImpl,
+      random: () => 0,
+      sleep,
+    });
+
+    const response = await resilientFetch(`${BASE_URL}/rest/v1/rpc/record_arrivals`, {
+      method: 'POST',
+      body: JSON.stringify({ p_event_id: 'event-1', p_arrivals: [] }),
+    });
+
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual([{ guest_id: 'guest-1', status: 'recorded' }]);
+  });
+
   it('9. POST /auth/v1/token?grant_type=password makes 1 call on network error and uses authTimeoutMs when hanging', async () => {
     const networkError = new TypeError('Auth network failure');
     const failingFetch = vi.fn<typeof fetch>().mockRejectedValueOnce(networkError);

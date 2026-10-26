@@ -1,4 +1,5 @@
 import { Tables } from '../supabase/database.types';
+import { ArrivalCounts } from '../utils/arrival-counts';
 
 export type Rsvp = 'pending' | 'accepted' | 'declined';
 
@@ -34,4 +35,9 @@ export interface EventInput {
   welcome_message: string | null;
   rsvp_deadline: string;
   budget_cop: number | null;
+}
+
+export interface EventAttendance {
+  rsvp: RsvpCounts;
+  arrivals: ArrivalCounts;
 }

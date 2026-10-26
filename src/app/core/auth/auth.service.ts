@@ -1,6 +1,13 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
+import { Preferences } from '@capacitor/preferences';
 import { Session, User } from '@supabase/supabase-js';
 import { SupabaseService } from '../supabase/supabase.service';
+
+export interface LastKnownUser {
+  id: string;
+  email: string;
+  displayName: string;
+}
 
 const INVALID_CREDENTIALS_MESSAGE = 'Correo o contraseña incorrectos.';
 const GENERIC_SIGN_IN_ERROR_MESSAGE =
@@ -37,12 +44,18 @@ export class AuthService {
     this.supabase.client.auth.onAuthStateChange((_event, session) => {
       this.sessionSignal.set(session);
       this.readySignal.set(true);
+      if (session) {
+        this.saveLastUser(session);
+      }
     });
 
     void this.supabase.client.auth
       .getSession()
       .then(({ data }) => {
         this.sessionSignal.set(data.session ?? null);
+        if (data.session) {
+          this.saveLastUser(data.session);
+        }
       })
       .catch(() => {
         this.sessionSignal.set(null);
@@ -79,10 +92,91 @@ export class AuthService {
 
     this.sessionSignal.set(data.session);
     this.readySignal.set(true);
+    if (data.session) {
+      this.saveLastUser(data.session);
+    }
   }
 
   async signOut(): Promise<void> {
+    void Preferences.remove({ key: 'convite.lastUser' }).catch(() => {});
     await this.supabase.client.auth.signOut();
     this.sessionSignal.set(null);
+  }
+
+  async lastKnownUser(): Promise<LastKnownUser | null> {
+    try {
+      const { value } = await Preferences.get({ key: 'convite.lastUser' });
+      if (!value) {
+        return null;
+      }
+      const parsed = JSON.parse(value) as Partial<LastKnownUser>;
+      if (
+        typeof parsed?.id === 'string' &&
+        typeof parsed?.email === 'string' &&
+        typeof parsed?.displayName === 'string'
+      ) {
+        return {
+          id: parsed.id,
+          email: parsed.email,
+          displayName: parsed.displayName,
+        };
+      }
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
+  async tryRestoreSession(): Promise<boolean> {
+    if (this.sessionSignal()) {
+      return true;
+    }
+    const lastUser = await this.lastKnownUser();
+    if (!lastUser) {
+      return false;
+    }
+    try {
+      const { data, error } = await this.supabase.client.auth.refreshSession();
+      if (error || !data.session) {
+        return false;
+      }
+      this.sessionSignal.set(data.session);
+      this.readySignal.set(true);
+      this.saveLastUser(data.session);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  private saveLastUser(session: Session): void {
+    try {
+      const currentUser = session.user;
+      if (!currentUser) {
+        return;
+      }
+      const metaName = currentUser.user_metadata?.['display_name'];
+      let displayName = '';
+      if (typeof metaName === 'string' && metaName.trim().length > 0) {
+        displayName = metaName.trim();
+      } else {
+        const email = currentUser.email ?? '';
+        const atIndex = email.indexOf('@');
+        displayName = atIndex > 0 ? email.slice(0, atIndex) : email;
+      }
+
+      const payload: LastKnownUser = {
+        id: currentUser.id,
+        email: currentUser.email ?? '',
+        displayName,
+      };
+
+      void Preferences.set({
+        key: 'convite.lastUser',
+        value: JSON.stringify(payload),
+      }).catch(() => {});
+    } catch {
+      // Ignorar errores al guardar el último usuario en Preferences
+    }
   }
 }

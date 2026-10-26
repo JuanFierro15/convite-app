@@ -1,7 +1,15 @@
 import { Injectable, inject } from '@angular/core';
 import { AuthService } from '../auth/auth.service';
-import { EventInput, EventRole, EventRow, EventSummary, RsvpCounts } from '../models/events';
+import {
+  EventAttendance,
+  EventInput,
+  EventRole,
+  EventRow,
+  EventSummary,
+  RsvpCounts,
+} from '../models/events';
 import { SupabaseService } from '../supabase/supabase.service';
+import { arrivalCounts } from '../utils/arrival-counts';
 import { rsvpCounts } from '../utils/invitation-status';
 import { LOAD_ERROR_MESSAGE, toUserError } from './errors';
 
@@ -137,5 +145,27 @@ export class EventsRepository {
       throw toUserError(error, LOAD_ERROR_MESSAGE);
     }
     return rsvpCounts(data ?? []);
+  }
+
+  async attendanceFor(eventId: string): Promise<EventAttendance> {
+    const { data, error } = await this.supabase.client
+      .from('guests')
+      .select('rsvp, arrived_at')
+      .eq('event_id', eventId);
+
+    if (error) {
+      throw toUserError(error, LOAD_ERROR_MESSAGE);
+    }
+
+    const list = data ?? [];
+    return {
+      rsvp: rsvpCounts(list),
+      arrivals: arrivalCounts(
+        list.map((g) => ({
+          rsvp: g.rsvp,
+          arrived: g.arrived_at !== null,
+        })),
+      ),
+    };
   }
 }

@@ -13,6 +13,7 @@ export const RETRYABLE_RPCS: readonly string[] = [
   'get_gifts',
   'set_rsvp',
   'reserve_gift',
+  'record_arrivals',
 ];
 
 export interface ResilientFetchOptions {

@@ -1,3 +1,4 @@
+export * from './arrivals';
 export * from './auth';
 export * from './data';
 export * from './events';
