@@ -166,6 +166,7 @@ export class InvitationDetailPage implements ViewWillEnter {
       },
       breakpoints: [0, 0.9, 1],
       initialBreakpoint: 0.9,
+      expandToScroll: false,
     });
 
     await modal.present();

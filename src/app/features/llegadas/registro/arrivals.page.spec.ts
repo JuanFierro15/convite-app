@@ -341,6 +341,7 @@ describe('ArrivalsPage', () => {
         componentProps: { invitationId: 'inv-1' },
         breakpoints: [0, 0.85, 1],
         initialBreakpoint: 0.85,
+        expandToScroll: false,
       }),
     );
   });
@@ -478,6 +479,7 @@ describe('ArrivalsPage', () => {
       expect.objectContaining({
         component: ArrivalGroupComponent,
         componentProps: { invitationId: sampleInvitationView.id },
+        expandToScroll: false,
       }),
     );
   });

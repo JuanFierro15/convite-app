@@ -11,27 +11,34 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content>
+<ion-content class="content-with-fab">
   <div class="page-container">
     <div class="top-bar">
       <p class="summary-text text-label">
         {{ uniqueCount() }} regalos únicos · {{ reservedUniqueCount() }} apartados
       </p>
 
-      <ion-button
-        fill="outline"
-        color="primary"
-        size="small"
-        (click)="addSuggestedGifts()"
-        [disabled]="addingSuggested()"
-      >
-        @if (addingSuggested()) {
-          <ion-spinner slot="start" name="crescent"></ion-spinner>
-        } @else {
-          <ion-icon slot="start" name="sparkles-outline" aria-hidden="true"></ion-icon>
-        }
-        Agregar opciones sugeridas
-      </ion-button>
+      <div class="top-bar-actions">
+        <ion-button color="primary" size="small" (click)="openForm()">
+          <ion-icon slot="start" name="add" aria-hidden="true"></ion-icon>
+          Nuevo regalo
+        </ion-button>
+
+        <ion-button
+          fill="outline"
+          color="primary"
+          size="small"
+          (click)="addSuggestedGifts()"
+          [disabled]="addingSuggested()"
+        >
+          @if (addingSuggested()) {
+            <ion-spinner slot="start" name="crescent"></ion-spinner>
+          } @else {
+            <ion-icon slot="start" name="sparkles-outline" aria-hidden="true"></ion-icon>
+          }
+          Agregar opciones sugeridas
+        </ion-button>
+      </div>
     </div>
 
     <ion-segment

@@ -175,6 +175,7 @@ export class ArrivalsPage implements ViewWillEnter, ViewWillLeave {
       componentProps: { invitationId },
       breakpoints: [0, 0.85, 1],
       initialBreakpoint: 0.85,
+      expandToScroll: false,
     });
     await modal.present();
   }

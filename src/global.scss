@@ -141,3 +141,31 @@ ion-button {
   height: auto;
   display: block;
 }
+
+/*
+ * Capacitor 8 dibuja de borde a borde en Android. Los elementos fijos o
+ * pegados al fondo deben dejar libre la barra de navegación del sistema.
+ */
+html ion-footer.footer-toolbar-padding ion-toolbar:last-of-type {
+  padding-bottom: calc(var(--space-sm) + var(--ion-safe-area-bottom, 0px));
+}
+
+/*
+ * fab-clearance: botón flotante (56px) + separación del borde (16px) + aire (16px).
+ * Evita que el botón flotante tape el último elemento de la lista.
+ */
+:root {
+  --fab-clearance: 88px;
+}
+
+ion-content:last-child {
+  --padding-bottom: calc(var(--space-lg) + var(--ion-safe-area-bottom, 0px));
+}
+
+ion-content.content-with-fab {
+  --padding-bottom: calc(var(--fab-clearance) + var(--ion-safe-area-bottom, 0px));
+}
+
+ion-fab.fab-vertical-bottom:not(.fab-edge) {
+  bottom: calc(var(--space-md) + var(--ion-safe-area-bottom, 0px));
+}
