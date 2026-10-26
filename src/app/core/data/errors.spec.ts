@@ -93,6 +93,23 @@ describe('core exports and error translation', () => {
       expect(err.message).toBe('Agrega al menos una persona.');
     });
 
+    it('translates reservations_exceed_limit', () => {
+      const err = toUserError({ message: 'reservations_exceed_limit' });
+      expect(err.message).toBe(
+        'El límite no puede ser menor que las familias que ya eligieron este regalo.',
+      );
+    });
+
+    it('translates gifts_max_reservations_valid', () => {
+      const err = toUserError({
+        message:
+          'new row for relation "gifts" violates check constraint "gifts_max_reservations_valid"',
+      });
+      expect(err.message).toBe(
+        'El límite de familias debe ser 1 o más y solo aplica a regalos repetibles.',
+      );
+    });
+
     it('translates invitation_event_mismatch, guest_not_in_invitation, individual_requires_one_guest and invalid_kind to generic save message', () => {
       expect(toUserError({ message: 'invitation_event_mismatch' }).message).toBe(
         'No pudimos guardar el cambio. Inténtalo de nuevo.',

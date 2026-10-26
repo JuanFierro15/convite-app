@@ -61,7 +61,7 @@
           @if (unlimitedGifts().length > 0) {
             <section class="gift-section" aria-labelledby="section-unlimited">
               <h2 id="section-unlimited" class="text-section gift-section__title">
-                Para elegir sin límite
+                Para elegir entre varias familias
               </h2>
               <div class="gift-list">
                 @for (gift of unlimitedGifts(); track gift.id) {
@@ -88,7 +88,24 @@
                           }
                           Quitar mi elección
                         </ion-button>
+                      } @else if (gift.full) {
+                        <div class="taken-badge badge-soft-medium">
+                          <ion-icon name="lock-closed-outline" aria-hidden="true"></ion-icon>
+                          <span>Completo</span>
+                        </div>
+                        <ion-button
+                          color="primary"
+                          expand="block"
+                          [disabled]="true"
+                        >
+                          Elegir esta opción
+                        </ion-button>
                       } @else {
+                        @if (gift.remaining !== null) {
+                          <p class="text-label gift-card__remaining">
+                            {{ remainingLabel(gift.remaining) }}
+                          </p>
+                        }
                         <ion-button
                           color="primary"
                           expand="block"

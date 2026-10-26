@@ -96,6 +96,27 @@
         </p>
       }
     </div>
+
+    @if (selectedKind() === 'repeatable') {
+      <div class="field-group">
+        <span class="field-label text-name" id="gift-max-reservations-label">Límite de familias</span>
+        <ion-input
+          aria-labelledby="gift-max-reservations-label"
+          formControlName="maxReservations"
+          type="text"
+          inputmode="numeric"
+          [maxlength]="4"
+          fill="outline"
+          placeholder="Sin límite"
+        ></ion-input>
+        <p class="field-help text-label">
+          Déjalo vacío si cualquier número de familias puede elegirlo.
+        </p>
+        @if (maxReservationsError; as errorMsg) {
+          <p class="field-error text-label" role="alert">{{ errorMsg }}</p>
+        }
+      </div>
+    }
   </form>
 </ion-content>
 

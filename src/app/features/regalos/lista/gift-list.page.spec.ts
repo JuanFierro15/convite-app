@@ -149,4 +149,18 @@ describe('GiftListPage', () => {
       }),
     );
   });
+
+  describe('familyCountLabel', () => {
+    it('formats count without max limit', () => {
+      expect(component.familyCountLabel(0, null)).toBe('Ninguna familia todavía');
+      expect(component.familyCountLabel(1, null)).toBe('1 familia');
+      expect(component.familyCountLabel(3, null)).toBe('3 familias');
+    });
+
+    it('formats count with max limit including 6 de 10 familias and 0 de 1 familia', () => {
+      expect(component.familyCountLabel(6, 10)).toBe('6 de 10 familias');
+      expect(component.familyCountLabel(0, 1)).toBe('0 de 1 familia');
+      expect(component.familyCountLabel(1, 1)).toBe('1 de 1 familia');
+    });
+  });
 });

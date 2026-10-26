@@ -225,7 +225,11 @@ export class GiftListPage implements ViewWillEnter {
     }
   }
 
-  familyCountLabel(count: number): string {
+  familyCountLabel(count: number, max: number | null): string {
+    if (max !== null && max !== undefined) {
+      const noun = max === 1 ? 'familia' : 'familias';
+      return `${count} de ${max} ${noun}`;
+    }
     if (count === 0) {
       return 'Ninguna familia todavía';
     }

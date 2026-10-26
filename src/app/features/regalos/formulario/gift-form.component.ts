@@ -7,6 +7,7 @@ import {
   inject,
   signal,
 } from '@angular/core';
+import { toSignal } from '@angular/core/rxjs-interop';
 import {
   AbstractControl,
   FormBuilder,
@@ -129,6 +130,11 @@ export class GiftFormComponent implements OnInit {
     description: ['', [Validators.maxLength(300)]],
     category: ['', [Validators.maxLength(60)]],
     kind: ['unique' as GiftKind, [Validators.required]],
+    maxReservations: [''],
+  });
+
+  readonly selectedKind = toSignal(this.form.controls.kind.valueChanges, {
+    initialValue: this.form.controls.kind.value,
   });
 
   constructor() {
@@ -143,6 +149,10 @@ export class GiftFormComponent implements OnInit {
         description: current.description ?? '',
         category: current.category ?? '',
         kind: toGiftKind(current.kind),
+        maxReservations:
+          current.max_reservations !== null && current.max_reservations !== undefined
+            ? String(current.max_reservations)
+            : '',
       });
     }
   }
@@ -156,6 +166,43 @@ export class GiftFormComponent implements OnInit {
       return 'El nombre puede tener máximo 120 caracteres.';
     }
     return 'Escribe el nombre del regalo.';
+  }
+
+  get maxReservationsError(): string | null {
+    const ctrl = this.form.controls.maxReservations;
+    if (!ctrl.touched && !this.submitted()) {
+      return null;
+    }
+    return this.getMaxReservationsValidationMessage();
+  }
+
+  private getMaxReservationsValidationMessage(): string | null {
+    const rawKind = this.form.controls.kind.value;
+    const current = this.giftSignal();
+    const resolvedKind = this.isTypeLocked() && current ? toGiftKind(current.kind) : rawKind;
+
+    if (resolvedKind !== 'repeatable') {
+      return null;
+    }
+
+    const value = this.form.controls.maxReservations.value ?? '';
+    const trimmed = value.trim();
+    if (trimmed === '') {
+      return null;
+    }
+
+    if (!/^[1-9]\d*$/.test(trimmed)) {
+      return 'Escribe un número entero de 1 en adelante o déjalo vacío.';
+    }
+
+    const num = Number(trimmed);
+    const reservationsCount = current?.reservations.length ?? 0;
+    if (current && num < reservationsCount) {
+      const familyWord = reservationsCount === 1 ? '1 familia' : `${reservationsCount} familias`;
+      return `Ya hay ${familyWord} con este regalo. El límite no puede ser menor.`;
+    }
+
+    return null;
   }
 
   get descriptionError(): string | null {
@@ -188,7 +235,7 @@ export class GiftFormComponent implements OnInit {
     this.submitted.set(true);
     this.form.markAllAsTouched();
 
-    if (this.form.invalid || this.saving()) {
+    if (this.form.invalid || this.maxReservationsError !== null || this.saving()) {
       return;
     }
 
@@ -202,11 +249,18 @@ export class GiftFormComponent implements OnInit {
       return;
     }
 
+    let parsedMaxReservations: number | null = null;
+    if (resolvedKind === 'repeatable') {
+      const trimmed = raw.maxReservations.trim();
+      parsedMaxReservations = trimmed === '' ? null : Number(trimmed);
+    }
+
     const input: GiftInput = {
       name: raw.name.trim(),
       description: raw.description.trim() ? raw.description.trim() : null,
       category: raw.category.trim() ? raw.category.trim() : null,
       kind: resolvedKind,
+      max_reservations: parsedMaxReservations,
     };
 
     this.saving.set(true);

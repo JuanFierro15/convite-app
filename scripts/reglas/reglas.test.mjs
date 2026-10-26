@@ -2912,3 +2912,692 @@ test(
     );
   }
 );
+
+test(
+  '33. Dos familias apartan el último cupo al mismo tiempo y solo una lo logra',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    const { data: gift33, error: createGiftError } = await ctx.adminClient
+      .from('gifts')
+      .insert({
+        event_id: ctx.eventX.id,
+        name: `PRUEBA-${ctx.run}-REGALO-33`,
+        kind: 'repeatable',
+        max_reservations: 2,
+        sort_order: 33,
+      })
+      .select()
+      .single();
+
+    assert.equal(
+      createGiftError,
+      null,
+      'Se esperaba crear con el administrador el regalo repetible con tope 2 sin error'
+    );
+    assert.ok(
+      gift33?.id,
+      'Se esperaba recibir el id del regalo repetible creado para la prueba 33'
+    );
+
+    const { error: reserveAError } = await ctx.anonClient.rpc('reserve_gift', {
+      p_code: ctx.invitationA.code,
+      p_gift_id: gift33.id,
+    });
+
+    assert.equal(
+      reserveAError,
+      null,
+      'Se esperaba que la familia A pudiera apartar el primer cupo sin error'
+    );
+
+    const [resultB, resultC] = await Promise.all([
+      ctx.anonClient.rpc('reserve_gift', {
+        p_code: ctx.invitationB.code,
+        p_gift_id: gift33.id,
+      }),
+      ctx.anonClient.rpc('reserve_gift', {
+        p_code: ctx.invitationC.code,
+        p_gift_id: gift33.id,
+      }),
+    ]);
+
+    const results = [resultB, resultC];
+    const successes = results.filter((r) => !r.error);
+    const fullErrors = results.filter(
+      (r) => r.error && r.error.message.includes('gift_full')
+    );
+
+    assert.equal(
+      successes.length,
+      1,
+      'Se esperaba que exactamente una de las familias B o C lograra apartar el cupo restante'
+    );
+    assert.equal(
+      fullErrors.length,
+      1,
+      'Se esperaba que exactamente una de las familias recibiera el error con gift_full'
+    );
+
+    const { data: reservations33, error: res33Error } = await ctx.adminClient
+      .from('gift_reservations')
+      .select('id, invitation_id')
+      .eq('gift_id', gift33.id);
+
+    assert.equal(
+      res33Error,
+      null,
+      'Se esperaba consultar con el administrador las reservas del regalo sin error'
+    );
+    assert.equal(
+      reservations33?.length,
+      2,
+      'Se esperaba que el regalo tuviera exactamente 2 reservas con el administrador'
+    );
+
+    const { data: giftsA, error: giftsAError } = await ctx.anonClient.rpc(
+      'get_gifts',
+      { p_code: ctx.invitationA.code }
+    );
+
+    assert.equal(
+      giftsAError,
+      null,
+      'Se esperaba consultar get_gifts para la familia A sin error'
+    );
+    const itemA = (giftsA ?? []).find((g) => g.id === gift33.id);
+    assert.ok(
+      itemA,
+      'Se esperaba encontrar el regalo en la respuesta de get_gifts de la familia A'
+    );
+    assert.equal(
+      itemA.remaining,
+      0,
+      'Se esperaba que remaining fuera 0 para el regalo completo'
+    );
+    assert.equal(
+      itemA.full,
+      true,
+      'Se esperaba que full fuera true para el regalo completo'
+    );
+  }
+);
+
+test(
+  '34. La misma familia que aparta dos veces no consume dos cupos',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    const { data: gift34, error: createGiftError } = await ctx.adminClient
+      .from('gifts')
+      .insert({
+        event_id: ctx.eventX.id,
+        name: `PRUEBA-${ctx.run}-REGALO-34`,
+        kind: 'repeatable',
+        max_reservations: 2,
+        sort_order: 34,
+      })
+      .select()
+      .single();
+
+    assert.equal(
+      createGiftError,
+      null,
+      'Se esperaba crear con el administrador el regalo repetible con tope 2 sin error'
+    );
+    assert.ok(
+      gift34?.id,
+      'Se esperaba recibir el id del regalo repetible creado para la prueba 34'
+    );
+
+    const { error: reserveA1Error } = await ctx.anonClient.rpc('reserve_gift', {
+      p_code: ctx.invitationA.code,
+      p_gift_id: gift34.id,
+    });
+
+    assert.equal(
+      reserveA1Error,
+      null,
+      'Se esperaba que la primera llamada a reserve_gift de la familia A no devolviera error'
+    );
+
+    const { error: reserveA2Error } = await ctx.anonClient.rpc('reserve_gift', {
+      p_code: ctx.invitationA.code,
+      p_gift_id: gift34.id,
+    });
+
+    assert.equal(
+      reserveA2Error,
+      null,
+      'Se esperaba que la segunda llamada a reserve_gift de la misma familia A no devolviera error'
+    );
+
+    const { data: reservationsAfterTwice, error: resTwiceError } =
+      await ctx.adminClient
+        .from('gift_reservations')
+        .select('id, invitation_id')
+        .eq('gift_id', gift34.id);
+
+    assert.equal(
+      resTwiceError,
+      null,
+      'Se esperaba consultar con el administrador las reservas del regalo sin error'
+    );
+    assert.equal(
+      reservationsAfterTwice?.length,
+      1,
+      'Se esperaba exactamente 1 reserva tras apartar dos veces la misma familia'
+    );
+
+    const { data: giftsAAfterTwice, error: giftsAError } =
+      await ctx.anonClient.rpc('get_gifts', {
+        p_code: ctx.invitationA.code,
+      });
+
+    assert.equal(
+      giftsAError,
+      null,
+      'Se esperaba consultar get_gifts para la familia A sin error'
+    );
+    const itemAAfterTwice = (giftsAAfterTwice ?? []).find(
+      (g) => g.id === gift34.id
+    );
+    assert.ok(
+      itemAAfterTwice,
+      'Se esperaba encontrar el regalo en get_gifts de la familia A'
+    );
+    assert.equal(
+      itemAAfterTwice.remaining,
+      1,
+      'Se esperaba remaining = 1 tras apartar una sola familia en un regalo con tope 2'
+    );
+    assert.equal(
+      itemAAfterTwice.full,
+      false,
+      'Se esperaba full = false cuando aún queda cupo disponible'
+    );
+
+    const { data: giftsBReserve, error: reserveBError } =
+      await ctx.anonClient.rpc('reserve_gift', {
+        p_code: ctx.invitationB.code,
+        p_gift_id: gift34.id,
+      });
+
+    assert.equal(
+      reserveBError,
+      null,
+      'Se esperaba que la familia B pudiera apartar el segundo cupo sin error'
+    );
+    const itemB = (giftsBReserve ?? []).find((g) => g.id === gift34.id);
+    assert.ok(
+      itemB,
+      'Se esperaba encontrar el regalo en la respuesta devuelta a la familia B'
+    );
+    assert.equal(
+      itemB.full,
+      true,
+      'Se esperaba full = true tras ocuparse el último cupo'
+    );
+    assert.equal(
+      itemB.remaining,
+      0,
+      'Se esperaba remaining = 0 tras ocuparse el último cupo'
+    );
+
+    const { error: reserveA3Error } = await ctx.anonClient.rpc('reserve_gift', {
+      p_code: ctx.invitationA.code,
+      p_gift_id: gift34.id,
+    });
+
+    assert.equal(
+      reserveA3Error,
+      null,
+      'Se esperaba que la familia A al apartar de nuevo con el regalo completo respondiera sin error'
+    );
+
+    const { data: reservationsFinal, error: resFinalError } =
+      await ctx.adminClient
+        .from('gift_reservations')
+        .select('id, invitation_id')
+        .eq('gift_id', gift34.id);
+
+    assert.equal(
+      resFinalError,
+      null,
+      'Se esperaba consultar con el administrador las reservas finales sin error'
+    );
+    assert.equal(
+      reservationsFinal?.length,
+      2,
+      'Se esperaba que siguiera habiendo exactamente 2 reservas tras el reintento de la familia A'
+    );
+  }
+);
+
+test(
+  '35. Liberar un regalo devuelve el cupo',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    const { data: gift35, error: createGiftError } = await ctx.adminClient
+      .from('gifts')
+      .insert({
+        event_id: ctx.eventX.id,
+        name: `PRUEBA-${ctx.run}-REGALO-35`,
+        kind: 'repeatable',
+        max_reservations: 1,
+        sort_order: 35,
+      })
+      .select()
+      .single();
+
+    assert.equal(
+      createGiftError,
+      null,
+      'Se esperaba crear con el administrador el regalo repetible con tope 1 sin error'
+    );
+    assert.ok(
+      gift35?.id,
+      'Se esperaba recibir el id del regalo repetible creado para la prueba 35'
+    );
+
+    const { error: reserveAError } = await ctx.anonClient.rpc('reserve_gift', {
+      p_code: ctx.invitationA.code,
+      p_gift_id: gift35.id,
+    });
+
+    assert.equal(
+      reserveAError,
+      null,
+      'Se esperaba que la familia A pudiera apartar el único cupo sin error'
+    );
+
+    const { error: reserveBError } = await ctx.anonClient.rpc('reserve_gift', {
+      p_code: ctx.invitationB.code,
+      p_gift_id: gift35.id,
+    });
+
+    assert.ok(
+      reserveBError,
+      'Se esperaba un error cuando la familia B intenta apartar un regalo lleno'
+    );
+    assert.ok(
+      reserveBError.message.includes('gift_full'),
+      `Se esperaba el código gift_full, pero se recibió: ${reserveBError.message}`
+    );
+
+    const { data: releaseData, error: releaseError } = await ctx.anonClient.rpc(
+      'release_gift',
+      {
+        p_code: ctx.invitationA.code,
+        p_gift_id: gift35.id,
+      }
+    );
+
+    assert.equal(
+      releaseError,
+      null,
+      'Se esperaba que la familia A pudiera liberar el regalo sin error'
+    );
+    const releasedGift = (releaseData ?? []).find((g) => g.id === gift35.id);
+    assert.ok(
+      releasedGift,
+      'Se esperaba encontrar el regalo en la respuesta de release_gift'
+    );
+    assert.equal(
+      releasedGift.remaining,
+      1,
+      'Se esperaba remaining = 1 para el regalo tras ser liberado'
+    );
+    assert.equal(
+      releasedGift.full,
+      false,
+      'Se esperaba full = false para el regalo tras ser liberado'
+    );
+
+    const { data: reserveBData, error: reserveBSuccessError } =
+      await ctx.anonClient.rpc('reserve_gift', {
+        p_code: ctx.invitationB.code,
+        p_gift_id: gift35.id,
+      });
+
+    assert.equal(
+      reserveBSuccessError,
+      null,
+      'Se esperaba que la familia B pudiera apartar el regalo liberado sin error'
+    );
+    const reservedByBGift = (reserveBData ?? []).find(
+      (g) => g.id === gift35.id
+    );
+    assert.ok(
+      reservedByBGift,
+      'Se esperaba encontrar el regalo en la respuesta devuelta a la familia B'
+    );
+    assert.equal(
+      reservedByBGift.full,
+      true,
+      'Se esperaba full = true tras apartar el cupo que fue liberado'
+    );
+    assert.equal(
+      reservedByBGift.remaining,
+      0,
+      'Se esperaba remaining = 0 tras apartar el cupo que fue liberado'
+    );
+  }
+);
+
+test(
+  '36. El organizador no puede bajar el límite por debajo de las reservas',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    const { data: gift36, error: createGiftError } = await ctx.adminClient
+      .from('gifts')
+      .insert({
+        event_id: ctx.eventX.id,
+        name: `PRUEBA-${ctx.run}-REGALO-36`,
+        kind: 'repeatable',
+        max_reservations: 3,
+        sort_order: 36,
+      })
+      .select()
+      .single();
+
+    assert.equal(
+      createGiftError,
+      null,
+      'Se esperaba crear con el administrador el regalo repetible con tope 3 sin error'
+    );
+    assert.ok(
+      gift36?.id,
+      'Se esperaba recibir el id del regalo repetible creado para la prueba 36'
+    );
+
+    const { error: resAError } = await ctx.anonClient.rpc('reserve_gift', {
+      p_code: ctx.invitationA.code,
+      p_gift_id: gift36.id,
+    });
+    assert.equal(
+      resAError,
+      null,
+      'Se esperaba que la familia A pudiera apartar sin error'
+    );
+
+    const { error: resBError } = await ctx.anonClient.rpc('reserve_gift', {
+      p_code: ctx.invitationB.code,
+      p_gift_id: gift36.id,
+    });
+    assert.equal(
+      resBError,
+      null,
+      'Se esperaba que la familia B pudiera apartar sin error'
+    );
+
+    const { error: updateTo1Error } = await ctx.ownerXClient
+      .from('gifts')
+      .update({ max_reservations: 1 })
+      .eq('id', gift36.id);
+
+    assert.ok(
+      updateTo1Error,
+      'Se esperaba un error al intentar bajar el tope por debajo del número de reservas'
+    );
+    assert.ok(
+      updateTo1Error.message.includes('reservations_exceed_limit'),
+      `Se esperaba reservations_exceed_limit, pero se recibió: ${updateTo1Error.message}`
+    );
+
+    const { data: giftAfterFailedUpdate, error: checkGiftError } =
+      await ctx.adminClient
+        .from('gifts')
+        .select('max_reservations')
+        .eq('id', gift36.id)
+        .single();
+
+    assert.equal(
+      checkGiftError,
+      null,
+      'Se esperaba consultar el regalo con el administrador sin error'
+    );
+    assert.equal(
+      giftAfterFailedUpdate?.max_reservations,
+      3,
+      'Se esperaba que max_reservations mantuviera su valor original de 3 tras fallar el update'
+    );
+
+    const { error: updateTo2Error } = await ctx.ownerXClient
+      .from('gifts')
+      .update({ max_reservations: 2 })
+      .eq('id', gift36.id);
+
+    assert.equal(
+      updateTo2Error,
+      null,
+      'Se esperaba que actualizar max_reservations a 2 fuera exitoso'
+    );
+
+    const { error: updateToNullError } = await ctx.ownerXClient
+      .from('gifts')
+      .update({ max_reservations: null })
+      .eq('id', gift36.id);
+
+    assert.equal(
+      updateToNullError,
+      null,
+      'Se esperaba que actualizar max_reservations a null fuera exitoso'
+    );
+
+    const { data: giftsAfterNull, error: giftsNullError } =
+      await ctx.anonClient.rpc('get_gifts', {
+        p_code: ctx.invitationA.code,
+      });
+
+    assert.equal(
+      giftsNullError,
+      null,
+      'Se esperaba consultar get_gifts tras poner el tope en null sin error'
+    );
+    const giftAfterNullItem = (giftsAfterNull ?? []).find(
+      (g) => g.id === gift36.id
+    );
+    assert.ok(
+      giftAfterNullItem,
+      'Se esperaba encontrar el regalo en get_gifts tras actualizar tope a null'
+    );
+    assert.equal(
+      giftAfterNullItem.remaining,
+      null,
+      'Se esperaba que remaining fuera null al actualizar el tope a null'
+    );
+    assert.equal(
+      giftAfterNullItem.full,
+      false,
+      'Se esperaba que full fuera false al actualizar el tope a null'
+    );
+
+    const { data: giftNoLimit, error: createNoLimitError } =
+      await ctx.adminClient
+        .from('gifts')
+        .insert({
+          event_id: ctx.eventX.id,
+          name: `PRUEBA-${ctx.run}-REGALO-36-SIN-TOPE`,
+          kind: 'repeatable',
+          max_reservations: null,
+          sort_order: 37,
+        })
+        .select()
+        .single();
+
+    assert.equal(
+      createNoLimitError,
+      null,
+      'Se esperaba crear un regalo sin tope sin error'
+    );
+    assert.ok(
+      giftNoLimit?.id,
+      'Se esperaba recibir el id del regalo creado sin tope'
+    );
+
+    const { data: giftsNoLimitList, error: giftsNoLimitError } =
+      await ctx.anonClient.rpc('get_gifts', {
+        p_code: ctx.invitationA.code,
+      });
+
+    assert.equal(
+      giftsNoLimitError,
+      null,
+      'Se esperaba consultar get_gifts para el regalo sin tope sin error'
+    );
+    const noLimitItem = (giftsNoLimitList ?? []).find(
+      (g) => g.id === giftNoLimit.id
+    );
+    assert.ok(
+      noLimitItem,
+      'Se esperaba encontrar el regalo sin tope en get_gifts'
+    );
+    assert.equal(
+      noLimitItem.remaining,
+      null,
+      'Se esperaba remaining = null en un regalo creado sin tope'
+    );
+    assert.equal(
+      noLimitItem.full,
+      false,
+      'Se esperaba full = false en un regalo creado sin tope'
+    );
+  }
+);
+
+test(
+  '37. Un regalo único o libre no acepta límite y el límite debe ser 1 o más',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    const uniqueInvalidName = `PRUEBA-${ctx.run}-REGALO-37-UNIQUE-INVALID`;
+    const { error: uniqueError } = await ctx.ownerXClient
+      .from('gifts')
+      .insert({
+        event_id: ctx.eventX.id,
+        name: uniqueInvalidName,
+        kind: 'unique',
+        max_reservations: 1,
+      });
+
+    assert.ok(
+      uniqueError,
+      'Se esperaba un error al crear un regalo unique con max_reservations'
+    );
+    assert.equal(
+      uniqueError.code,
+      '23514',
+      'Se esperaba el código de error 23514 (check_violation)'
+    );
+    assert.ok(
+      uniqueError.message.includes('gifts_max_reservations_valid'),
+      `Se esperaba la restricción gifts_max_reservations_valid, pero se recibió: ${uniqueError.message}`
+    );
+
+    const freeInvalidName = `PRUEBA-${ctx.run}-REGALO-37-FREE-INVALID`;
+    const { error: freeError } = await ctx.ownerYClient
+      .from('gifts')
+      .insert({
+        event_id: ctx.eventY.id,
+        name: freeInvalidName,
+        kind: 'free',
+        max_reservations: 1,
+      });
+
+    assert.ok(
+      freeError,
+      'Se esperaba un error al crear un regalo free con max_reservations'
+    );
+    assert.equal(
+      freeError.code,
+      '23514',
+      'Se esperaba el código de error 23514 (check_violation)'
+    );
+    assert.ok(
+      freeError.message.includes('gifts_max_reservations_valid'),
+      `Se esperaba la restricción gifts_max_reservations_valid, pero se recibió: ${freeError.message}`
+    );
+
+    const zeroInvalidName = `PRUEBA-${ctx.run}-REGALO-37-ZERO-INVALID`;
+    const { error: zeroError } = await ctx.ownerXClient
+      .from('gifts')
+      .insert({
+        event_id: ctx.eventX.id,
+        name: zeroInvalidName,
+        kind: 'repeatable',
+        max_reservations: 0,
+      });
+
+    assert.ok(
+      zeroError,
+      'Se esperaba un error al crear un regalo repeatable con max_reservations = 0'
+    );
+    assert.equal(
+      zeroError.code,
+      '23514',
+      'Se esperaba el código de error 23514 (check_violation)'
+    );
+    assert.ok(
+      zeroError.message.includes('gifts_max_reservations_valid'),
+      `Se esperaba la restricción gifts_max_reservations_valid, pero se recibió: ${zeroError.message}`
+    );
+
+    const validRepeatableName = `PRUEBA-${ctx.run}-REGALO-37-REPEATABLE-VALID`;
+    const { data: createdRepeatable, error: createValidError } =
+      await ctx.ownerXClient
+        .from('gifts')
+        .insert({
+          event_id: ctx.eventX.id,
+          name: validRepeatableName,
+          kind: 'repeatable',
+          max_reservations: 2,
+        })
+        .select()
+        .single();
+
+    assert.equal(
+      createValidError,
+      null,
+      'Se esperaba crear el regalo repeatable con max_reservations = 2 sin error'
+    );
+    assert.ok(
+      createdRepeatable?.id,
+      'Se esperaba recibir el id del regalo repeatable válido'
+    );
+
+    const { error: changeKindError } = await ctx.ownerXClient
+      .from('gifts')
+      .update({ kind: 'unique' })
+      .eq('id', createdRepeatable.id);
+
+    assert.ok(
+      changeKindError,
+      'Se esperaba un error al cambiar kind a unique sin quitar el tope max_reservations'
+    );
+    assert.equal(
+      changeKindError.code,
+      '23514',
+      'Se esperaba el código de error 23514 (check_violation)'
+    );
+    assert.ok(
+      changeKindError.message.includes('gifts_max_reservations_valid'),
+      `Se esperaba la restricción gifts_max_reservations_valid, pero se recibió: ${changeKindError.message}`
+    );
+
+    const failedNames = [uniqueInvalidName, freeInvalidName, zeroInvalidName];
+    const { data: failedGifts, error: checkFailedError } = await ctx.adminClient
+      .from('gifts')
+      .select('id, name')
+      .in('name', failedNames);
+
+    assert.equal(
+      checkFailedError,
+      null,
+      'Se esperaba consultar los regalos fallidos con el administrador sin error'
+    );
+    assert.equal(
+      failedGifts?.length,
+      0,
+      'Se esperaba que ninguno de los intentos fallidos dejara un regalo creado en la base de datos'
+    );
+  }
+);
+

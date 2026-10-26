@@ -22,4 +22,5 @@ export interface GiftInput {
   description: string | null;
   category: string | null;
   kind: GiftKind;
+  max_reservations: number | null;
 }

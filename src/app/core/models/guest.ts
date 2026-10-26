@@ -42,6 +42,8 @@ export interface GuestGift {
   kind: GiftKind;
   reserved_by_me: boolean;
   taken: boolean;
+  remaining: number | null;
+  full: boolean;
 }
 
 export const GUEST_ERROR_MESSAGES: Record<string, string> = {
@@ -53,6 +55,7 @@ export const GUEST_ERROR_MESSAGES: Record<string, string> = {
   network_error: CONNECTION_ERROR_MESSAGE,
   not_reserved_by_you: 'Este regalo ya no está apartado para esta invitación.',
   load_failed: 'No pudimos cargar tu invitación. Inténtalo de nuevo.',
+  gift_full: 'Esta opción ya completó sus cupos. Elige otra de la lista.',
 };
 
 const DEFAULT_GUEST_ERROR_MESSAGE = 'No pudimos guardar el cambio. Inténtalo de nuevo.';

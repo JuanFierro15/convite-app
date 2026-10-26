@@ -1,7 +1,8 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { AlertController } from '@ionic/angular';
+import { AlertController, ToastController } from '@ionic/angular';
 import {
+  GuestApiError,
   GuestApiService,
   GuestGift,
   GuestInvitation,
@@ -63,6 +64,8 @@ const mockGifts: GuestGift[] = [
     kind: 'unique',
     reserved_by_me: true,
     taken: true,
+    remaining: null,
+    full: false,
   },
 ];
 
@@ -76,6 +79,9 @@ describe('GuestGiftsPage', () => {
     releaseGift: ReturnType<typeof vi.fn>;
   };
   let alertController: AlertController;
+  let mockToastController: {
+    create: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(async () => {
     mockGuestApi = {
@@ -84,12 +90,18 @@ describe('GuestGiftsPage', () => {
       reserveGift: vi.fn(),
       releaseGift: vi.fn(),
     };
+    mockToastController = {
+      create: vi.fn().mockResolvedValue({
+        present: vi.fn().mockResolvedValue(undefined),
+      }),
+    };
 
     await TestBed.configureTestingModule({
       imports: [GuestGiftsPage],
       providers: [
         provideRouter([]),
         { provide: GuestApiService, useValue: mockGuestApi },
+        { provide: ToastController, useValue: mockToastController },
       ],
     }).compileComponents();
 
@@ -153,5 +165,150 @@ describe('GuestGiftsPage', () => {
         message: '¿Liberar Coche para bebé? Alguien más podrá apartarlo.',
       }),
     );
+  });
+
+  it('un repetible con remaining: 4, full: false muestra "Quedan 4 cupos"; con remaining: 1, "Queda 1 cupo"', async () => {
+    mockGuestApi.getInvitation.mockResolvedValue(mockGroupInvitation);
+    mockGuestApi.getGifts.mockResolvedValue([
+      {
+        id: 'gift-rep-4',
+        name: 'Pañales etapa 1',
+        description: null,
+        category: null,
+        kind: 'repeatable',
+        reserved_by_me: false,
+        taken: false,
+        remaining: 4,
+        full: false,
+      },
+    ]);
+
+    fixture = TestBed.createComponent(GuestGiftsPage);
+    component = fixture.componentInstance;
+    fixture.componentRef.setInput('code', 'ABCD1234JK');
+
+    await component.loadData();
+    fixture.detectChanges();
+
+    const remainingEl4 = fixture.nativeElement.querySelector('.gift-card__remaining');
+    expect(remainingEl4?.textContent?.trim()).toBe('Quedan 4 cupos');
+
+    component.gifts.set([
+      {
+        id: 'gift-rep-1',
+        name: 'Pañales etapa 1',
+        description: null,
+        category: null,
+        kind: 'repeatable',
+        reserved_by_me: false,
+        taken: false,
+        remaining: 1,
+        full: false,
+      },
+    ]);
+    fixture.detectChanges();
+
+    const remainingEl1 = fixture.nativeElement.querySelector('.gift-card__remaining');
+    expect(remainingEl1?.textContent?.trim()).toBe('Queda 1 cupo');
+  });
+
+  it('un repetible con full: true y reserved_by_me: false muestra "Completo" y su botón está deshabilitado; onToggleUnlimitedGift no llama a reserveGift', async () => {
+    const fullGift: GuestGift = {
+      id: 'gift-full',
+      name: 'Pañales etapa 2',
+      description: null,
+      category: null,
+      kind: 'repeatable',
+      reserved_by_me: false,
+      taken: false,
+      remaining: 0,
+      full: true,
+    };
+
+    mockGuestApi.getInvitation.mockResolvedValue(mockGroupInvitation);
+    mockGuestApi.getGifts.mockResolvedValue([fullGift]);
+
+    fixture = TestBed.createComponent(GuestGiftsPage);
+    component = fixture.componentInstance;
+    fixture.componentRef.setInput('code', 'ABCD1234JK');
+
+    await component.loadData();
+    fixture.detectChanges();
+
+    const badgeEl = fixture.nativeElement.querySelector('.taken-badge');
+    expect(badgeEl?.textContent?.trim()).toBe('Completo');
+
+    const buttonEl = fixture.nativeElement.querySelector('.gift-card ion-button');
+    expect(buttonEl?.disabled).toBe(true);
+
+    await component.onToggleUnlimitedGift(fullGift);
+    expect(mockGuestApi.reserveGift).not.toHaveBeenCalled();
+  });
+
+  it('un repetible con full: true y reserved_by_me: true muestra "Quitar mi elección" habilitado y al usarlo llama a releaseGift', async () => {
+    const myFullGift: GuestGift = {
+      id: 'gift-my-full',
+      name: 'Pañales etapa 3',
+      description: null,
+      category: null,
+      kind: 'repeatable',
+      reserved_by_me: true,
+      taken: false,
+      remaining: 0,
+      full: true,
+    };
+
+    mockGuestApi.getInvitation.mockResolvedValue(mockGroupInvitation);
+    mockGuestApi.getGifts.mockResolvedValue([myFullGift]);
+
+    fixture = TestBed.createComponent(GuestGiftsPage);
+    component = fixture.componentInstance;
+    fixture.componentRef.setInput('code', 'ABCD1234JK');
+
+    await component.loadData();
+    fixture.detectChanges();
+
+    const buttonEl = fixture.nativeElement.querySelector('.gift-card ion-button');
+    expect(buttonEl?.textContent?.trim()).toContain('Quitar mi elección');
+    expect(buttonEl?.disabled).toBe(false);
+
+    await component.onToggleUnlimitedGift(myFullGift);
+    expect(mockGuestApi.releaseGift).toHaveBeenCalledWith('ABCD1234JK', 'gift-my-full');
+  });
+
+  it('si reserveGift falla con gift_full, se muestra el mensaje y se recarga la lista', async () => {
+    mockGuestApi.getInvitation.mockResolvedValue(mockGroupInvitation);
+    mockGuestApi.getGifts.mockResolvedValue([
+      {
+        id: 'gift-rep',
+        name: 'Pañales etapa 1',
+        description: null,
+        category: null,
+        kind: 'repeatable',
+        reserved_by_me: false,
+        taken: false,
+        remaining: 1,
+        full: false,
+      },
+    ]);
+
+    mockGuestApi.reserveGift.mockRejectedValue(new GuestApiError('gift_full'));
+
+    fixture = TestBed.createComponent(GuestGiftsPage);
+    component = fixture.componentInstance;
+    fixture.componentRef.setInput('code', 'ABCD1234JK');
+
+    await component.loadData();
+    mockGuestApi.getGifts.mockClear();
+
+    await component.executeReserve('gift-rep');
+
+    expect(mockToastController.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Esta opción ya completó sus cupos. Elige otra de la lista.',
+        color: 'danger',
+      }),
+    );
+    expect(mockGuestApi.getGifts).toHaveBeenCalledWith('ABCD1234JK');
   });
 });

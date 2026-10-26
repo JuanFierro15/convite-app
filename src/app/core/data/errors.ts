@@ -80,6 +80,14 @@ export function toUserError(error: unknown, fallback?: string): Error {
     return new Error('Agrega al menos una persona.');
   }
 
+  if (combined.includes('reservations_exceed_limit')) {
+    return new Error('El límite no puede ser menor que las familias que ya eligieron este regalo.');
+  }
+
+  if (combined.includes('gifts_max_reservations_valid')) {
+    return new Error('El límite de familias debe ser 1 o más y solo aplica a regalos repetibles.');
+  }
+
   if (
     combined.includes('invitation_event_mismatch') ||
     combined.includes('guest_not_in_invitation') ||

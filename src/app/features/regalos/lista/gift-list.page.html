@@ -117,7 +117,7 @@
 
                 <div class="gift-card__meta">
                   <span class="text-label badge-soft-primary">
-                    {{ familyCountLabel(gift.reservations.length) }}
+                    {{ familyCountLabel(gift.reservations.length, gift.max_reservations) }}
                   </span>
                 </div>
 
@@ -203,7 +203,7 @@
 
                 <div class="gift-card__meta">
                   <span class="text-label badge-soft-primary">
-                    {{ familyCountLabel(gift.reservations.length) }}
+                    {{ familyCountLabel(gift.reservations.length, null) }}
                   </span>
                 </div>
 

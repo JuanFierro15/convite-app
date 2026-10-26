@@ -130,6 +130,11 @@
   color: var(--ion-color-medium);
 }
 
+.gift-card__remaining {
+  margin: 0;
+  color: var(--ion-color-medium-shade);
+}
+
 .chosen-badge,
 .taken-badge {
   align-self: flex-start;

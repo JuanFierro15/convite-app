@@ -191,10 +191,20 @@ export class GuestGiftsPage implements OnInit, ViewWillEnter {
     }
   }
 
+  remainingLabel(remaining: number): string {
+    if (remaining === 1) {
+      return 'Queda 1 cupo';
+    }
+    return `Quedan ${remaining} cupos`;
+  }
+
   async onToggleUnlimitedGift(gift: GuestGift): Promise<void> {
     if (gift.reserved_by_me) {
       await this.executeRelease(gift.id);
     } else {
+      if (gift.full) {
+        return;
+      }
       await this.executeReserve(gift.id);
     }
   }

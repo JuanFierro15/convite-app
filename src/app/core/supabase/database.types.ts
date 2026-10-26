@@ -148,6 +148,7 @@ export type Database = {
           event_id: string
           id: string
           kind: string
+          max_reservations: number | null
           name: string
           sort_order: number
         }
@@ -158,6 +159,7 @@ export type Database = {
           event_id: string
           id?: string
           kind?: string
+          max_reservations?: number | null
           name: string
           sort_order?: number
         }
@@ -168,6 +170,7 @@ export type Database = {
           event_id?: string
           id?: string
           kind?: string
+          max_reservations?: number | null
           name?: string
           sort_order?: number
         }

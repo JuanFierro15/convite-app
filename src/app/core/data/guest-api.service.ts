@@ -20,6 +20,7 @@ const KNOWN_RPC_CODES = [
   'invalid_value',
   'gift_not_found',
   'not_reserved_by_you',
+  'gift_full',
 ] as const;
 
 export function toGuestApiError(error: unknown, fallbackCode?: string): GuestApiError {
@@ -101,6 +102,20 @@ export class GuestApiService {
     return normalizeInvitationResponse(data) as GuestInvitation;
   }
 
+  private normalizeGiftsResponse(data: unknown): GuestGift[] {
+    if (!Array.isArray(data)) {
+      return [];
+    }
+    return data.map((item) => {
+      const raw = (item ?? {}) as Record<string, unknown>;
+      return {
+        ...(raw as unknown as GuestGift),
+        remaining: typeof raw['remaining'] === 'number' ? raw['remaining'] : null,
+        full: raw['full'] === true,
+      };
+    });
+  }
+
   async getGifts(code: string): Promise<GuestGift[]> {
     const { data, error } = await this.supabase.client.rpc('get_gifts', {
       p_code: code,
@@ -109,7 +124,7 @@ export class GuestApiService {
     if (error) {
       throw toGuestApiError(error, 'load_failed');
     }
-    return (data as unknown as GuestGift[] | null) ?? [];
+    return this.normalizeGiftsResponse(data);
   }
 
   async reserveGift(code: string, giftId: string): Promise<GuestGift[]> {
@@ -121,7 +136,7 @@ export class GuestApiService {
     if (error) {
       throw toGuestApiError(error);
     }
-    return (data as unknown as GuestGift[] | null) ?? [];
+    return this.normalizeGiftsResponse(data);
   }
 
   async releaseGift(code: string, giftId: string): Promise<GuestGift[]> {
@@ -133,6 +148,6 @@ export class GuestApiService {
     if (error) {
       throw toGuestApiError(error);
     }
-    return (data as unknown as GuestGift[] | null) ?? [];
+    return this.normalizeGiftsResponse(data);
   }
 }

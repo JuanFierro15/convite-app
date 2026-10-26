@@ -75,6 +75,7 @@ export class GiftsRepository {
         description: row.description,
         category: row.category,
         kind: row.kind,
+        max_reservations: row.max_reservations,
         sort_order: row.sort_order,
         created_at: row.created_at,
         reservations,
@@ -93,6 +94,7 @@ export class GiftsRepository {
         description: input.description,
         category: input.category,
         kind: input.kind,
+        max_reservations: input.kind === 'repeatable' ? input.max_reservations : null,
       })
       .select('*')
       .single();
@@ -111,6 +113,7 @@ export class GiftsRepository {
         description: input.description,
         category: input.category,
         kind: input.kind,
+        max_reservations: input.kind === 'repeatable' ? input.max_reservations : null,
       })
       .eq('id', giftId)
       .select('*')

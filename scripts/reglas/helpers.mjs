@@ -81,11 +81,13 @@ export function createEmptyContext() {
     eventStarted: null,
     invitationA: null,
     invitationB: null,
+    invitationC: null,
     invitationY: null,
     invitationExpired: null,
     invitationStarted: null,
     guestsA: [],
     guestB: null,
+    guestC: null,
     guestY: null,
     guestExpired: null,
     guestStarted: null,
@@ -364,6 +366,22 @@ export async function setupTestContext(ctx) {
     }
     ctx.invitationB = invitationB;
 
+    const { data: invitationC, error: invCError } = await ctx.adminClient
+      .from('invitations')
+      .insert({
+        event_id: ctx.eventX.id,
+        group_name: 'Familia Prueba C',
+        phone: '+573000000006',
+      })
+      .select()
+      .single();
+    if (invCError || !invitationC) {
+      throw new Error(
+        `No se pudo crear la invitación C: ${invCError?.message ?? 'sin datos'}`
+      );
+    }
+    ctx.invitationC = invitationC;
+
     const { data: invitationY, error: invYError } = await ctx.adminClient
       .from('invitations')
       .insert({
@@ -451,6 +469,22 @@ export async function setupTestContext(ctx) {
       );
     }
     ctx.guestB = guestB;
+
+    const { data: guestC, error: guestCError } = await ctx.adminClient
+      .from('guests')
+      .insert({
+        invitation_id: ctx.invitationC.id,
+        full_name: 'Integrante C Uno',
+        sort_order: 1,
+      })
+      .select()
+      .single();
+    if (guestCError || !guestC) {
+      throw new Error(
+        `No se pudo crear la persona de la invitación C: ${guestCError?.message ?? 'sin datos'}`
+      );
+    }
+    ctx.guestC = guestC;
 
     const { data: guestY, error: guestYError } = await ctx.adminClient
       .from('guests')
