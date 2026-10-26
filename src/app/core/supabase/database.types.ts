@@ -236,6 +236,7 @@ export type Database = {
           event_id: string
           group_name: string
           id: string
+          kind: string
           phone: string | null
           updated_at: string
         }
@@ -245,6 +246,7 @@ export type Database = {
           event_id: string
           group_name: string
           id?: string
+          kind?: string
           phone?: string | null
           updated_at?: string
         }
@@ -254,6 +256,7 @@ export type Database = {
           event_id?: string
           group_name?: string
           id?: string
+          kind?: string
           phone?: string | null
           updated_at?: string
         }
@@ -335,6 +338,7 @@ export type Database = {
           p_group_name: string
           p_guests: Json
           p_invitation_id: string
+          p_kind?: string
           p_phone: string
         }
         Returns: Json
