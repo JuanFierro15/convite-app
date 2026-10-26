@@ -8,6 +8,7 @@ import {
   InvitationsRepository,
   formatLongDate,
   invitationMessage,
+  toInvitationKind,
   whatsappUrl,
 } from '../../core';
 
@@ -18,10 +19,11 @@ export class InvitationActionsService {
   private readonly toastController = inject(ToastController);
 
   async shareWhatsApp(
-    invitation: Pick<InvitationRow, 'group_name' | 'phone' | 'code'>,
+    invitation: Pick<InvitationRow, 'group_name' | 'phone' | 'code' | 'kind'>,
     event: Pick<EventRow, 'name' | 'starts_at'>,
   ): Promise<void> {
     const message = invitationMessage({
+      kind: toInvitationKind(invitation.kind),
       groupName: invitation.group_name,
       eventName: event.name,
       dateText: formatLongDate(event.starts_at),

@@ -43,6 +43,7 @@ import {
   InvitationsRepository,
   RealtimeService,
   invitationStatus,
+  normalizeSearchText,
   rsvpCounts,
 } from '../../../core';
 import { EmptyStateComponent, StatusBadgeComponent } from '../../../shared';
@@ -55,13 +56,6 @@ export interface InvitationListItem {
   invitation: InvitationWithGuests;
   status: InvitationStatus;
   summary: string;
-}
-
-function normalizeSearchText(value: string): string {
-  return value
-    .normalize('NFD')
-    .replace(/\p{Diacritic}/gu, '')
-    .toLowerCase();
 }
 
 function formatInvitationSummary(guests: readonly GuestRow[]): string {

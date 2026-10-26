@@ -2,7 +2,9 @@ import {
   ChangeDetectionStrategy,
   Component,
   Input,
+  OnDestroy,
   OnInit,
+  computed,
   inject,
   signal,
 } from '@angular/core';
@@ -17,6 +19,7 @@ import {
   Validators,
 } from '@angular/forms';
 import {
+  AlertController,
   IonButton,
   IonButtons,
   IonContent,
@@ -25,24 +28,34 @@ import {
   IonIcon,
   IonInput,
   IonItem,
+  IonLabel,
   IonList,
   IonReorder,
   IonReorderGroup,
+  IonSegment,
+  IonSegmentButton,
   IonSpinner,
   IonTitle,
   IonToolbar,
   ModalController,
   ReorderEndCustomEvent,
+  SegmentCustomEvent,
 } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { closeOutline, personAddOutline, trashOutline } from 'ionicons/icons';
 import {
+  InvitationGuestInput,
   InvitationInput,
+  InvitationKind,
   InvitationWithGuests,
   InvitationsRepository,
+  PhoneStatus,
+  caretForDigits,
+  countDigitsBefore,
   formatPhone,
-  isValidPhone,
   newId,
+  parsePhoneInput,
+  toInvitationKind,
 } from '../../../core';
 import { InvitationActionsService } from '../invitation-actions.service';
 
@@ -58,12 +71,13 @@ function notBlankValidator(control: AbstractControl<string>): ValidationErrors |
   return value.trim().length > 0 ? null : { required: true };
 }
 
-function optionalPhoneValidator(control: AbstractControl<string>): ValidationErrors | null {
+function phoneValidator(control: AbstractControl<string>): ValidationErrors | null {
   const value = control.value ?? '';
-  if (value.trim() === '') {
+  const result = parsePhoneInput(value);
+  if (result.status === 'empty' || result.status === 'valid') {
     return null;
   }
-  return isValidPhone(value) ? null : { invalidPhone: true };
+  return { phone: result.message };
 }
 
 function minOneGuestValidator(control: AbstractControl): ValidationErrors | null {
@@ -93,11 +107,15 @@ function minOneGuestValidator(control: AbstractControl): ValidationErrors | null
     IonReorderGroup,
     IonReorder,
     IonSpinner,
+    IonSegment,
+    IonSegmentButton,
+    IonLabel,
   ],
 })
-export class InvitationFormComponent implements OnInit {
+export class InvitationFormComponent implements OnInit, OnDestroy {
   private readonly fb = inject(FormBuilder);
   private readonly modalController = inject(ModalController);
+  private readonly alertController = inject(AlertController);
   private readonly invitationsRepository = inject(InvitationsRepository);
   private readonly invitationActions = inject(InvitationActionsService);
 
@@ -107,12 +125,26 @@ export class InvitationFormComponent implements OnInit {
   readonly isEdit = signal<boolean>(false);
   readonly saving = signal<boolean>(false);
   readonly submitted = signal<boolean>(false);
+  readonly kind = signal<InvitationKind>('group');
+  readonly phoneStatus = signal<PhoneStatus>('empty');
+  readonly duplicatePhoneWarning = signal<string | null>(null);
 
   private invitationId = '';
+  private duplicatePhoneTimer: ReturnType<typeof setTimeout> | null = null;
+  private duplicateCheckSequence = 0;
+
+  readonly isSaveDisabled = computed(() => {
+    if (this.saving()) {
+      return true;
+    }
+    const status = this.phoneStatus();
+    return status !== 'empty' && status !== 'valid';
+  });
 
   readonly form = this.fb.nonNullable.group({
+    kind: this.fb.nonNullable.control<InvitationKind>('group'),
     group_name: ['', [Validators.required, Validators.maxLength(120), notBlankValidator]],
-    phone: ['', [optionalPhoneValidator]],
+    phone: ['', [phoneValidator]],
     guests: this.fb.array<GuestFormGroup>([], [minOneGuestValidator]),
   });
 
@@ -129,8 +161,19 @@ export class InvitationFormComponent implements OnInit {
     if (existing) {
       this.isEdit.set(true);
       this.invitationId = existing.id;
+      const initialKind = toInvitationKind(existing.kind);
+      this.kind.set(initialKind);
+      this.form.controls.kind.setValue(initialKind);
       this.form.controls.group_name.setValue(existing.group_name);
-      this.form.controls.phone.setValue(formatPhone(existing.phone));
+
+      const formatted = formatPhone(existing.phone);
+      this.form.controls.phone.setValue(formatted);
+      const parsed = parsePhoneInput(formatted);
+      this.phoneStatus.set(parsed.status);
+      if (parsed.status === 'valid' && parsed.e164) {
+        this.scheduleDuplicatePhoneCheck(parsed.e164);
+      }
+
       this.guestsArray.clear();
       if (existing.guests.length > 0) {
         for (const guest of existing.guests) {
@@ -139,12 +182,151 @@ export class InvitationFormComponent implements OnInit {
       } else {
         this.guestsArray.push(this.createGuestControl(''));
       }
+
+      if (initialKind === 'individual') {
+        this.guestsArray.disable();
+      }
     } else {
       this.isEdit.set(false);
       this.invitationId = newId();
+      this.kind.set('group');
+      this.form.controls.kind.setValue('group');
+      this.phoneStatus.set('empty');
       this.guestsArray.clear();
       this.guestsArray.push(this.createGuestControl(''));
     }
+  }
+
+  ngOnDestroy(): void {
+    if (this.duplicatePhoneTimer) {
+      clearTimeout(this.duplicatePhoneTimer);
+      this.duplicatePhoneTimer = null;
+    }
+  }
+
+  onKindChange(event: SegmentCustomEvent): void {
+    const nextKind = toInvitationKind(event.detail.value);
+    this.setKind(nextKind);
+  }
+
+  setKind(nextKind: InvitationKind): void {
+    const currentKind = this.kind();
+    if (currentKind === nextKind) {
+      return;
+    }
+
+    if (nextKind === 'individual') {
+      const currentName = this.form.controls.group_name.value.trim();
+      const namedGuests = this.guestsArray.controls.filter(
+        (c) => c.controls.full_name.value.trim().length > 0,
+      );
+      if (currentName === '' && namedGuests.length === 1) {
+        this.form.controls.group_name.setValue(
+          namedGuests[0].controls.full_name.value.trim(),
+        );
+      }
+      this.guestsArray.disable();
+    } else {
+      this.guestsArray.enable();
+      const currentName = this.form.controls.group_name.value.trim();
+      if (this.guestsArray.length === 0) {
+        this.guestsArray.push(this.createGuestControl(currentName));
+      } else if (
+        this.guestsArray.length === 1 &&
+        this.guestsArray.at(0).controls.full_name.value.trim() === ''
+      ) {
+        this.guestsArray.at(0).controls.full_name.setValue(currentName);
+      }
+    }
+
+    this.kind.set(nextKind);
+    this.form.controls.kind.setValue(nextKind);
+  }
+
+  async onPhoneInput(ionInput: IonInput): Promise<void> {
+    this.duplicatePhoneWarning.set(null);
+    if (this.duplicatePhoneTimer) {
+      clearTimeout(this.duplicatePhoneTimer);
+      this.duplicatePhoneTimer = null;
+    }
+
+    const nativeInput = await ionInput.getInputElement();
+    const raw = nativeInput ? nativeInput.value : String(ionInput.value ?? '');
+    const caret = nativeInput?.selectionStart ?? raw.length;
+
+    const result = parsePhoneInput(raw);
+    this.phoneStatus.set(result.status);
+
+    this.form.controls.phone.setValue(result.display);
+
+    const digitsBefore = countDigitsBefore(raw, caret);
+    const nextCaret = caretForDigits(result.display, digitsBefore);
+
+    setTimeout(() => {
+      if (nativeInput) {
+        if (nativeInput.value !== result.display) {
+          nativeInput.value = result.display;
+        }
+        nativeInput.setSelectionRange(nextCaret, nextCaret);
+      }
+    }, 0);
+
+    if (result.status === 'valid' && result.e164) {
+      this.scheduleDuplicatePhoneCheck(result.e164);
+    }
+  }
+
+  onPhoneBlur(): void {
+    this.form.controls.phone.markAsTouched();
+  }
+
+  private scheduleDuplicatePhoneCheck(e164: string): void {
+    if (this.duplicatePhoneTimer) {
+      clearTimeout(this.duplicatePhoneTimer);
+    }
+
+    const sequence = ++this.duplicateCheckSequence;
+
+    this.duplicatePhoneTimer = setTimeout(async () => {
+      const currentParsed = parsePhoneInput(this.form.controls.phone.value);
+      if (
+        currentParsed.status !== 'valid' ||
+        currentParsed.e164 !== e164 ||
+        sequence !== this.duplicateCheckSequence
+      ) {
+        return;
+      }
+
+      const targetEventId = this.invitation ? this.invitation.event_id : this.eventId;
+      const currentInvId = this.invitation ? this.invitation.id : undefined;
+
+      try {
+        const names = await this.invitationsRepository.findPhoneInEvent(
+          targetEventId,
+          e164,
+          currentInvId,
+        );
+
+        const latestParsed = parsePhoneInput(this.form.controls.phone.value);
+        if (
+          latestParsed.status !== 'valid' ||
+          latestParsed.e164 !== e164 ||
+          sequence !== this.duplicateCheckSequence
+        ) {
+          return;
+        }
+
+        if (names.length > 0) {
+          this.duplicatePhoneWarning.set(
+            `Este número ya está en la invitación de ${names.join(', ')}.`,
+          );
+        } else {
+          this.duplicatePhoneWarning.set(null);
+        }
+      } catch {
+        this.duplicatePhoneWarning.set(null);
+      }
+    }, 400);
   }
 
   addGuest(): void {
@@ -193,14 +375,30 @@ export class InvitationFormComponent implements OnInit {
   groupNameErrorText(): string {
     const errors = this.form.controls.group_name.errors;
     if (errors?.['maxlength']) {
-      return 'El nombre del grupo no puede superar 120 caracteres.';
+      return this.kind() === 'individual'
+        ? 'El nombre no puede superar 120 caracteres.'
+        : 'El nombre del grupo no puede superar 120 caracteres.';
     }
-    return 'Escribe el nombre del grupo.';
+    return this.kind() === 'individual'
+      ? 'Escribe el nombre de la persona.'
+      : 'Escribe el nombre del grupo.';
   }
 
   showPhoneError(): boolean {
-    const control = this.form.controls.phone;
-    return control.invalid && (control.touched || this.submitted());
+    const status = this.phoneStatus();
+    if (status === 'empty' || status === 'valid') {
+      return false;
+    }
+    if (status === 'incomplete') {
+      const control = this.form.controls.phone;
+      return control.touched || this.submitted();
+    }
+    return true;
+  }
+
+  phoneErrorText(): string {
+    const result = parsePhoneInput(this.form.controls.phone.value);
+    return result.message ?? '';
   }
 
   showGuestsMinError(): boolean {
@@ -233,21 +431,72 @@ export class InvitationFormComponent implements OnInit {
   async save(): Promise<void> {
     this.submitted.set(true);
     this.form.markAllAsTouched();
-    this.guestsArray.updateValueAndValidity();
+    if (this.kind() === 'group') {
+      this.guestsArray.updateValueAndValidity();
+    }
 
-    if (this.form.invalid || this.saving()) {
+    if (this.form.invalid || this.isSaveDisabled()) {
       return;
     }
 
-    this.saving.set(true);
     const raw = this.form.getRawValue();
-    const payload: InvitationInput = {
-      group_name: raw.group_name.trim(),
-      phone: raw.phone,
-      guests: raw.guests.map((guest) => ({
+    const currentKind = this.kind();
+
+    let guestsPayload: InvitationGuestInput[];
+
+    if (currentKind === 'individual') {
+      const namedGuests = this.guestsArray.controls.filter(
+        (c) => c.controls.full_name.value.trim().length > 0,
+      );
+
+      if (namedGuests.length > 1) {
+        const alert = await this.alertController.create({
+          header: 'Invitación individual',
+          message: `Esta invitación tiene ${namedGuests.length} personas. Como invitación individual quedará solo ${raw.group_name.trim()}. ¿Continuar?`,
+          buttons: [
+            {
+              text: 'Cancelar',
+              role: 'cancel',
+            },
+            {
+              text: 'Continuar',
+              role: 'confirm',
+            },
+          ],
+        });
+
+        await alert.present();
+        const { role } = await alert.onDidDismiss();
+        if (role !== 'confirm') {
+          return;
+        }
+      }
+
+      let firstGuestId = this.guestsArray.at(0)?.controls.id.value;
+      if (!firstGuestId) {
+        firstGuestId = newId();
+        this.guestsArray.push(this.createGuestControl('', firstGuestId));
+      }
+
+      guestsPayload = [
+        {
+          id: firstGuestId,
+          full_name: raw.group_name.trim(),
+        },
+      ];
+    } else {
+      guestsPayload = raw.guests.map((guest) => ({
         id: guest.id,
         full_name: guest.full_name.trim(),
-      })),
+      }));
+    }
+
+    this.saving.set(true);
+    const payload: InvitationInput = {
+      kind: currentKind,
+      group_name: raw.group_name.trim(),
+      phone: raw.phone.trim() ? raw.phone : null,
+      guests: guestsPayload,
     };
 
     const targetEventId = this.invitation ? this.invitation.event_id : this.eventId;

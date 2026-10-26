@@ -25,11 +25,11 @@ import {
 } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { closeOutline, shareSocialOutline } from 'ionicons/icons';
-import QRCode from 'qrcode';
 import {
   InvitationRow,
   InvitationsRepository,
   formatInvitationCode,
+  qrImageDataUrl,
 } from '../../../core';
 import { EmptyStateComponent } from '../../../shared';
 import { InvitationActionsService } from '../invitation-actions.service';
@@ -138,19 +138,7 @@ export class InvitationQrComponent implements OnInit {
     this.loading.set(true);
     this.error.set(null);
     try {
-      const styles = getComputedStyle(document.documentElement);
-      const dark = styles.getPropertyValue('--ion-color-dark').trim();
-      const light = styles.getPropertyValue('--ion-background-color').trim();
-
-      const dataUrl = await QRCode.toDataURL(link, {
-        width: 512,
-        margin: 2,
-        errorCorrectionLevel: 'M',
-        color: {
-          dark: dark || undefined,
-          light: light || undefined,
-        },
-      });
+      const dataUrl = await qrImageDataUrl(link);
       this.qrDataUrl.set(dataUrl);
     } catch (err) {
       const message =

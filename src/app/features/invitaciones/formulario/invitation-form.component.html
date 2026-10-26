@@ -17,16 +17,27 @@
 
 <ion-content class="ion-padding">
   <form class="invitation-form" [formGroup]="form" (ngSubmit)="save()">
+    <ion-segment [value]="kind()" (ionChange)="onKindChange($event)">
+      <ion-segment-button value="group">
+        <ion-label>Familia o grupo</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="individual">
+        <ion-label>Persona</ion-label>
+      </ion-segment-button>
+    </ion-segment>
+
     <div class="field-group">
       <ion-input
-        label="Nombre del grupo"
+        [label]="kind() === 'individual' ? 'Nombre completo' : 'Nombre del grupo'"
         labelPlacement="stacked"
         fill="outline"
         formControlName="group_name"
         maxlength="120"
-        placeholder="Nombre de la familia o grupo"
+        [placeholder]="kind() === 'individual' ? 'Nombre completo' : 'Nombre de la familia o grupo'"
       ></ion-input>
-      <p class="field-helper text-label">Por ejemplo: Familia Castro</p>
+      <p class="field-helper text-label">
+        {{ kind() === 'individual' ? 'Por ejemplo: Ana Ejemplo' : 'Por ejemplo: Familia Castro' }}
+      </p>
       @if (showGroupNameError()) {
         <p class="field-error text-label" role="alert">{{ groupNameErrorText() }}</p>
       }
@@ -34,74 +45,84 @@
 
     <div class="field-group">
       <ion-input
+        #phoneInput
         label="WhatsApp (opcional)"
         labelPlacement="stacked"
         fill="outline"
         type="tel"
         inputmode="tel"
         formControlName="phone"
-        placeholder="300 000 0000"
+        placeholder="+57 300 000 0000"
+        (ionInput)="onPhoneInput(phoneInput)"
+        (ionBlur)="onPhoneBlur()"
       ></ion-input>
       @if (showPhoneError()) {
         <p class="field-error text-label" role="alert">
-          Escribe 10 dígitos que empiecen por 3.
+          {{ phoneErrorText() }}
+        </p>
+      }
+      @if (duplicatePhoneWarning(); as warning) {
+        <p class="field-warning text-label" role="status">
+          {{ warning }}
         </p>
       }
     </div>
 
-    <div class="guests-section">
-      <div class="guests-header">
-        <h2 class="text-section">Personas</h2>
-        <ion-button
-          type="button"
-          fill="outline"
-          color="secondary"
-          size="small"
-          (click)="addGuest()"
-        >
-          <ion-icon slot="start" name="person-add-outline"></ion-icon>
-          Agregar persona
-        </ion-button>
+    @if (kind() === 'group') {
+      <div class="guests-section">
+        <div class="guests-header">
+          <h2 class="text-section">Personas</h2>
+          <ion-button
+            type="button"
+            fill="outline"
+            color="secondary"
+            size="small"
+            (click)="addGuest()"
+          >
+            <ion-icon slot="start" name="person-add-outline"></ion-icon>
+            Agregar persona
+          </ion-button>
+        </div>
+
+        @if (showGuestsMinError()) {
+          <p class="field-error text-label" role="alert">Agrega al menos una persona.</p>
+        }
+
+        <ion-list class="guests-list" formArrayName="guests">
+          <ion-reorder-group [disabled]="false" (ionReorderEnd)="onReorder($event)">
+            @for (guestControl of guestsArray.controls; track guestControl; let i = $index) {
+              <div class="guest-row-wrapper" [formGroupName]="i">
+                <ion-item lines="none" class="guest-item">
+                  <ion-reorder slot="start"></ion-reorder>
+                  <ion-input
+                    aria-label="Nombre de la persona"
+                    fill="outline"
+                    formControlName="full_name"
+                    maxlength="120"
+                    placeholder="Nombre completo"
+                  ></ion-input>
+                  <ion-button
+                    slot="end"
+                    type="button"
+                    fill="clear"
+                    color="danger"
+                    [attr.aria-label]="removeGuestAriaLabel(i)"
+                    (click)="removeGuest(i)"
+                  >
+                    <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
+                  </ion-button>
+                </ion-item>
+                @if (showGuestNameError(i)) {
+                  <p class="field-error guest-error text-label" role="alert">
+                    {{ guestNameErrorText(i) }}
+                  </p>
+                }
+              </div>
+            }
+          </ion-reorder-group>
+        </ion-list>
       </div>
-
-      @if (showGuestsMinError()) {
-        <p class="field-error text-label" role="alert">Agrega al menos una persona.</p>
-      }
-
-      <ion-list class="guests-list" formArrayName="guests">
-        <ion-reorder-group [disabled]="false" (ionReorderEnd)="onReorder($event)">
-          @for (guestControl of guestsArray.controls; track guestControl; let i = $index) {
-            <div class="guest-row-wrapper" [formGroupName]="i">
-              <ion-item lines="none" class="guest-item">
-                <ion-reorder slot="start"></ion-reorder>
-                <ion-input
-                  aria-label="Nombre de la persona"
-                  fill="outline"
-                  formControlName="full_name"
-                  maxlength="120"
-                  placeholder="Nombre completo"
-                ></ion-input>
-                <ion-button
-                  slot="end"
-                  type="button"
-                  fill="clear"
-                  color="danger"
-                  [attr.aria-label]="removeGuestAriaLabel(i)"
-                  (click)="removeGuest(i)"
-                >
-                  <ion-icon slot="icon-only" name="trash-outline"></ion-icon>
-                </ion-button>
-              </ion-item>
-              @if (showGuestNameError(i)) {
-                <p class="field-error guest-error text-label" role="alert">
-                  {{ guestNameErrorText(i) }}
-                </p>
-              }
-            </div>
-          }
-        </ion-reorder-group>
-      </ion-list>
-    </div>
+    }
   </form>
 </ion-content>
 
@@ -122,7 +143,7 @@
         type="button"
         color="primary"
         expand="block"
-        [disabled]="saving()"
+        [disabled]="isSaveDisabled()"
         (click)="save()"
       >
         @if (saving()) {

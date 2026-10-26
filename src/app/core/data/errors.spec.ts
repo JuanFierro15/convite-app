@@ -93,11 +93,17 @@ describe('core exports and error translation', () => {
       expect(err.message).toBe('Agrega al menos una persona.');
     });
 
-    it('translates invitation_event_mismatch and guest_not_in_invitation to generic save message', () => {
+    it('translates invitation_event_mismatch, guest_not_in_invitation, individual_requires_one_guest and invalid_kind to generic save message', () => {
       expect(toUserError({ message: 'invitation_event_mismatch' }).message).toBe(
         'No pudimos guardar el cambio. Inténtalo de nuevo.',
       );
       expect(toUserError({ message: 'guest_not_in_invitation' }).message).toBe(
+        'No pudimos guardar el cambio. Inténtalo de nuevo.',
+      );
+      expect(toUserError({ message: 'individual_requires_one_guest' }).message).toBe(
+        'No pudimos guardar el cambio. Inténtalo de nuevo.',
+      );
+      expect(toUserError({ message: 'invalid_kind' }).message).toBe(
         'No pudimos guardar el cambio. Inténtalo de nuevo.',
       );
     });
@@ -122,19 +128,19 @@ describe('core exports and error translation', () => {
         'El plazo para responder ya terminó. Si necesitas cambiar tu respuesta, escríbenos.',
       );
       expect(guestErrorMessage('already_reserved')).toBe(
-        'Otra familia acaba de apartar este regalo. Elige otro de la lista.',
+        'Alguien acaba de apartar este regalo. Elige otro de la lista.',
       );
       expect(guestErrorMessage('gifts_closed')).toBe('La lista de regalos ya está cerrada.');
       expect(GUEST_ERROR_MESSAGES['network_error']).toBe(CONNECTION_ERROR_MESSAGE);
       expect(GUEST_ERROR_MESSAGES['not_reserved_by_you']).toBe(
-        'Este regalo ya no está apartado por tu familia.',
+        'Este regalo ya no está apartado para esta invitación.',
       );
       expect(GUEST_ERROR_MESSAGES['load_failed']).toBe(
         'No pudimos cargar tu invitación. Inténtalo de nuevo.',
       );
       expect(guestErrorMessage('network_error')).toBe(CONNECTION_ERROR_MESSAGE);
       expect(guestErrorMessage('not_reserved_by_you')).toBe(
-        'Este regalo ya no está apartado por tu familia.',
+        'Este regalo ya no está apartado para esta invitación.',
       );
       expect(guestErrorMessage('load_failed')).toBe(
         'No pudimos cargar tu invitación. Inténtalo de nuevo.',
@@ -150,7 +156,7 @@ describe('core exports and error translation', () => {
       expect(error).toBeInstanceOf(GuestApiError);
       expect(error.code).toBe('already_reserved');
       expect(error.message).toBe(
-        'Otra familia acaba de apartar este regalo. Elige otro de la lista.',
+        'Alguien acaba de apartar este regalo. Elige otro de la lista.',
       );
     });
 

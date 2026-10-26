@@ -82,7 +82,9 @@ export function toUserError(error: unknown, fallback?: string): Error {
 
   if (
     combined.includes('invitation_event_mismatch') ||
-    combined.includes('guest_not_in_invitation')
+    combined.includes('guest_not_in_invitation') ||
+    combined.includes('individual_requires_one_guest') ||
+    combined.includes('invalid_kind')
   ) {
     return new Error(DEFAULT_USER_ERROR_MESSAGE);
   }

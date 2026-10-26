@@ -1,8 +1,9 @@
 import { Injectable, inject } from '@angular/core';
-import { environment } from '../../../environments/environment';
 import { Rsvp } from '../models/events';
 import { GuestRow, InvitationInput, InvitationWithGuests } from '../models/invitations';
 import { SupabaseService } from '../supabase/supabase.service';
+import { guestInvitationUrl } from '../utils/guest-link';
+import { toInvitationKind } from '../utils/invitation-texts';
 import { normalizePhone } from '../utils/phone';
 import { LOAD_ERROR_MESSAGE, toUserError } from './errors';
 
@@ -33,7 +34,7 @@ export class InvitationsRepository {
       id: row.id,
       event_id: row.event_id,
       group_name: row.group_name,
-      kind: row.kind,
+      kind: toInvitationKind(row.kind),
       phone: row.phone,
       code: row.code,
       created_at: row.created_at,
@@ -62,7 +63,7 @@ export class InvitationsRepository {
       id: data.id,
       event_id: data.event_id,
       group_name: data.group_name,
-      kind: data.kind,
+      kind: toInvitationKind(data.kind),
       phone: data.phone,
       code: data.code,
       created_at: data.created_at,
@@ -94,6 +95,7 @@ export class InvitationsRepository {
       p_group_name: input.group_name.trim(),
       p_phone: phone ?? '',
       p_guests: guests,
+      p_kind: input.kind,
     });
 
     if (error) {
@@ -105,6 +107,27 @@ export class InvitationsRepository {
       ...saved,
       guests: sortGuests(saved.guests ?? []),
     };
+  }
+
+  async findPhoneInEvent(
+    eventId: string,
+    e164: string,
+    excludeInvitationId?: string,
+  ): Promise<string[]> {
+    const { data, error } = await this.supabase.client
+      .from('invitations')
+      .select('id, group_name')
+      .eq('event_id', eventId)
+      .eq('phone', e164);
+
+    if (error) {
+      throw toUserError(error);
+    }
+
+    const rows = (data ?? []).filter((row) => row.id !== excludeInvitationId);
+    return rows
+      .map((row) => row.group_name)
+      .sort((a, b) => a.localeCompare(b, 'es'));
   }
 
   async remove(invitationId: string): Promise<void> {
@@ -130,7 +153,6 @@ export class InvitationsRepository {
   }
 
   guestLink(code: string): string {
-    const base = environment.guestBaseUrl.replace(/\/+$/, '');
-    return `${base}/i/${code}`;
+    return guestInvitationUrl(code);
   }
 }

@@ -1,4 +1,5 @@
 import { Tables } from '../supabase/database.types';
+import { InvitationKind } from '../utils/invitation-texts';
 
 export type InvitationRow = Tables<'invitations'>;
 
@@ -14,6 +15,7 @@ export interface InvitationGuestInput {
 }
 
 export interface InvitationInput {
+  kind: InvitationKind;
   group_name: string;
   phone: string | null;
   guests: InvitationGuestInput[];
