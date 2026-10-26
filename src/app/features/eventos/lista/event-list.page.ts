@@ -3,6 +3,7 @@ import { toObservable } from '@angular/core/rxjs-interop';
 import { Router } from '@angular/router';
 import {
   ActionSheetController,
+  AlertController,
   IonButton,
   IonButtons,
   IonCard,
@@ -27,6 +28,7 @@ import { addIcons } from 'ionicons';
 import { addOutline, ellipsisVerticalOutline, logOutOutline } from 'ionicons/icons';
 import { filter, firstValueFrom } from 'rxjs';
 import {
+  ArrivalStoreService,
   AuthService,
   EventRow,
   EventSummary,
@@ -66,9 +68,11 @@ import { EmptyStateComponent } from '../../../shared';
 export class EventListPage implements ViewWillEnter {
   private readonly auth = inject(AuthService);
   private readonly eventsRepo = inject(EventsRepository);
+  private readonly store = inject(ArrivalStoreService);
   private readonly theme = inject(ThemeService);
   private readonly router = inject(Router);
   private readonly actionSheetCtrl = inject(ActionSheetController);
+  private readonly alertCtrl = inject(AlertController);
   private readonly toastCtrl = inject(ToastController);
   private readonly authReady$ = toObservable(this.auth.ready);
 
@@ -177,7 +181,37 @@ export class EventListPage implements ViewWillEnter {
   }
 
   async signOut(): Promise<void> {
+    const pending = await this.store.pendingTotal();
+    if (pending > 0) {
+      const message =
+        pending === 1
+          ? 'Hay 1 llegada sin sincronizar en este celular. Si cierras sesión ahora, se perderá.'
+          : `Hay ${pending} llegadas sin sincronizar en este celular. Si cierras sesión ahora, se perderán.`;
+
+      const alert = await this.alertCtrl.create({
+        header: 'Llegadas sin sincronizar',
+        message,
+        buttons: [
+          {
+            text: 'Cancelar',
+            role: 'cancel',
+          },
+          {
+            text: 'Cerrar sesión',
+            role: 'destructive',
+          },
+        ],
+      });
+
+      await alert.present();
+      const { role } = await alert.onDidDismiss();
+      if (role !== 'destructive') {
+        return;
+      }
+    }
+
     try {
+      await this.store.clearAll();
       await this.auth.signOut();
     } finally {
       await this.router.navigateByUrl('/login', { replaceUrl: true });

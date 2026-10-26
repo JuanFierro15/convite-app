@@ -1,5 +1,6 @@
-import { Component } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { IonApp, IonRouterOutlet } from '@ionic/angular';
+import { ArrivalSyncService } from './core';
 import { ConnectionBannerComponent } from './shared';
 
 @Component({
@@ -8,5 +9,9 @@ import { ConnectionBannerComponent } from './shared';
   imports: [IonApp, IonRouterOutlet, ConnectionBannerComponent],
 })
 export class AppComponent {
-  constructor() {}
+  private readonly arrivalSync = inject(ArrivalSyncService);
+
+  constructor() {
+    this.arrivalSync.start();
+  }
 }

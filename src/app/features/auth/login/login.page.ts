@@ -1,7 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, inject, signal } from '@angular/core';
 import { toObservable } from '@angular/core/rxjs-interop';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Router } from '@angular/router';
+import { Router, RouterLink } from '@angular/router';
 import {
   IonButton,
   IonCard,
@@ -22,9 +22,16 @@ import {
   eyeOutline,
   lockClosedOutline,
   mailOutline,
+  qrCodeOutline,
 } from 'ionicons/icons';
 import { filter, firstValueFrom } from 'rxjs';
-import { AuthService, ThemeService } from '../../../core';
+import {
+  ArrivalSnapshot,
+  ArrivalStoreService,
+  AuthService,
+  ThemeService,
+  formatDownloadedAt,
+} from '../../../core';
 
 @Component({
   selector: 'app-login',
@@ -34,6 +41,7 @@ import { AuthService, ThemeService } from '../../../core';
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     ReactiveFormsModule,
+    RouterLink,
     IonContent,
     IonCard,
     IonCardContent,
@@ -48,6 +56,7 @@ import { AuthService, ThemeService } from '../../../core';
 export class LoginPage implements ViewWillEnter {
   private readonly fb = inject(FormBuilder);
   private readonly auth = inject(AuthService);
+  private readonly store = inject(ArrivalStoreService);
   private readonly theme = inject(ThemeService);
   private readonly router = inject(Router);
   private readonly authReady$ = toObservable(this.auth.ready);
@@ -55,6 +64,7 @@ export class LoginPage implements ViewWillEnter {
   readonly submitting = signal<boolean>(false);
   readonly submitted = signal<boolean>(false);
   readonly errorMessage = signal<string | null>(null);
+  readonly offlineSnapshots = signal<ArrivalSnapshot[]>([]);
 
   readonly logoSrc = computed<string>(() => this.theme.asset(null, 'app-icon.png'));
 
@@ -71,12 +81,14 @@ export class LoginPage implements ViewWillEnter {
       eyeOff,
       eyeOutline,
       eyeOffOutline,
+      qrCodeOutline,
     });
   }
 
   async ionViewWillEnter(): Promise<void> {
     this.theme.apply(null);
     this.errorMessage.set(null);
+    this.offlineSnapshots.set([]);
 
     if (!this.auth.ready()) {
       await firstValueFrom(this.authReady$.pipe(filter((ready) => ready)));
@@ -84,7 +96,18 @@ export class LoginPage implements ViewWillEnter {
 
     if (this.auth.session()) {
       await this.router.navigateByUrl('/eventos', { replaceUrl: true });
+      return;
     }
+
+    const last = await this.auth.lastKnownUser();
+    const snapshots = (await this.store.listSnapshots()).filter(
+      (s) => s.userId === last?.id,
+    );
+    this.offlineSnapshots.set(snapshots);
+  }
+
+  formatDownloadedAt(iso: string): string {
+    return formatDownloadedAt(iso);
   }
 
   get emailError(): string | null {

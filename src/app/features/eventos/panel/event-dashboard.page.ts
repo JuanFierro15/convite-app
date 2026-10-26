@@ -42,6 +42,8 @@ import {
   walletOutline,
 } from 'ionicons/icons';
 import {
+  ArrivalCounts,
+  ArrivalSessionService,
   EventContextService,
   EventsRepository,
   RealtimeService,
@@ -93,6 +95,7 @@ function formatDayMonthBogota(iso: string): string {
 export class EventDashboardPage implements ViewWillEnter, ViewWillLeave {
   private readonly eventContext = inject(EventContextService);
   private readonly eventsRepo = inject(EventsRepository);
+  private readonly arrivalSession = inject(ArrivalSessionService);
   private readonly realtime = inject(RealtimeService);
   private readonly router = inject(Router);
   private readonly toastCtrl = inject(ToastController);
@@ -108,6 +111,12 @@ export class EventDashboardPage implements ViewWillEnter, ViewWillLeave {
     pending: 0,
     declined: 0,
     total: 0,
+  });
+  readonly arrivals = signal<ArrivalCounts>({
+    confirmed: 0,
+    arrivedConfirmed: 0,
+    arrivedUnconfirmed: 0,
+    arrivedTotal: 0,
   });
   private readonly initialLoading = signal<boolean>(true);
 
@@ -171,9 +180,16 @@ export class EventDashboardPage implements ViewWillEnter, ViewWillLeave {
     if (this.eventContext.event()?.id !== eventId) {
       this.eventContext.clear();
       this.counts.set({ accepted: 0, pending: 0, declined: 0, total: 0 });
+      this.arrivals.set({
+        confirmed: 0,
+        arrivedConfirmed: 0,
+        arrivedUnconfirmed: 0,
+        arrivedTotal: 0,
+      });
     }
     this.initialLoading.set(true);
     void this.loadDashboard(eventId, true);
+    void this.arrivalSession.prefetch(eventId);
 
     this.stopRealtime?.();
     this.stopRealtime = this.realtime.watch(
@@ -205,15 +221,16 @@ export class EventDashboardPage implements ViewWillEnter, ViewWillLeave {
     isInitial: boolean,
   ): Promise<void> {
     try {
-      const [, countsResult] = await Promise.allSettled([
+      const [, attendanceResult] = await Promise.allSettled([
         this.eventContext.load(eventId, { force: isInitial }),
-        this.eventsRepo.countsFor(eventId),
+        this.eventsRepo.attendanceFor(eventId),
       ]);
 
-      if (countsResult.status === 'fulfilled') {
-        this.counts.set(countsResult.value);
+      if (attendanceResult.status === 'fulfilled') {
+        this.counts.set(attendanceResult.value.rsvp);
+        this.arrivals.set(attendanceResult.value.arrivals);
       } else if (this.eventContext.event() !== null) {
-        const reason: unknown = countsResult.reason;
+        const reason: unknown = attendanceResult.reason;
         const message =
           reason instanceof Error
             ? reason.message

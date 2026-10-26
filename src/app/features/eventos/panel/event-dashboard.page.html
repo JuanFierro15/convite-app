@@ -126,6 +126,9 @@
         <p class="text-label kpi-total">
           {{ counts().total }} personas invitadas en total
         </p>
+        <p class="text-label kpi-total">
+          Llegadas: {{ arrivals().arrivedConfirmed }} de {{ arrivals().confirmed }} personas confirmadas · {{ arrivals().arrivedUnconfirmed }} sin confirmar
+        </p>
       </section>
 
       <section class="dashboard-section" aria-labelledby="access-section-title">
@@ -223,15 +226,15 @@
 
               <ion-col size="6">
                 <ion-card
-                  class="access-card access-card--disabled"
-                  aria-disabled="true"
+                  class="access-card"
+                  [button]="true"
+                  [routerLink]="['/eventos', id(), 'llegadas']"
                 >
                   <ion-card-content class="access-card__content">
                     <div class="access-card__top">
-                      <div class="access-card__icon-box access-card__icon-box--disabled">
+                      <div class="access-card__icon-box">
                         <ion-icon name="qr-code-outline" aria-hidden="true"></ion-icon>
                       </div>
-                      <span class="badge-soft-medium text-label">Pronto</span>
                     </div>
                     <span class="text-name access-card__title">Llegada con QR</span>
                   </ion-card-content>
@@ -252,17 +255,17 @@
             </ion-button>
 
             <ion-card
-              class="access-card access-card--disabled helper-actions__qr-card"
-              aria-disabled="true"
+              class="access-card helper-actions__qr-card"
+              [button]="true"
+              [routerLink]="['/eventos', id(), 'llegadas']"
             >
               <ion-card-content class="access-card__content access-card__content--row">
-                <div class="access-card__icon-box access-card__icon-box--disabled">
+                <div class="access-card__icon-box">
                   <ion-icon name="qr-code-outline" aria-hidden="true"></ion-icon>
                 </div>
                 <span class="text-name access-card__title access-card__title--grow">
                   Llegada con QR
                 </span>
-                <span class="badge-soft-medium text-label">Pronto</span>
               </ion-card-content>
             </ion-card>
           </div>

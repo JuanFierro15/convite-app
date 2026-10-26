@@ -101,5 +101,33 @@
         </form>
       </ion-card-content>
     </ion-card>
+
+    @if (offlineSnapshots().length > 0) {
+      <ion-card class="login-card offline-card">
+        <ion-card-content class="login-card__content">
+          <h2 class="text-section offline-card__title">¿Sin conexión?</h2>
+          <p class="text-body offline-card__description">
+            Puedes registrar llegadas con la lista guardada en este celular.
+          </p>
+          <div class="offline-card__list">
+            @for (snapshot of offlineSnapshots(); track snapshot.eventId) {
+              <div class="offline-card__item">
+                <ion-button
+                  fill="outline"
+                  expand="block"
+                  [routerLink]="['/eventos', snapshot.eventId, 'llegadas']"
+                >
+                  <ion-icon slot="start" name="qr-code-outline" aria-hidden="true"></ion-icon>
+                  Registrar llegadas de {{ snapshot.event.name }}
+                </ion-button>
+                <p class="text-label offline-card__meta">
+                  Lista {{ formatDownloadedAt(snapshot.downloadedAt) }}
+                </p>
+              </div>
+            }
+          </div>
+        </ion-card-content>
+      </ion-card>
+    }
   </div>
 </ion-content>
