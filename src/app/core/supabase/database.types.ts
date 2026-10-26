@@ -183,6 +183,8 @@ export type Database = {
       }
       guests: {
         Row: {
+          arrived_at: string | null
+          arrived_by: string | null
           created_at: string
           event_id: string
           full_name: string
@@ -193,6 +195,8 @@ export type Database = {
           sort_order: number
         }
         Insert: {
+          arrived_at?: string | null
+          arrived_by?: string | null
           created_at?: string
           event_id: string
           full_name: string
@@ -203,6 +207,8 @@ export type Database = {
           sort_order?: number
         }
         Update: {
+          arrived_at?: string | null
+          arrived_by?: string | null
           created_at?: string
           event_id?: string
           full_name?: string
@@ -324,6 +330,10 @@ export type Database = {
     Functions: {
       get_gifts: { Args: { p_code: string }; Returns: Json }
       get_invitation: { Args: { p_code: string }; Returns: Json }
+      record_arrivals: {
+        Args: { p_arrivals: Json; p_event_id: string }
+        Returns: Json
+      }
       release_gift: {
         Args: { p_code: string; p_gift_id: string }
         Returns: Json
