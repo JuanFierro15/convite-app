@@ -35,6 +35,12 @@ const timeFormatter = new Intl.DateTimeFormat('es-CO', {
   hour12: true,
 });
 
+const dayMonthFormatter = new Intl.DateTimeFormat('es-CO', {
+  timeZone: BOGOTA_TIME_ZONE,
+  day: 'numeric',
+  month: 'long',
+});
+
 function parseBogotaAwareDate(iso: string | Date): Date {
   if (iso instanceof Date) {
     return iso;
@@ -123,4 +129,19 @@ export function fromBogotaDateTimeInput(value: string): string {
   const minutes = pad2(shifted.getUTCMinutes());
   const seconds = pad2(shifted.getUTCSeconds());
   return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}-05:00`;
+}
+
+export function formatDownloadedAt(iso: string | Date, now: Date = new Date()): string {
+  const date = parseBogotaAwareDate(iso);
+  const diff = daysUntil(date, now);
+  const time = formatTime(date);
+
+  if (diff === 0) {
+    return `hoy a las ${time}`;
+  }
+  if (diff === -1) {
+    return `ayer a las ${time}`;
+  }
+  const dayMonth = dayMonthFormatter.format(date).replace(/\s+/g, ' ');
+  return `el ${dayMonth} a las ${time}`;
 }

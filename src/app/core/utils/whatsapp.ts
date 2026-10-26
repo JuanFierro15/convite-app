@@ -1,3 +1,4 @@
+import { InvitationKind } from './invitation-texts';
 import { normalizePhone } from './phone';
 
 export interface InvitationMessageParams {
@@ -5,6 +6,7 @@ export interface InvitationMessageParams {
   eventName: string;
   dateText: string;
   link: string;
+  kind?: InvitationKind;
 }
 
 export function invitationMessage({
@@ -12,8 +14,12 @@ export function invitationMessage({
   eventName,
   dateText,
   link,
+  kind = 'group',
 }: InvitationMessageParams): string {
-  return `Hola, ${groupName}. Están invitados a ${eventName} el ${dateText}. Confirmen su asistencia aquí: ${link}`;
+  if (kind === 'individual') {
+    return `Hola, ${groupName}. Te invitamos a ${eventName} el ${dateText}. Confirma tu asistencia aquí: ${link}`;
+  }
+  return `Hola, ${groupName}. Les invitamos a ${eventName} el ${dateText}. Confirmen su asistencia aquí: ${link}`;
 }
 
 export function whatsappUrl(phone: string | null | undefined, message: string): string | null {
