@@ -24,6 +24,13 @@ describe('ThemeService', () => {
     expect(service.current()).toBe('bautizo');
   });
 
+  it('applies honey-bee theme to documentElement and updates current', () => {
+    service.apply('honey-bee');
+
+    expect(doc.documentElement.getAttribute('data-theme')).toBe('honey-bee');
+    expect(service.current()).toBe('honey-bee');
+  });
+
   it('falls back to DEFAULT_THEME when applying an invalid or empty themeId', () => {
     service.apply('bautizo');
     service.apply('inexistente');
@@ -47,6 +54,15 @@ describe('ThemeService', () => {
     );
     expect(service.asset(null, 'empty-state.webp')).toBe(
       'assets/themes/baby-shower/empty-state.webp',
+    );
+  });
+
+  it('returns own asset paths for honey-bee theme assets', () => {
+    expect(service.asset('honey-bee', 'countdown.webp')).toBe(
+      'assets/themes/honey-bee/countdown.webp',
+    );
+    expect(service.asset('honey-bee', 'app-icon.png')).toBe(
+      'assets/themes/honey-bee/app-icon.png',
     );
   });
 });

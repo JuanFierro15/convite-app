@@ -1,9 +1,7 @@
 import { DOCUMENT, Injectable, inject, signal } from '@angular/core';
-import { DEFAULT_THEME, THEMES, ThemeAsset, ThemeId } from './themes';
+import { DEFAULT_THEME, ThemeAsset, ThemeId, findTheme, isThemeId } from './themes';
 
 export { DEFAULT_THEME, THEMES, type ThemeAsset, type ThemeId } from './themes';
-
-const THEMES_WITH_OWN_ASSETS: ReadonlySet<ThemeId> = new Set<ThemeId>(['baby-shower']);
 
 @Injectable({ providedIn: 'root' })
 export class ThemeService {
@@ -21,14 +19,11 @@ export class ThemeService {
 
   asset(themeId: string | null | undefined, file: ThemeAsset): string {
     const resolved = this.resolveThemeId(themeId);
-    const assetTheme = THEMES_WITH_OWN_ASSETS.has(resolved) ? resolved : DEFAULT_THEME;
+    const assetTheme = findTheme(resolved)?.hasOwnAssets ? resolved : DEFAULT_THEME;
     return `assets/themes/${assetTheme}/${file}`;
   }
 
   private resolveThemeId(themeId: string | null | undefined): ThemeId {
-    if (themeId && THEMES.some((theme) => theme.id === themeId)) {
-      return themeId as ThemeId;
-    }
-    return DEFAULT_THEME;
+    return isThemeId(themeId) ? themeId : DEFAULT_THEME;
   }
 }

@@ -192,3 +192,79 @@
   --shadow-card: 0 4px 16px rgba(var(--ion-text-color-rgb), 0.06), 0 1px 3px rgba(var(--ion-text-color-rgb), 0.04);
   --shadow-floating: 0 8px 24px rgba(var(--ion-color-primary-rgb), 0.20);
 }
+
+/* Tema: Miel y flores silvestres */
+[data-theme="honey-bee"] {
+  --ion-background-color: #FFFDF7;
+  --ion-background-color-rgb: 255, 253, 247;
+  --ion-text-color: #2E261D;
+  --ion-text-color-rgb: 46, 38, 29;
+
+  --ion-color-primary: #9B6C1F;
+  --ion-color-primary-rgb: 155, 108, 31;
+  --ion-color-primary-contrast: #FFFFFF;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #885F1B;
+  --ion-color-primary-tint: #A57B35;
+
+  --ion-color-secondary: #5D7C69;
+  --ion-color-secondary-rgb: 93, 124, 105;
+  --ion-color-secondary-contrast: #FFFFFF;
+  --ion-color-secondary-contrast-rgb: 255, 255, 255;
+  --ion-color-secondary-shade: #526D5C;
+  --ion-color-secondary-tint: #6D8978;
+
+  --ion-color-tertiary: #846AA2;
+  --ion-color-tertiary-rgb: 132, 106, 162;
+  --ion-color-tertiary-contrast: #FFFFFF;
+  --ion-color-tertiary-contrast-rgb: 255, 255, 255;
+  --ion-color-tertiary-shade: #745D8F;
+  --ion-color-tertiary-tint: #9079AB;
+
+  --ion-color-success: #45815E;
+  --ion-color-success-rgb: 69, 129, 94;
+  --ion-color-success-contrast: #FFFFFF;
+  --ion-color-success-contrast-rgb: 255, 255, 255;
+  --ion-color-success-shade: #3D7253;
+  --ion-color-success-tint: #588E6E;
+
+  --ion-color-warning: #A76518;
+  --ion-color-warning-rgb: 167, 101, 24;
+  --ion-color-warning-contrast: #FFFFFF;
+  --ion-color-warning-contrast-rgb: 255, 255, 255;
+  --ion-color-warning-shade: #935915;
+  --ion-color-warning-tint: #B0742F;
+
+  --ion-color-danger: #C15151;
+  --ion-color-danger-rgb: 193, 81, 81;
+  --ion-color-danger-contrast: #FFFFFF;
+  --ion-color-danger-contrast-rgb: 255, 255, 255;
+  --ion-color-danger-shade: #AA4747;
+  --ion-color-danger-tint: #C76262;
+
+  --ion-color-light: #FDF5E2;
+  --ion-color-light-rgb: 253, 245, 226;
+  --ion-color-light-contrast: #2E261D;
+  --ion-color-light-contrast-rgb: 46, 38, 29;
+  --ion-color-light-shade: #DFD8C7;
+  --ion-color-light-tint: #FDF6E5;
+
+  --ion-color-medium: #736555;
+  --ion-color-medium-rgb: 115, 101, 85;
+  --ion-color-medium-contrast: #FFFFFF;
+  --ion-color-medium-contrast-rgb: 255, 255, 255;
+  --ion-color-medium-shade: #65594B;
+  --ion-color-medium-tint: #817466;
+
+  --ion-color-dark: #2E261D;
+  --ion-color-dark-rgb: 46, 38, 29;
+  --ion-color-dark-contrast: #FFFFFF;
+  --ion-color-dark-contrast-rgb: 255, 255, 255;
+  --ion-color-dark-shade: #28211A;
+  --ion-color-dark-tint: #433C34;
+
+  --ion-card-background: #FFFFFF;
+  --ion-item-background: #FFFFFF;
+  --ion-toolbar-background: #FFFDF7;
+  --ion-border-color: rgba(115, 101, 85, 0.16);
+}
