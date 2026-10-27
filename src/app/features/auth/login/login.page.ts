@@ -26,6 +26,7 @@ import {
 } from 'ionicons/icons';
 import { filter, firstValueFrom } from 'rxjs';
 import {
+  APP_ICON_THEME,
   ArrivalSnapshot,
   ArrivalStoreService,
   AuthService,
@@ -66,7 +67,7 @@ export class LoginPage implements ViewWillEnter {
   readonly errorMessage = signal<string | null>(null);
   readonly offlineSnapshots = signal<ArrivalSnapshot[]>([]);
 
-  readonly logoSrc = computed<string>(() => this.theme.asset(null, 'app-icon.png'));
+  readonly logoSrc = computed<string>(() => this.theme.asset(APP_ICON_THEME, 'app-icon.png'));
 
   readonly form = this.fb.nonNullable.group({
     email: ['', [Validators.required, Validators.email]],

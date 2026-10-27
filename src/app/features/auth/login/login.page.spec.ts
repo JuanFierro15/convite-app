@@ -122,4 +122,9 @@ describe('LoginPage - Offline Arrivals Access', () => {
     const element = fixture.nativeElement as HTMLElement;
     expect(element.textContent).not.toContain('¿Sin conexión?');
   });
+
+  it('resolves login logo using honey-bee theme app-icon asset', () => {
+    expect(component.logoSrc()).toBe('mock-logo.png');
+    expect(mockTheme.asset).toHaveBeenCalledWith('honey-bee', 'app-icon.png');
+  });
 });
