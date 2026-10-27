@@ -3601,3 +3601,72 @@ test(
   }
 );
 
+
+test(
+  '38. Un propietario crea un evento con el tema de miel y un tema que no existe falla',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    const now = Date.now();
+    const startsAt = new Date(now + 30 * 24 * 60 * 60 * 1000).toISOString();
+    const rsvpDeadline = new Date(now + 20 * 24 * 60 * 60 * 1000).toISOString();
+
+    const { data: honeyEvent, error: honeyError } = await ctx.ownerXClient
+      .from('events')
+      .insert({
+        name: `PRUEBA-${ctx.run}-TEMA-MIEL`,
+        theme_id: 'honey-bee',
+        starts_at: startsAt,
+        rsvp_deadline: rsvpDeadline,
+      })
+      .select()
+      .single();
+
+    assert.equal(
+      honeyError,
+      null,
+      'Se esperaba que el propietario X pudiera crear un evento con el tema honey-bee'
+    );
+    assert.ok(honeyEvent?.id, 'Se esperaba recibir el id del evento con el tema de miel');
+    ctx.createdEventIds.push(honeyEvent.id);
+    assert.equal(
+      honeyEvent.theme_id,
+      'honey-bee',
+      'Se esperaba que el evento quedara guardado con el tema honey-bee'
+    );
+
+    const invalidName = `PRUEBA-${ctx.run}-TEMA-INEXISTENTE`;
+    const { error: invalidError } = await ctx.ownerXClient.from('events').insert({
+      name: invalidName,
+      theme_id: 'tema-inexistente',
+      starts_at: startsAt,
+      rsvp_deadline: rsvpDeadline,
+    });
+
+    assert.ok(invalidError, 'Se esperaba un error al crear un evento con un tema que no existe');
+    assert.equal(
+      invalidError.code,
+      '23514',
+      'Se esperaba el código de error 23514 (check_violation)'
+    );
+    assert.ok(
+      invalidError.message.includes('events_theme_id_valid'),
+      `Se esperaba la restricción events_theme_id_valid, pero se recibió: ${invalidError.message}`
+    );
+
+    const { data: invalidEvents, error: checkError } = await ctx.adminClient
+      .from('events')
+      .select('id')
+      .eq('name', invalidName);
+
+    assert.equal(
+      checkError,
+      null,
+      'Se esperaba consultar el evento fallido con el administrador sin error'
+    );
+    assert.equal(
+      invalidEvents?.length,
+      0,
+      'Se esperaba que el intento fallido no dejara un evento creado en la base de datos'
+    );
+  }
+);
