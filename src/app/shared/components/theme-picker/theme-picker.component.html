@@ -1,0 +1,35 @@
+<p class="theme-picker__label text-label" id="theme-picker-label">Tema</p>
+<div class="theme-picker" role="radiogroup" aria-labelledby="theme-picker-label">
+  @for (theme of options(); track theme.id) {
+    <button
+      type="button"
+      class="theme-card"
+      role="radio"
+      [class.theme-card--selected]="isSelected(theme.id)"
+      [attr.aria-checked]="isSelected(theme.id)"
+      [attr.data-theme]="theme.id"
+      [disabled]="disabled()"
+      (click)="select(theme.id)"
+    >
+      <span class="theme-card__media">
+        <img
+          class="theme-card__thumb"
+          [src]="coverSrc(theme.id)"
+          alt=""
+          width="160"
+          height="120"
+          decoding="async"
+        />
+        @if (isSelected(theme.id)) {
+          <ion-icon class="theme-card__check" name="checkmark-circle" aria-hidden="true"></ion-icon>
+        }
+      </span>
+      <span class="theme-card__name text-label">{{ theme.label }}</span>
+      <span class="theme-card__dots" aria-hidden="true">
+        <span class="theme-card__dot theme-card__dot--primary"></span>
+        <span class="theme-card__dot theme-card__dot--secondary"></span>
+        <span class="theme-card__dot theme-card__dot--tertiary"></span>
+      </span>
+    </button>
+  }
+</div>

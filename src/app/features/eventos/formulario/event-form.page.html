@@ -55,21 +55,7 @@
             </div>
 
             <div class="form-field">
-              <ion-item class="form-item">
-                <ion-select
-                  label="Tema"
-                  labelPlacement="stacked"
-                  formControlName="theme_id"
-                  interface="popover"
-                  (ionChange)="onThemeChange($event.detail.value)"
-                >
-                  @for (theme of themes; track theme.id) {
-                    <ion-select-option [value]="theme.id">
-                      {{ theme.label }}
-                    </ion-select-option>
-                  }
-                </ion-select>
-              </ion-item>
+              <app-theme-picker formControlName="theme_id" [options]="themeOptions()" />
             </div>
 
             <div class="form-field">

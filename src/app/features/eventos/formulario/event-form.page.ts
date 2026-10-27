@@ -27,8 +27,6 @@ import {
   IonInput,
   IonItem,
   IonList,
-  IonSelect,
-  IonSelectOption,
   IonSpinner,
   IonTextarea,
   IonTitle,
@@ -41,15 +39,15 @@ import {
   EventContextService,
   EventInput,
   EventsRepository,
-  THEMES,
   ThemeId,
   ThemeService,
   endOfDayBogota,
   fromBogotaDateTimeInput,
+  themeOptionsFor,
   toBogotaDateInput,
   toBogotaDateTimeInput,
 } from '../../../core';
-import { EmptyStateComponent } from '../../../shared';
+import { EmptyStateComponent, ThemePickerComponent } from '../../../shared';
 
 function requiredTrimmedValidator(
   control: AbstractControl<string>,
@@ -141,11 +139,10 @@ function toNullableBudget(value: string | number | null | undefined): number | n
     IonList,
     IonItem,
     IonInput,
-    IonSelect,
-    IonSelectOption,
     IonTextarea,
     IonButton,
     EmptyStateComponent,
+    ThemePickerComponent,
   ],
 })
 export class EventFormPage implements ViewWillEnter {
@@ -159,7 +156,8 @@ export class EventFormPage implements ViewWillEnter {
 
   readonly id = input<string>();
 
-  readonly themes = THEMES;
+  private readonly loadedTheme = signal<ThemeId | null>(null);
+  readonly themeOptions = computed(() => themeOptionsFor(this.loadedTheme()));
   readonly loading = signal<boolean>(false);
   readonly loadError = signal<string | null>(null);
   readonly submitting = signal<boolean>(false);
@@ -219,12 +217,6 @@ export class EventFormPage implements ViewWillEnter {
     }
   }
 
-  onThemeChange(themeId: string | null | undefined): void {
-    if (themeId) {
-      this.themeService.apply(themeId);
-    }
-  }
-
   async onSubmit(): Promise<void> {
     if (this.form.invalid || this.submitting()) {
       this.form.markAllAsTouched();
@@ -272,6 +264,7 @@ export class EventFormPage implements ViewWillEnter {
   }
 
   private resetForCreate(): void {
+    this.loadedTheme.set(null);
     this.loading.set(false);
     this.loadError.set(null);
     this.form.reset({
@@ -314,6 +307,7 @@ export class EventFormPage implements ViewWillEnter {
       const resolvedTheme: ThemeId = this.themeService.apply(
         currentEvent.theme_id,
       );
+      this.loadedTheme.set(resolvedTheme);
 
       this.form.reset({
         name: currentEvent.name,
