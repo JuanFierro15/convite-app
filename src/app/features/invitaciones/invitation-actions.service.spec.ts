@@ -46,13 +46,14 @@ describe('InvitationActionsService', () => {
       {
         name: 'Celebración Familiar',
         starts_at: '2026-11-29T15:00:00-05:00',
+        rsvp_deadline: '2026-11-24T23:59:59-05:00',
       },
     );
 
     expect(openSpy).toHaveBeenCalled();
     const openedUrl = openSpy.mock.calls[0][0] as string;
     expect(openedUrl).toContain('wa.me/573001234567');
-    expect(decodeURIComponent(openedUrl)).toContain('Hola, Persona Ejemplo. Te invitamos');
+    expect(decodeURIComponent(openedUrl)).toContain('Hola, Persona Ejemplo.\n\nTe invitamos al *');
     openSpy.mockRestore();
   });
 
@@ -69,12 +70,13 @@ describe('InvitationActionsService', () => {
       {
         name: 'Celebración Familiar',
         starts_at: '2026-11-29T15:00:00-05:00',
+        rsvp_deadline: '2026-11-24T23:59:59-05:00',
       },
     );
 
     expect(openSpy).toHaveBeenCalled();
     const openedUrl = openSpy.mock.calls[0][0] as string;
-    expect(decodeURIComponent(openedUrl)).toContain('Hola, Familia Ejemplo. Queremos que nos acompañen en');
+    expect(decodeURIComponent(openedUrl)).toContain('Hola, familia Ejemplo.\n\nLos invitamos al *');
     openSpy.mockRestore();
   });
 });

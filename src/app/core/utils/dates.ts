@@ -65,6 +65,10 @@ export function formatLongDate(iso: string | Date): string {
   return longDateFormatter.format(parseBogotaAwareDate(iso)).replace(/\s+/g, ' ');
 }
 
+export function formatDayMonth(iso: string | Date): string {
+  return dayMonthFormatter.format(parseBogotaAwareDate(iso)).replace(/\s+/g, ' ');
+}
+
 export function formatShortDate(iso: string | Date): string {
   const shifted = getBogotaShiftedDate(iso);
   const day = shifted.getUTCDate();
@@ -142,6 +146,6 @@ export function formatDownloadedAt(iso: string | Date, now: Date = new Date()): 
   if (diff === -1) {
     return `ayer a las ${time}`;
   }
-  const dayMonth = dayMonthFormatter.format(date).replace(/\s+/g, ' ');
+  const dayMonth = formatDayMonth(date);
   return `el ${dayMonth} a las ${time}`;
 }

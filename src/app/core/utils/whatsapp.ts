@@ -1,10 +1,12 @@
+import { formatDayMonth, formatLongDate, formatTime } from './dates';
 import { InvitationKind } from './invitation-texts';
 import { normalizePhone } from './phone';
 
 export interface InvitationMessageParams {
   groupName: string;
   eventName: string;
-  dateText: string;
+  startsAt: string | Date;
+  rsvpDeadline: string | Date;
   link: string;
   kind?: InvitationKind;
 }
@@ -12,14 +14,39 @@ export interface InvitationMessageParams {
 export function invitationMessage({
   groupName,
   eventName,
-  dateText,
+  startsAt,
+  rsvpDeadline,
   link,
   kind = 'group',
 }: InvitationMessageParams): string {
+  const trimmedGroup = groupName.trim();
+  const match = trimmedGroup.match(/^familia\s+(.+)$/i);
+  const saludoName = match ? `familia ${match[1]}` : trimmedGroup;
+
+  const longDate = formatLongDate(startsAt).replace(',', '');
+  const capitalizedDate = longDate.charAt(0).toUpperCase() + longDate.slice(1);
+  const dateTimeLine = `${capitalizedDate}, ${formatTime(startsAt)}`;
+
+  const deadlineText = formatDayMonth(rsvpDeadline);
+  const trimmedEvent = eventName.trim();
+
   if (kind === 'individual') {
-    return `Hola, ${groupName}. Te invitamos a ${eventName} el ${dateText}. Confirma tu asistencia aquí: ${link}`;
+    return (
+      `Hola, ${saludoName}.\n\n` +
+      `Te invitamos al *${trimmedEvent}*\n` +
+      `${dateTimeLine}\n\n` +
+      `Por favor confirma tu asistencia hasta el ${deadlineText} en este enlace:\n` +
+      `${link.trim()}`
+    );
   }
-  return `Hola, ${groupName}. Queremos que nos acompañen en ${eventName} el ${dateText}. Confirmen su asistencia aquí: ${link}`;
+
+  return (
+    `Hola, ${saludoName}.\n\n` +
+    `Los invitamos al *${trimmedEvent}*\n` +
+    `${dateTimeLine}\n\n` +
+    `Por favor confirmen su asistencia hasta el ${deadlineText} en este enlace:\n` +
+    `${link.trim()}`
+  );
 }
 
 export function whatsappUrl(phone: string | null | undefined, message: string): string | null {

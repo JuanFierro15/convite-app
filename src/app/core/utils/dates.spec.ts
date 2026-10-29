@@ -1,6 +1,7 @@
 import {
   daysUntil,
   endOfDayBogota,
+  formatDayMonth,
   formatDownloadedAt,
   formatLongDate,
   formatShortDate,
@@ -27,6 +28,12 @@ describe('dates utils', () => {
   it('formats time in es-CO and America/Bogota', () => {
     expect(formatTime(eventIso)).toBe('3:00 p. m.');
     expect(formatTime('2026-11-29T20:00:00Z')).toBe('3:00 p. m.');
+  });
+
+  it('formats day and month in Bogota timezone', () => {
+    expect(formatDayMonth('2026-11-24T23:59:59-05:00')).toBe('24 de noviembre');
+    expect(formatDayMonth('2026-11-25T04:59:59Z')).toBe('24 de noviembre');
+    expect(formatDayMonth('2026-11-24')).toBe('24 de noviembre');
   });
 
   it('calculates calendar daysUntil in Bogota timezone', () => {
