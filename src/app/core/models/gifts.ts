@@ -8,8 +8,6 @@ export type GiftReservationRow = Tables<'gift_reservations'>;
 
 export interface GiftReservationSummary {
   id: string;
-  invitation_id: string;
-  group_name: string;
   created_at: string;
 }
 

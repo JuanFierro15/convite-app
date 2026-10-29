@@ -147,20 +147,14 @@ describe('GiftFormComponent', () => {
       reservations: [
         {
           id: 'res-1',
-          invitation_id: 'inv-1',
-          group_name: 'Familia Uno',
           created_at: '2026-10-25T01:00:00Z',
         },
         {
           id: 'res-2',
-          invitation_id: 'inv-2',
-          group_name: 'Familia Dos',
           created_at: '2026-10-25T02:00:00Z',
         },
         {
           id: 'res-3',
-          invitation_id: 'inv-3',
-          group_name: 'Familia Tres',
           created_at: '2026-10-25T03:00:00Z',
         },
       ],

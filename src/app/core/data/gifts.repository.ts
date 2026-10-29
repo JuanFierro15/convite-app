@@ -40,7 +40,7 @@ export class GiftsRepository {
   async list(eventId: string): Promise<GiftWithReservations[]> {
     const { data, error } = await this.supabase.client
       .from('gifts')
-      .select('*, gift_reservations(id, invitation_id, created_at, invitations(group_name))')
+      .select('*, gift_reservations(id, created_at)')
       .eq('event_id', eventId);
 
     if (error) {
@@ -50,22 +50,10 @@ export class GiftsRepository {
     const items: GiftWithReservations[] = (data ?? []).map((row) => {
       const rawReservations = row.gift_reservations ?? [];
       const reservations: GiftReservationSummary[] = rawReservations
-        .map((res) => {
-          const inv = res.invitations as
-            | { group_name: string }
-            | { group_name: string }[]
-            | null
-            | undefined;
-          const groupName = Array.isArray(inv)
-            ? (inv[0]?.group_name ?? '')
-            : (inv?.group_name ?? '');
-          return {
-            id: res.id,
-            invitation_id: res.invitation_id,
-            group_name: groupName,
-            created_at: res.created_at,
-          };
-        })
+        .map((res) => ({
+          id: res.id,
+          created_at: res.created_at,
+        }))
         .sort((a, b) => a.created_at.localeCompare(b.created_at));
 
       return {

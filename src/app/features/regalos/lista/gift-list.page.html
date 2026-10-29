@@ -17,6 +17,9 @@
       <p class="summary-text text-label">
         {{ uniqueCount() }} regalos únicos · {{ reservedUniqueCount() }} apartados
       </p>
+      <p class="anonymity-note text-body">
+        Las reservas son anónimas: aquí solo ves cuántas familias eligieron cada regalo.
+      </p>
 
       <div class="top-bar-actions">
         <ion-button color="primary" size="small" (click)="openForm()">
@@ -120,44 +123,6 @@
                     {{ familyCountLabel(gift.reservations.length, gift.max_reservations) }}
                   </span>
                 </div>
-
-                @if (gift.reservations.length > 0) {
-                  <ion-accordion-group class="reservations-accordion">
-                    <ion-accordion [value]="gift.id">
-                      <ion-item slot="header" lines="none" class="accordion-header">
-                        <ion-label class="text-body">Ver familias</ion-label>
-                      </ion-item>
-                      <div slot="content" class="reservations-list">
-                        @for (res of gift.reservations; track res.id) {
-                          <div class="reservation-row">
-                            <span class="reservation-row__name text-body">
-                              {{ res.group_name }}
-                            </span>
-                            <ion-button
-                              fill="clear"
-                              color="danger"
-                              size="small"
-                              (click)="confirmRelease(gift, res)"
-                              [disabled]="releasingReservationId() !== null"
-                              [attr.aria-label]="'Liberar la reserva de ' + res.group_name"
-                            >
-                              @if (releasingReservationId() === res.id) {
-                                <ion-spinner slot="start" name="crescent"></ion-spinner>
-                              } @else {
-                                <ion-icon
-                                  slot="start"
-                                  name="close-circle-outline"
-                                  aria-hidden="true"
-                                ></ion-icon>
-                              }
-                              Liberar
-                            </ion-button>
-                          </div>
-                        }
-                      </div>
-                    </ion-accordion>
-                  </ion-accordion-group>
-                }
               </ion-card-content>
             </ion-card>
           }
@@ -206,44 +171,6 @@
                     {{ familyCountLabel(gift.reservations.length, null) }}
                   </span>
                 </div>
-
-                @if (gift.reservations.length > 0) {
-                  <ion-accordion-group class="reservations-accordion">
-                    <ion-accordion [value]="gift.id">
-                      <ion-item slot="header" lines="none" class="accordion-header">
-                        <ion-label class="text-body">Ver familias</ion-label>
-                      </ion-item>
-                      <div slot="content" class="reservations-list">
-                        @for (res of gift.reservations; track res.id) {
-                          <div class="reservation-row">
-                            <span class="reservation-row__name text-body">
-                              {{ res.group_name }}
-                            </span>
-                            <ion-button
-                              fill="clear"
-                              color="danger"
-                              size="small"
-                              (click)="confirmRelease(gift, res)"
-                              [disabled]="releasingReservationId() !== null"
-                              [attr.aria-label]="'Liberar la reserva de ' + res.group_name"
-                            >
-                              @if (releasingReservationId() === res.id) {
-                                <ion-spinner slot="start" name="crescent"></ion-spinner>
-                              } @else {
-                                <ion-icon
-                                  slot="start"
-                                  name="close-circle-outline"
-                                  aria-hidden="true"
-                                ></ion-icon>
-                              }
-                              Liberar
-                            </ion-button>
-                          </div>
-                        }
-                      </div>
-                    </ion-accordion>
-                  </ion-accordion-group>
-                }
               </ion-card-content>
             </ion-card>
           }
@@ -291,7 +218,7 @@
                   <div class="unique-status-row">
                     <span class="text-label badge-soft-success">
                       <ion-icon name="lock-closed" aria-hidden="true"></ion-icon>
-                      Apartado por: {{ reservation.group_name }}
+                      Apartado
                     </span>
                     <ion-button
                       fill="clear"
@@ -299,7 +226,7 @@
                       size="small"
                       (click)="confirmRelease(gift, reservation)"
                       [disabled]="releasingReservationId() !== null"
-                      [attr.aria-label]="'Liberar la reserva de ' + reservation.group_name"
+                      [attr.aria-label]="'Liberar la reserva de ' + gift.name"
                     >
                       @if (releasingReservationId() === reservation.id) {
                         <ion-spinner slot="start" name="crescent"></ion-spinner>

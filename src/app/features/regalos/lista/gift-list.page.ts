@@ -11,8 +11,6 @@ import { Router } from '@angular/router';
 import {
   ActionSheetController,
   AlertController,
-  IonAccordion,
-  IonAccordionGroup,
   IonBackButton,
   IonButton,
   IonButtons,
@@ -23,7 +21,6 @@ import {
   IonFabButton,
   IonHeader,
   IonIcon,
-  IonItem,
   IonLabel,
   IonSegment,
   IonSegmentButton,
@@ -78,9 +75,6 @@ export type GiftFilter = 'all' | GiftKind;
     IonIcon,
     IonCard,
     IonCardContent,
-    IonAccordionGroup,
-    IonAccordion,
-    IonItem,
     IonFab,
     IonFabButton,
     IonSpinner,
@@ -340,7 +334,7 @@ export class GiftListPage implements ViewWillEnter {
   ): Promise<void> {
     const alert = await this.alertCtrl.create({
       header: 'Liberar reserva',
-      message: `¿Liberar el regalo ${gift.name} apartado por ${reservation.group_name}? La familia podrá elegir otro.`,
+      message: `¿Liberar ${gift.name}? Volverá a quedar disponible en la lista.`,
       buttons: [
         {
           text: 'Cancelar',

@@ -29,6 +29,12 @@
   color: var(--ion-color-medium);
 }
 
+.anonymity-note {
+  margin: 0;
+  color: var(--ion-color-medium);
+  line-height: 1.4;
+}
+
 ion-segment {
   background: var(--ion-color-light);
   border-radius: var(--radius-md);
@@ -124,44 +130,6 @@ ion-segment-button {
   align-items: center;
   flex-wrap: wrap;
   gap: var(--space-xs);
-}
-
-.reservations-accordion {
-  margin-top: var(--space-xs);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  border: 1px solid var(--ion-border-color);
-}
-
-.accordion-header {
-  --background: var(--ion-color-light);
-  --min-height: 44px;
-  font-weight: 600;
-}
-
-.reservations-list {
-  display: flex;
-  flex-direction: column;
-  padding: var(--space-xs) var(--space-sm);
-  background: var(--ion-card-background);
-}
-
-.reservation-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-sm);
-  padding: var(--space-xs) 0;
-  border-bottom: 1px solid var(--ion-border-color);
-}
-
-.reservation-row:last-child {
-  border-bottom: none;
-}
-
-.reservation-row__name {
-  color: var(--ion-text-color);
-  font-weight: 500;
 }
 
 .unique-status-row {

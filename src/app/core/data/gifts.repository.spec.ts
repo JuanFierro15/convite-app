@@ -44,9 +44,7 @@ describe('GiftsRepository', () => {
               gift_reservations: [
                 {
                   id: 'res-1',
-                  invitation_id: 'inv-1',
                   created_at: '2026-10-25T01:00:00Z',
-                  invitations: { group_name: 'Familia Ejemplo' },
                 },
               ],
             },
@@ -60,9 +58,13 @@ describe('GiftsRepository', () => {
       const result = await repository.list('event-1');
 
       expect(mockSupabase.client.from).toHaveBeenCalledWith('gifts');
+      expect(mockQuery.select).toHaveBeenCalledWith('*, gift_reservations(id, created_at)');
       expect(result).toHaveLength(1);
       expect(result[0].max_reservations).toBe(10);
-      expect(result[0].reservations[0].group_name).toBe('Familia Ejemplo');
+      expect(result[0].reservations[0]).toEqual({
+        id: 'res-1',
+        created_at: '2026-10-25T01:00:00Z',
+      });
     });
   });
 

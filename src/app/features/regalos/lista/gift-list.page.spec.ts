@@ -163,4 +163,84 @@ describe('GiftListPage', () => {
       expect(component.familyCountLabel(1, 1)).toBe('1 de 1 familia');
     });
   });
+
+  describe('anonymity in list', () => {
+    const mockRepeatable: GiftWithReservations = {
+      id: 'gift-rep',
+      event_id: 'evt-123',
+      name: 'Pañales',
+      description: 'Etapa 1',
+      category: 'Higiene',
+      kind: 'repeatable',
+      max_reservations: 5,
+      sort_order: 1,
+      created_at: '2026-10-25T00:00:00Z',
+      reservations: [
+        { id: 'res-1', created_at: '2026-10-25T01:00:00Z' },
+        { id: 'res-2', created_at: '2026-10-25T02:00:00Z' },
+      ],
+    };
+
+    const mockUnique: GiftWithReservations = {
+      id: 'gift-uniq',
+      event_id: 'evt-123',
+      name: 'Coche paseador',
+      description: 'Color gris',
+      category: 'Paseo',
+      kind: 'unique',
+      max_reservations: null,
+      sort_order: 2,
+      created_at: '2026-10-25T00:00:00Z',
+      reservations: [{ id: 'res-3', created_at: '2026-10-25T03:00:00Z' }],
+    };
+
+    beforeEach(async () => {
+      mockGiftsRepo.list.mockResolvedValue([mockRepeatable, mockUnique]);
+      await component.ionViewWillEnter();
+      fixture.detectChanges();
+      await fixture.whenStable();
+    });
+
+    it('renders anonymity note in top bar', () => {
+      const note = fixture.debugElement.query(By.css('.anonymity-note'));
+      expect(note).toBeTruthy();
+      expect(note.nativeElement.textContent).toContain(
+        'Las reservas son anónimas: aquí solo ves cuántas familias eligieron cada regalo.',
+      );
+    });
+
+    it('does not contain family names or "Ver familias" in component text', () => {
+      const text = fixture.nativeElement.textContent;
+      expect(text).not.toContain('Familia');
+      expect(text).not.toContain('Ver familias');
+    });
+
+    it('does not render any ion-accordion element', () => {
+      const accordion = fixture.debugElement.query(By.css('ion-accordion'));
+      const accordionGroup = fixture.debugElement.query(By.css('ion-accordion-group'));
+      expect(accordion).toBeNull();
+      expect(accordionGroup).toBeNull();
+    });
+
+    it('displays "Apartado" on reserved unique gift badge', () => {
+      const badge = fixture.debugElement.query(By.css('.unique-status-row .badge-soft-success'));
+      expect(badge).toBeTruthy();
+      expect(badge.nativeElement.textContent.trim()).toBe('Apartado');
+    });
+
+    it('opens confirmation alert with new message on confirmRelease', async () => {
+      mockAlertCtrl.create.mockResolvedValue({
+        present: vi.fn().mockResolvedValue(undefined),
+      });
+
+      await component.confirmRelease(mockUnique, mockUnique.reservations[0]);
+
+      expect(mockAlertCtrl.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          header: 'Liberar reserva',
+          message: '¿Liberar Coche paseador? Volverá a quedar disponible en la lista.',
+        }),
+      );
+    });
+  });
 });
