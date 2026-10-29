@@ -267,4 +267,8 @@
   --ion-item-background: #FFFFFF;
   --ion-toolbar-background: #FFFDF7;
   --ion-border-color: rgba(115, 101, 85, 0.16);
+
+  /* Sombras cálidas recalculadas con los colores del tema de miel */
+  --shadow-card: 0 4px 16px rgba(var(--ion-text-color-rgb), 0.06), 0 1px 3px rgba(var(--ion-text-color-rgb), 0.04);
+  --shadow-floating: 0 8px 24px rgba(var(--ion-color-primary-rgb), 0.20);
 }
