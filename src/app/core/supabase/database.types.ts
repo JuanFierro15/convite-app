@@ -248,6 +248,7 @@ export type Database = {
           kind: string
           phone: string | null
           updated_at: string
+          whatsapp_sent_at: string | null
         }
         Insert: {
           code?: string
@@ -258,6 +259,7 @@ export type Database = {
           kind?: string
           phone?: string | null
           updated_at?: string
+          whatsapp_sent_at?: string | null
         }
         Update: {
           code?: string
@@ -268,6 +270,7 @@ export type Database = {
           kind?: string
           phone?: string | null
           updated_at?: string
+          whatsapp_sent_at?: string | null
         }
         Relationships: [
           {

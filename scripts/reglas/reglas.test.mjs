@@ -3670,3 +3670,116 @@ test(
     );
   }
 );
+
+test(
+  '39. Un ayudante marca y desmarca el envío por WhatsApp, un usuario ajeno no y el invitado no lo ve',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    const { data: invitation, error: createError } = await ctx.adminClient
+      .from('invitations')
+      .insert({
+        event_id: ctx.eventX.id,
+        group_name: `PRUEBA-${ctx.run}-ENVIO-WHATSAPP`,
+        phone: '+573000000039',
+      })
+      .select()
+      .single();
+
+    assert.equal(
+      createError,
+      null,
+      'Se esperaba crear con el administrador la invitación para la prueba 39 sin error'
+    );
+    assert.ok(invitation?.id, 'Se esperaba recibir el id de la invitación de la prueba 39');
+
+    try {
+      const sentAt = new Date().toISOString();
+      const { data: marked, error: markError } = await ctx.helperXClient
+        .from('invitations')
+        .update({ whatsapp_sent_at: sentAt })
+        .eq('id', invitation.id)
+        .select('whatsapp_sent_at')
+        .single();
+
+      assert.equal(
+        markError,
+        null,
+        'Se esperaba que el ayudante pudiera marcar la invitación como enviada'
+      );
+      assert.equal(
+        new Date(marked.whatsapp_sent_at).getTime(),
+        new Date(sentAt).getTime(),
+        'Se esperaba que whatsapp_sent_at quedara con la fecha enviada por el ayudante'
+      );
+
+      const { data: inviteeView, error: inviteeError } = await ctx.anonClient.rpc(
+        'get_invitation',
+        { p_code: invitation.code }
+      );
+
+      assert.equal(
+        inviteeError,
+        null,
+        'Se esperaba que get_invitation con el código de la prueba 39 no devolviera error'
+      );
+      assert.ok(inviteeView, 'Se esperaba recibir la invitación desde get_invitation');
+      assert.ok(
+        !JSON.stringify(inviteeView).includes('whatsapp_sent_at'),
+        'Se esperaba que get_invitation no expusiera whatsapp_sent_at en ninguna parte del JSON'
+      );
+
+      const { data: outsiderRows, error: outsiderError } = await ctx.ownerYClient
+        .from('invitations')
+        .update({ whatsapp_sent_at: null })
+        .eq('id', invitation.id)
+        .select('id');
+
+      assert.equal(
+        outsiderError,
+        null,
+        'Se esperaba que la actualización de un usuario ajeno no devolviera error, solo cero filas'
+      );
+      assert.equal(
+        outsiderRows?.length ?? 0,
+        0,
+        'Se esperaba que un usuario que no es miembro del evento no pudiera quitar la marca'
+      );
+
+      const { data: stillMarked, error: stillMarkedError } = await ctx.adminClient
+        .from('invitations')
+        .select('whatsapp_sent_at')
+        .eq('id', invitation.id)
+        .single();
+
+      assert.equal(
+        stillMarkedError,
+        null,
+        'Se esperaba consultar la invitación con el administrador sin error'
+      );
+      assert.ok(
+        stillMarked.whatsapp_sent_at,
+        'Se esperaba que la marca siguiera puesta tras el intento del usuario ajeno'
+      );
+
+      const { data: cleared, error: clearError } = await ctx.helperXClient
+        .from('invitations')
+        .update({ whatsapp_sent_at: null })
+        .eq('id', invitation.id)
+        .select('whatsapp_sent_at')
+        .single();
+
+      assert.equal(
+        clearError,
+        null,
+        'Se esperaba que el ayudante pudiera quitar la marca de enviada'
+      );
+      assert.equal(
+        cleared.whatsapp_sent_at,
+        null,
+        'Se esperaba que whatsapp_sent_at quedara en null tras desmarcar'
+      );
+    } finally {
+      await ctx.adminClient.from('invitations').delete().eq('id', invitation.id);
+    }
+  }
+);
