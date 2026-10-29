@@ -9,6 +9,7 @@ import {
 } from '@angular/core';
 import { Router } from '@angular/router';
 import {
+  AlertController,
   IonBackButton,
   IonButton,
   IonButtons,
@@ -34,6 +35,7 @@ import {
   createOutline,
   keyOutline,
   logoWhatsapp,
+  paperPlaneOutline,
   qrCodeOutline,
   trashOutline,
 } from 'ionicons/icons';
@@ -48,6 +50,7 @@ import {
   Rsvp,
   formatInvitationCode,
   formatPhone,
+  formatShortDate,
   invitationStatus,
 } from '../../../core';
 import { EmptyStateComponent, StatusBadgeComponent } from '../../../shared';
@@ -89,6 +92,7 @@ export class InvitationDetailPage implements ViewWillEnter {
   private readonly invitationsRepository = inject(InvitationsRepository);
   private readonly realtime = inject(RealtimeService);
   private readonly invitationActions = inject(InvitationActionsService);
+  private readonly alertController = inject(AlertController);
   private readonly modalController = inject(ModalController);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
@@ -100,6 +104,7 @@ export class InvitationDetailPage implements ViewWillEnter {
   readonly loading = signal<boolean>(true);
   readonly error = signal<string | null>(null);
   readonly deleting = signal<boolean>(false);
+  readonly clearingSent = signal<boolean>(false);
 
   private stopRealtime: (() => void) | null = null;
   private watchedEventId: string | null = null;
@@ -124,6 +129,14 @@ export class InvitationDetailPage implements ViewWillEnter {
     return formatInvitationCode(code);
   });
 
+  readonly sentLabel = computed<string>(() => {
+    const sentAt = this.invitation()?.whatsapp_sent_at;
+    if (sentAt) {
+      return `Enviada por WhatsApp el ${formatShortDate(sentAt)}`;
+    }
+    return 'Aún no se ha enviado por WhatsApp';
+  });
+
   constructor() {
     addIcons({
       createOutline,
@@ -132,6 +145,7 @@ export class InvitationDetailPage implements ViewWillEnter {
       qrCodeOutline,
       callOutline,
       keyOutline,
+      paperPlaneOutline,
     });
   }
 
@@ -224,6 +238,49 @@ export class InvitationDetailPage implements ViewWillEnter {
     }
   }
 
+  async onClearSent(): Promise<void> {
+    const current = this.invitation();
+    if (!current || this.clearingSent()) {
+      return;
+    }
+
+    const alert = await this.alertController.create({
+      header: 'Marcar como no enviada',
+      message: 'La invitación vuelve a la lista de pendientes para enviarla otra vez.',
+      buttons: [
+        {
+          text: 'Cancelar',
+          role: 'cancel',
+        },
+        {
+          text: 'Marcar',
+          handler: () => {
+            void this.clearSent();
+          },
+        },
+      ],
+    });
+
+    await alert.present();
+  }
+
+  private async clearSent(): Promise<void> {
+    const current = this.invitation();
+    if (!current) {
+      return;
+    }
+
+    this.clearingSent.set(true);
+    try {
+      await this.invitationsRepository.clearWhatsAppSent(current.id);
+      await this.reloadInvitation();
+    } catch (err) {
+      await this.invitationActions.showError(err);
+    } finally {
+      this.clearingSent.set(false);
+    }
+  }
+
   async onShareWhatsApp(): Promise<void> {
     const current = this.invitation();
     if (!current) {
@@ -244,7 +301,10 @@ export class InvitationDetailPage implements ViewWillEnter {
       return;
     }
 
-    await this.invitationActions.shareWhatsApp(current, currentEvent);
+    const sent = await this.invitationActions.shareWhatsApp(current, currentEvent);
+    if (sent) {
+      await this.reloadInvitation();
+    }
   }
 
   async openQrModal(): Promise<void> {

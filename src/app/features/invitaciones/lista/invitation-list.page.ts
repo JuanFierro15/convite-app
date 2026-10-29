@@ -33,7 +33,7 @@ import {
   ViewWillEnter,
 } from '@ionic/angular';
 import { addIcons } from 'ionicons';
-import { add, logoWhatsapp } from 'ionicons/icons';
+import { add, checkmarkCircle, logoWhatsapp } from 'ionicons/icons';
 import {
   AuthService,
   EventContextService,
@@ -213,8 +213,17 @@ export class InvitationListPage implements ViewWillEnter {
     return `${invitationCount} ${invWord} · ${guestCount} ${guestWord}`;
   });
 
+  readonly pendingSendCount = computed<number>(() =>
+    this.invitations().filter(
+      (invitation) =>
+        invitation.phone !== null &&
+        invitation.phone !== '' &&
+        invitation.whatsapp_sent_at === null,
+    ).length,
+  );
+
   constructor() {
-    addIcons({ add, logoWhatsapp });
+    addIcons({ add, logoWhatsapp, checkmarkCircle });
   }
 
   ionViewWillEnter(): void {
@@ -239,6 +248,20 @@ export class InvitationListPage implements ViewWillEnter {
     if (value) {
       this.selectedFilter.set(value);
     }
+  }
+
+  sendStateLabel(invitation: InvitationWithGuests): string {
+    if (invitation.whatsapp_sent_at !== null) {
+      return 'Enviada';
+    }
+    if (invitation.phone === null || invitation.phone === '') {
+      return 'Sin teléfono';
+    }
+    return 'Sin enviar';
+  }
+
+  async openSendQueue(): Promise<void> {
+    await this.router.navigate(['/eventos', this.id(), 'invitaciones', 'envio']);
   }
 
   async openDetail(invitationId: string): Promise<void> {
@@ -266,7 +289,10 @@ export class InvitationListPage implements ViewWillEnter {
       return;
     }
 
-    await this.invitationActions.shareWhatsApp(invitation, currentEvent);
+    const sent = await this.invitationActions.shareWhatsApp(invitation, currentEvent);
+    if (sent) {
+      await this.reloadInvitations();
+    }
   }
 
   async openCreateModal(): Promise<void> {

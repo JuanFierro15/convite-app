@@ -67,6 +67,22 @@
               <ion-icon name="key-outline" color="medium"></ion-icon>
               <span class="text-body code-text">{{ formattedCode() }}</span>
             </div>
+            <div class="info-meta-item">
+              <ion-icon name="paper-plane-outline" color="medium"></ion-icon>
+              <span class="text-body">{{ sentLabel() }}</span>
+              @if (inv.whatsapp_sent_at !== null) {
+                <ion-button
+                  fill="clear"
+                  size="small"
+                  color="medium"
+                  class="clear-sent-button"
+                  (click)="onClearSent()"
+                  [disabled]="clearingSent()"
+                >
+                  Marcar como no enviada
+                </ion-button>
+              }
+            </div>
           </div>
         </ion-card-content>
       </ion-card>

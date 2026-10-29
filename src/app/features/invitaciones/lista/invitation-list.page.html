@@ -63,6 +63,19 @@
     <app-empty-state message="No hay invitaciones que coincidan." />
   } @else {
     <div class="list-container">
+      @if (pendingSendCount() > 0) {
+        <ion-button
+          class="send-queue-button"
+          expand="block"
+          fill="outline"
+          color="success"
+          (click)="openSendQueue()"
+        >
+          <ion-icon slot="start" name="logo-whatsapp" aria-hidden="true"></ion-icon>
+          Enviar invitaciones pendientes ({{ pendingSendCount() }})
+        </ion-button>
+      }
+
       <p class="totals-label text-label">{{ totalsLabel() }}</p>
 
       <div class="cards-list">
@@ -80,6 +93,16 @@
                 </div>
 
                 <p class="text-body summary-text">{{ item.summary }}</p>
+
+                <p
+                  class="text-label send-state"
+                  [class.send-state--sent]="item.invitation.whatsapp_sent_at !== null"
+                >
+                  @if (item.invitation.whatsapp_sent_at !== null) {
+                    <ion-icon name="checkmark-circle" aria-hidden="true"></ion-icon>
+                  }
+                  {{ sendStateLabel(item.invitation) }}
+                </p>
 
                 @if (item.invitation.guests.length > 0) {
                   <div class="guests-chips">

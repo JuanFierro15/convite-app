@@ -39,6 +39,7 @@ export class InvitationsRepository {
       code: row.code,
       created_at: row.created_at,
       updated_at: row.updated_at,
+      whatsapp_sent_at: row.whatsapp_sent_at,
       guests: sortGuests(row.guests ?? []),
     }));
 
@@ -68,6 +69,7 @@ export class InvitationsRepository {
       code: data.code,
       created_at: data.created_at,
       updated_at: data.updated_at,
+      whatsapp_sent_at: data.whatsapp_sent_at,
       guests: sortGuests(data.guests ?? []),
     };
   }
@@ -146,6 +148,29 @@ export class InvitationsRepository {
       .from('guests')
       .update({ rsvp })
       .eq('id', guestId);
+
+    if (error) {
+      throw toUserError(error);
+    }
+  }
+
+  async markWhatsAppSent(invitationId: string): Promise<void> {
+    const { error } = await this.supabase.client
+      .from('invitations')
+      .update({ whatsapp_sent_at: new Date().toISOString() })
+      .eq('id', invitationId)
+      .is('whatsapp_sent_at', null);
+
+    if (error) {
+      throw toUserError(error);
+    }
+  }
+
+  async clearWhatsAppSent(invitationId: string): Promise<void> {
+    const { error } = await this.supabase.client
+      .from('invitations')
+      .update({ whatsapp_sent_at: null })
+      .eq('id', invitationId);
 
     if (error) {
       throw toUserError(error);

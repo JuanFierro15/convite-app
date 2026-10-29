@@ -61,6 +61,10 @@
   color: var(--ion-text-color);
 }
 
+.clear-sent-button {
+  margin-inline-start: auto;
+}
+
 .guests-section {
   display: flex;
   flex-direction: column;

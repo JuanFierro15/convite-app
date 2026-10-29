@@ -17,11 +17,11 @@ export class InvitationActionsService {
   private readonly alertController = inject(AlertController);
   private readonly toastController = inject(ToastController);
 
-  async shareWhatsApp(
-    invitation: Pick<InvitationRow, 'group_name' | 'phone' | 'code' | 'kind'>,
+  whatsAppMessage(
+    invitation: Pick<InvitationRow, 'group_name' | 'code' | 'kind'>,
     event: Pick<EventRow, 'name' | 'starts_at' | 'rsvp_deadline'>,
-  ): Promise<void> {
-    const message = invitationMessage({
+  ): string {
+    return invitationMessage({
       kind: toInvitationKind(invitation.kind),
       groupName: invitation.group_name,
       eventName: event.name,
@@ -29,11 +29,30 @@ export class InvitationActionsService {
       rsvpDeadline: event.rsvp_deadline,
       link: this.invitationsRepository.guestLink(invitation.code),
     });
+  }
+
+  async shareWhatsApp(
+    invitation: Pick<InvitationRow, 'id' | 'group_name' | 'phone' | 'code' | 'kind'>,
+    event: Pick<EventRow, 'name' | 'starts_at' | 'rsvp_deadline'>,
+  ): Promise<boolean> {
+    const message = this.whatsAppMessage(invitation, event);
+
+    const markSent = async (): Promise<void> => {
+      try {
+        await this.invitationsRepository.markWhatsAppSent(invitation.id);
+      } catch {
+        await this.showToast(
+          'Se abrió WhatsApp, pero no pudimos marcar la invitación como enviada.',
+          'warning',
+        );
+      }
+    };
 
     const url = whatsappUrl(invitation.phone, message);
     if (url) {
       window.open(url, '_blank');
-      return;
+      await markSent();
+      return true;
     }
 
     if (Capacitor.isNativePlatform()) {
@@ -42,10 +61,12 @@ export class InvitationActionsService {
           title: event.name,
           text: message,
         });
+        await markSent();
+        return true;
       } catch {
         // El usuario puede cerrar la hoja de compartir sin elegir una app.
+        return false;
       }
-      return;
     }
 
     if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
@@ -54,10 +75,12 @@ export class InvitationActionsService {
           title: event.name,
           text: message,
         });
+        await markSent();
+        return true;
       } catch {
         // El navegador lanza AbortError si el usuario cancela el menú de compartir.
+        return false;
       }
-      return;
     }
 
     try {
@@ -66,6 +89,7 @@ export class InvitationActionsService {
     } catch (err) {
       await this.showError(err);
     }
+    return false;
   }
 
   async confirmDelete(
