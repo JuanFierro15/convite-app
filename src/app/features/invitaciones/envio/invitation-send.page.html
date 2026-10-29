@@ -1,0 +1,94 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button
+        [defaultHref]="'/eventos/' + id() + '/invitaciones'"
+        text=""
+        aria-label="Volver a las invitaciones"
+      ></ion-back-button>
+    </ion-buttons>
+    <ion-title>Enviar invitaciones</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  @if (loading()) {
+    <div class="loading-container">
+      <ion-spinner name="crescent" color="primary" role="status" aria-label="Cargando"></ion-spinner>
+    </div>
+  } @else if (error(); as errorMsg) {
+    <app-empty-state
+      [message]="errorMsg"
+      actionLabel="Reintentar"
+      (action)="retryLoad()"
+    />
+  } @else {
+    <div class="send-container">
+      <p class="text-label progress-label">{{ sentCount() }} de {{ withPhone().length }} enviadas</p>
+      <ion-progress-bar [value]="progress()" color="primary"></ion-progress-bar>
+
+      @if (lastOpened(); as last) {
+        <div class="last-opened" role="status" aria-live="polite">
+          <ion-icon name="checkmark-circle" color="success" aria-hidden="true"></ion-icon>
+          <span class="text-body last-opened__text">Se abrió el chat de {{ last.groupName }}.</span>
+          <ion-button
+            fill="clear"
+            size="small"
+            (click)="undoLast()"
+            [disabled]="undoing()"
+          >
+            @if (undoing()) {
+              <ion-spinner name="crescent" slot="start"></ion-spinner>
+            }
+            No se envió, deshacer
+          </ion-button>
+        </div>
+      }
+
+      @if (current(); as c) {
+        <p class="text-body tip-text">Toca Abrir WhatsApp, envía el mensaje y vuelve a la app para seguir con la siguiente.</p>
+        <ion-card class="next-card">
+          <ion-card-content>
+            <p class="text-label next-label">Siguiente</p>
+            <h2 class="text-name next-name">{{ c.group_name }}</h2>
+            <p class="text-body next-phone">{{ formatPhone(c.phone) }}</p>
+            <ion-button fill="clear" size="small" (click)="togglePreview()">
+              {{ showPreview() ? 'Ocultar mensaje' : 'Ver mensaje' }}
+            </ion-button>
+            @if (showPreview()) {
+              <p class="text-body message-preview">{{ previewText() }}</p>
+            }
+          </ion-card-content>
+        </ion-card>
+      } @else if (withPhone().length > 0) {
+        <app-empty-state message="Ya se enviaron todas las invitaciones que tienen teléfono." />
+      } @else {
+        <app-empty-state message="Ninguna invitación tiene teléfono todavía." />
+      }
+
+      @if (withoutPhoneCount() > 0) {
+        <p class="text-body no-phone-note">{{ noPhoneLabel() }}</p>
+      }
+    </div>
+  }
+</ion-content>
+
+@if (!loading() && !error() && current()) {
+  <ion-footer class="ion-no-border">
+    <ion-toolbar class="send-footer">
+      <div class="send-footer__actions">
+        <ion-button expand="block" color="success" (click)="sendCurrent()" [disabled]="sending()">
+          @if (sending()) {
+            <ion-spinner name="crescent" slot="start"></ion-spinner>
+          } @else {
+            <ion-icon name="logo-whatsapp" slot="start" aria-hidden="true"></ion-icon>
+          }
+          Abrir WhatsApp
+        </ion-button>
+        <ion-button expand="block" fill="clear" color="medium" (click)="skipCurrent()" [disabled]="sending()">
+          Saltar por ahora
+        </ion-button>
+      </div>
+    </ion-toolbar>
+  </ion-footer>
+}

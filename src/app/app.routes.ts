@@ -50,6 +50,14 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'eventos/:id/invitaciones/envio',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/invitaciones/envio/invitation-send.page').then(
+        (m) => m.InvitationSendPage,
+      ),
+  },
+  {
     path: 'eventos/:id/invitaciones/:invitationId',
     canActivate: [authGuard],
     loadComponent: () =>
