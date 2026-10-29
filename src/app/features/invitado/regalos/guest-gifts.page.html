@@ -38,6 +38,11 @@
           </div>
         }
 
+        <div class="anonymity-banner" role="note">
+          <ion-icon class="anonymity-banner__icon" name="eye-off-outline" aria-hidden="true"></ion-icon>
+          <span>{{ texts().giftsAnonymityNote }}</span>
+        </div>
+
         @if (showReservedConfirmation()) {
           <ion-card class="reserved-confirmation-card" role="status" aria-live="polite">
             <ion-card-content class="reserved-confirmation-card__content">
@@ -49,7 +54,7 @@
                 />
               </div>
               <p class="text-body reserved-confirmation-card__text">
-                ¡Listo! Quedó apartado a nombre de {{ inv.invitation.group_name }}.
+                {{ texts().giftReservedConfirmation }}
               </p>
             </ion-card-content>
           </ion-card>

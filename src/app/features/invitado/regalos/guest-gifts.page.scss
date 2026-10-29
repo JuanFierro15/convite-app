@@ -50,6 +50,24 @@
   min-width: 24px;
 }
 
+.anonymity-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  border-radius: var(--radius-md);
+  background-color: rgba(var(--ion-color-primary-rgb), 0.08);
+  color: var(--ion-text-color);
+  line-height: 1.4;
+}
+
+.anonymity-banner__icon {
+  flex-shrink: 0;
+  font-size: 1.25rem;
+  margin-top: 2px;
+  color: var(--ion-color-primary);
+}
+
 .reserved-confirmation-card {
   margin: 0;
   border-radius: var(--radius-lg);

@@ -225,4 +225,45 @@ describe('GuestInvitationPage', () => {
       '¡Gracias! Recibimos su respuesta. Pueden cambiarla hasta el',
     );
   });
+
+  it('renders gifts intro in plural before the gift list button for group invitations', async () => {
+    mockGuestApi.getInvitation.mockResolvedValue(mockGroupInvitation);
+    vi.mocked(QRCode.toDataURL).mockResolvedValue('data:image/png;base64,fakeqr' as never);
+
+    fixture = TestBed.createComponent(GuestInvitationPage);
+    component = fixture.componentInstance;
+    fixture.componentRef.setInput('code', 'ABCD1234JK');
+
+    await component.loadInvitation();
+    fixture.detectChanges();
+
+    const introParagraphs = fixture.nativeElement.querySelectorAll('.gifts-intro__text');
+    expect(introParagraphs.length).toBe(2);
+    expect(introParagraphs[0]?.textContent?.trim()).toContain('su compañía');
+    expect(introParagraphs[1]?.textContent?.trim()).toContain('les hace ilusión');
+
+    const giftsIntroEl = fixture.nativeElement.querySelector('.gifts-intro');
+    expect(giftsIntroEl).not.toBeNull();
+    const giftListButton = giftsIntroEl.nextElementSibling as HTMLElement | null;
+    expect(giftListButton).not.toBeNull();
+    expect(giftListButton?.tagName.toLowerCase()).toBe('ion-button');
+    expect(giftListButton?.textContent?.trim()).toContain('Ver lista de regalos');
+  });
+
+  it('renders gifts intro in singular for individual invitations', async () => {
+    mockGuestApi.getInvitation.mockResolvedValue(mockIndividualInvitation);
+    vi.mocked(QRCode.toDataURL).mockResolvedValue('data:image/png;base64,fakeqr' as never);
+
+    fixture = TestBed.createComponent(GuestInvitationPage);
+    component = fixture.componentInstance;
+    fixture.componentRef.setInput('code', 'WXYZ5678LM');
+
+    await component.loadInvitation();
+    fixture.detectChanges();
+
+    const introParagraphs = fixture.nativeElement.querySelectorAll('.gifts-intro__text');
+    expect(introParagraphs.length).toBe(2);
+    expect(introParagraphs[0]?.textContent?.trim()).toContain('tu compañía');
+    expect(introParagraphs[1]?.textContent?.trim()).toContain('te hace ilusión');
+  });
 });

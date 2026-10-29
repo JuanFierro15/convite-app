@@ -311,4 +311,63 @@ describe('GuestGiftsPage', () => {
     );
     expect(mockGuestApi.getGifts).toHaveBeenCalledWith('ABCD1234JK');
   });
+
+  it('renders anonymity banner with plural text for group invitations', async () => {
+    mockGuestApi.getInvitation.mockResolvedValue(mockGroupInvitation);
+    mockGuestApi.getGifts.mockResolvedValue(mockGifts);
+
+    fixture = TestBed.createComponent(GuestGiftsPage);
+    component = fixture.componentInstance;
+    fixture.componentRef.setInput('code', 'ABCD1234JK');
+
+    await component.loadData();
+    fixture.detectChanges();
+
+    const bannerEl = fixture.nativeElement.querySelector('.anonymity-banner');
+    expect(bannerEl).not.toBeNull();
+    expect(bannerEl?.textContent?.trim()).toBe(
+      'Lo que aparten es anónimo: ni nosotros ni los demás invitados sabremos qué regalo eligieron.',
+    );
+  });
+
+  it('renders anonymity banner with singular text for individual invitations', async () => {
+    mockGuestApi.getInvitation.mockResolvedValue(mockIndividualInvitation);
+    mockGuestApi.getGifts.mockResolvedValue(mockGifts);
+
+    fixture = TestBed.createComponent(GuestGiftsPage);
+    component = fixture.componentInstance;
+    fixture.componentRef.setInput('code', 'WXYZ5678LM');
+
+    await component.loadData();
+    fixture.detectChanges();
+
+    const bannerEl = fixture.nativeElement.querySelector('.anonymity-banner');
+    expect(bannerEl).not.toBeNull();
+    expect(bannerEl?.textContent?.trim()).toBe(
+      'Lo que apartes es anónimo: ni nosotros ni los demás invitados sabremos qué regalo elegiste.',
+    );
+  });
+
+  it('renders reserved confirmation text matching giftReservedConfirmation without the group name', async () => {
+    mockGuestApi.getInvitation.mockResolvedValue(mockGroupInvitation);
+    mockGuestApi.getGifts.mockResolvedValue(mockGifts);
+    mockGuestApi.reserveGift.mockResolvedValue(mockGifts);
+
+    fixture = TestBed.createComponent(GuestGiftsPage);
+    component = fixture.componentInstance;
+    fixture.componentRef.setInput('code', 'ABCD1234JK');
+
+    await component.loadData();
+    await component.executeReserve('gift-1');
+    fixture.detectChanges();
+
+    const confirmationEl = fixture.nativeElement.querySelector(
+      '.reserved-confirmation-card__text',
+    );
+    expect(confirmationEl).not.toBeNull();
+    expect(confirmationEl?.textContent?.trim()).toBe(
+      '¡Listo! Quedó apartado. Solo ustedes saben que lo eligieron.',
+    );
+    expect(confirmationEl?.textContent).not.toContain(mockGroupInvitation.invitation.group_name);
+  });
 });

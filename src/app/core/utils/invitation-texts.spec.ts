@@ -61,7 +61,17 @@ describe('invitation-texts utils', () => {
       expect(texts.giftMineBadge).toBe('Apartado por ustedes');
       expect(texts.giftChosenBadge).toBe('Ustedes eligieron esta opción');
       expect(texts.reserveGiftConfirm('Pañales')).toBe(
-        '¿Desean apartar Pañales a nombre de Familia Ejemplo?',
+        '¿Desean apartar Pañales? Nadie más sabrá que lo eligieron ustedes.',
+      );
+      expect(texts.giftsIntro).toEqual([
+        'Para nosotros, el mejor regalo es su compañía y compartir juntos esta tarde, así que por favor no sientan ningún compromiso de llevar algo adicional.',
+        'Si de todas formas les hace ilusión tener un detalle con Eloise, preparamos la siguiente lista con algunas ideas.',
+      ]);
+      expect(texts.giftsAnonymityNote).toBe(
+        'Lo que aparten es anónimo: ni nosotros ni los demás invitados sabremos qué regalo eligieron.',
+      );
+      expect(texts.giftReservedConfirmation).toBe(
+        '¡Listo! Quedó apartado. Solo ustedes saben que lo eligieron.',
       );
       expect(texts.entryCodeTitle).toBe('Código de entrada');
       expect(texts.entryCodeInstruction).toBe('Muestra este código en la entrada');
@@ -84,12 +94,56 @@ describe('invitation-texts utils', () => {
       expect(texts.giftsMineHeading).toBe('Apartados por ti');
       expect(texts.giftMineBadge).toBe('Apartado por ti');
       expect(texts.giftChosenBadge).toBe('Elegiste esta opción');
-      expect(texts.reserveGiftConfirm('Pañales')).toBe('¿Quieres apartar Pañales a tu nombre?');
+      expect(texts.reserveGiftConfirm('Pañales')).toBe(
+        '¿Quieres apartar Pañales? Nadie más sabrá que lo elegiste tú.',
+      );
+      expect(texts.giftsIntro).toEqual([
+        'Para nosotros, el mejor regalo es tu compañía y compartir juntos esta tarde, así que por favor no sientas ningún compromiso de llevar algo adicional.',
+        'Si de todas formas te hace ilusión tener un detalle con Eloise, preparamos la siguiente lista con algunas ideas.',
+      ]);
+      expect(texts.giftsAnonymityNote).toBe(
+        'Lo que apartes es anónimo: ni nosotros ni los demás invitados sabremos qué regalo elegiste.',
+      );
+      expect(texts.giftReservedConfirmation).toBe(
+        '¡Listo! Quedó apartado. Solo tú sabes que lo elegiste.',
+      );
       expect(texts.entryCodeTitle).toBe('Código de entrada');
       expect(texts.entryCodeInstruction).toBe('Muestra este código en la entrada');
       expect(texts.entryCodeTip).toBe(
         'Tómale una captura de pantalla para tenerlo a mano, aunque no haya señal.',
       );
+    });
+
+    it('does not contain the group name in any field except welcomeTitle', () => {
+      const groupName = 'Familia Ejemplo';
+      const texts = guestTexts('group', groupName);
+      const namePart = 'Ejemplo';
+
+      expect(texts.welcomeTitle).toContain(namePart);
+
+      const stringKeys: Array<keyof typeof texts> = [
+        'deadlinePassed',
+        'tableNote',
+        'giftsMineHeading',
+        'giftMineBadge',
+        'giftChosenBadge',
+        'giftsAnonymityNote',
+        'giftReservedConfirmation',
+        'entryCodeTitle',
+        'entryCodeInstruction',
+        'entryCodeTip',
+      ];
+      for (const key of stringKeys) {
+        expect(texts[key]).not.toContain(namePart);
+      }
+
+      for (const paragraph of texts.giftsIntro) {
+        expect(paragraph).not.toContain(namePart);
+      }
+
+      expect(texts.deadlineReminder('24 de noviembre')).not.toContain(namePart);
+      expect(texts.rsvpThanks('24 de noviembre')).not.toContain(namePart);
+      expect(texts.reserveGiftConfirm('Coche para bebé')).not.toContain(namePart);
     });
   });
 });

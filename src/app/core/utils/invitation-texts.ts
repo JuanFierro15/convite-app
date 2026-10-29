@@ -14,6 +14,9 @@ export interface GuestTexts {
   giftMineBadge: string;
   giftChosenBadge: string;
   reserveGiftConfirm(giftName: string): string;
+  giftsIntro: readonly string[];
+  giftsAnonymityNote: string;
+  giftReservedConfirmation: string;
   entryCodeTitle: string;
   entryCodeInstruction: string;
   entryCodeTip: string;
@@ -59,8 +62,23 @@ export function guestTexts(kind: InvitationKind, groupName: string): GuestTexts 
     giftChosenBadge: isIndividual ? 'Elegiste esta opción' : 'Ustedes eligieron esta opción',
     reserveGiftConfirm: (giftName: string) =>
       isIndividual
-        ? `¿Quieres apartar ${giftName} a tu nombre?`
-        : `¿Desean apartar ${giftName} a nombre de ${groupName.trim()}?`,
+        ? `¿Quieres apartar ${giftName}? Nadie más sabrá que lo elegiste tú.`
+        : `¿Desean apartar ${giftName}? Nadie más sabrá que lo eligieron ustedes.`,
+    giftsIntro: isIndividual
+      ? [
+          'Para nosotros, el mejor regalo es tu compañía y compartir juntos esta tarde, así que por favor no sientas ningún compromiso de llevar algo adicional.',
+          'Si de todas formas te hace ilusión tener un detalle con Eloise, preparamos la siguiente lista con algunas ideas.',
+        ]
+      : [
+          'Para nosotros, el mejor regalo es su compañía y compartir juntos esta tarde, así que por favor no sientan ningún compromiso de llevar algo adicional.',
+          'Si de todas formas les hace ilusión tener un detalle con Eloise, preparamos la siguiente lista con algunas ideas.',
+        ],
+    giftsAnonymityNote: isIndividual
+      ? 'Lo que apartes es anónimo: ni nosotros ni los demás invitados sabremos qué regalo elegiste.'
+      : 'Lo que aparten es anónimo: ni nosotros ni los demás invitados sabremos qué regalo eligieron.',
+    giftReservedConfirmation: isIndividual
+      ? '¡Listo! Quedó apartado. Solo tú sabes que lo elegiste.'
+      : '¡Listo! Quedó apartado. Solo ustedes saben que lo eligieron.',
     entryCodeTitle: 'Código de entrada',
     entryCodeInstruction: 'Muestra este código en la entrada',
     entryCodeTip: 'Tómale una captura de pantalla para tenerlo a mano, aunque no haya señal.',

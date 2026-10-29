@@ -206,6 +206,11 @@
 
         <ion-card class="section-card">
           <ion-card-content class="section-card__content">
+            <div class="gifts-intro">
+              @for (paragraph of texts().giftsIntro; track $index) {
+                <p class="text-body gifts-intro__text">{{ paragraph }}</p>
+              }
+            </div>
             <ion-button
               color="primary"
               expand="block"

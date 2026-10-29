@@ -28,6 +28,7 @@ import { addIcons } from 'ionicons';
 import {
   arrowBackOutline,
   checkmarkCircle,
+  eyeOffOutline,
   lockClosedOutline,
 } from 'ionicons/icons';
 import {
@@ -118,6 +119,7 @@ export class GuestGiftsPage implements OnInit, ViewWillEnter {
     addIcons({
       'arrow-back-outline': arrowBackOutline,
       'checkmark-circle': checkmarkCircle,
+      'eye-off-outline': eyeOffOutline,
       'lock-closed-outline': lockClosedOutline,
     });
   }
