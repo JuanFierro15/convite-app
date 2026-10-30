@@ -21,6 +21,7 @@ const KNOWN_RPC_CODES = [
   'gift_not_found',
   'not_reserved_by_you',
   'gift_full',
+  'gift_not_reservable',
 ] as const;
 
 export function toGuestApiError(error: unknown, fallbackCode?: string): GuestApiError {
@@ -112,6 +113,8 @@ export class GuestApiService {
         ...(raw as unknown as GuestGift),
         remaining: typeof raw['remaining'] === 'number' ? raw['remaining'] : null,
         full: raw['full'] === true,
+        max_reservations:
+          typeof raw['max_reservations'] === 'number' ? raw['max_reservations'] : null,
       };
     });
   }

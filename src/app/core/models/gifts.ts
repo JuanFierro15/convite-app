@@ -1,6 +1,6 @@
 import { Tables } from '../supabase/database.types';
 
-export type GiftKind = 'unique' | 'repeatable' | 'free';
+export type GiftKind = 'unique' | 'repeatable' | 'free' | 'suggestion';
 
 export type GiftRow = Tables<'gifts'>;
 

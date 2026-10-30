@@ -44,6 +44,7 @@ export interface GuestGift {
   taken: boolean;
   remaining: number | null;
   full: boolean;
+  max_reservations: number | null;
 }
 
 export const GUEST_ERROR_MESSAGES: Record<string, string> = {
