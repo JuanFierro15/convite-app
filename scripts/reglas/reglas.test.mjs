@@ -3783,3 +3783,155 @@ test(
     }
   }
 );
+
+test(
+  '40. Registrar una llegada no cambia la respuesta de la persona',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    const invId = crypto.randomUUID();
+    const guestPendingId = crypto.randomUUID();
+    const guestAcceptedId = crypto.randomUUID();
+    const guestDeclinedId = crypto.randomUUID();
+
+    try {
+      const { error: invError } = await ctx.adminClient
+        .from('invitations')
+        .insert({
+          id: invId,
+          event_id: ctx.eventX.id,
+          group_name: `PRUEBA-${ctx.run}-LLEGADAS-40`,
+        });
+
+      assert.equal(
+        invError,
+        null,
+        'Se esperaba crear la invitación para la prueba 40 sin error'
+      );
+
+      const { error: guestsError } = await ctx.adminClient
+        .from('guests')
+        .insert([
+          {
+            id: guestPendingId,
+            invitation_id: invId,
+            full_name: 'Persona Pendiente',
+            rsvp: 'pending',
+            sort_order: 1,
+          },
+          {
+            id: guestAcceptedId,
+            invitation_id: invId,
+            full_name: 'Persona Aceptada',
+            rsvp: 'accepted',
+            sort_order: 2,
+          },
+          {
+            id: guestDeclinedId,
+            invitation_id: invId,
+            full_name: 'Persona Rechazada',
+            rsvp: 'declined',
+            sort_order: 3,
+          },
+        ]);
+
+      assert.equal(
+        guestsError,
+        null,
+        'Se esperaba crear las personas para la prueba 40 sin error'
+      );
+
+      const { data: initialGuests, error: initialError } = await ctx.adminClient
+        .from('guests')
+        .select('id, rsvp, rsvp_updated_at')
+        .in('id', [guestPendingId, guestAcceptedId, guestDeclinedId]);
+
+      assert.equal(
+        initialError,
+        null,
+        'Se esperaba consultar las personas iniciales para la prueba 40 sin error'
+      );
+      assert.equal(
+        initialGuests?.length,
+        3,
+        'Se esperaba obtener exactamente tres personas iniciales'
+      );
+
+      const initialMap = new Map(
+        initialGuests.map((g) => [g.id, g])
+      );
+
+      const twoMinutesAgo = new Date(Date.now() - 2 * 60 * 1000).toISOString();
+      const arrivalsPayload = [
+        { guest_id: guestPendingId, arrived_at: twoMinutesAgo },
+        { guest_id: guestAcceptedId, arrived_at: twoMinutesAgo },
+        { guest_id: guestDeclinedId, arrived_at: twoMinutesAgo },
+      ];
+
+      const { data: arrivalsData, error: arrivalsError } =
+        await ctx.helperXClient.rpc('record_arrivals', {
+          p_event_id: ctx.eventX.id,
+          p_arrivals: arrivalsPayload,
+        });
+
+      assert.equal(
+        arrivalsError,
+        null,
+        'Se esperaba que el ayudante llamara a record_arrivals sin error'
+      );
+      assert.ok(
+        Array.isArray(arrivalsData),
+        'Se esperaba que record_arrivals devolviera un arreglo'
+      );
+      assert.equal(
+        arrivalsData.length,
+        3,
+        'Se esperaba que se devolvieran exactamente tres resultados de llegada'
+      );
+
+      for (const item of arrivalsData) {
+        assert.equal(
+          item.status,
+          'recorded',
+          `Se esperaba status = recorded para la persona ${item.guest_id}`
+        );
+      }
+
+      const { data: finalGuests, error: finalError } = await ctx.adminClient
+        .from('guests')
+        .select('id, rsvp, rsvp_updated_at, arrived_at')
+        .in('id', [guestPendingId, guestAcceptedId, guestDeclinedId]);
+
+      assert.equal(
+        finalError,
+        null,
+        'Se esperaba consultar las personas finales para la prueba 40 sin error'
+      );
+      assert.equal(
+        finalGuests?.length,
+        3,
+        'Se esperaba obtener las tres personas finales'
+      );
+
+      for (const finalGuest of finalGuests) {
+        const initial = initialMap.get(finalGuest.id);
+        assert.ok(initial, `Se esperaba encontrar el estado inicial de la persona ${finalGuest.id}`);
+        assert.equal(
+          finalGuest.rsvp,
+          initial.rsvp,
+          `Se esperaba que rsvp se mantuviera igual para la persona ${finalGuest.id}`
+        );
+        assert.equal(
+          finalGuest.rsvp_updated_at,
+          initial.rsvp_updated_at,
+          `Se esperaba que rsvp_updated_at se mantuviera igual para la persona ${finalGuest.id}`
+        );
+        assert.ok(
+          finalGuest.arrived_at !== null,
+          `Se esperaba que arrived_at ya no fuera null para la persona ${finalGuest.id}`
+        );
+      }
+    } finally {
+      await ctx.adminClient.from('invitations').delete().eq('id', invId);
+    }
+  }
+);
