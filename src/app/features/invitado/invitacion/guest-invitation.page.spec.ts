@@ -107,9 +107,19 @@ describe('GuestInvitationPage', () => {
     const deadlineEl = fixture.nativeElement.querySelector('.deadline-banner span');
     expect(deadlineEl?.textContent?.trim()).toContain('Por favor respondan antes del');
 
-    // Mesa en plural
-    const tableEl = fixture.nativeElement.querySelector('.table-card__text');
-    expect(tableEl?.textContent?.trim()).toBe('Su mesa se asignará pronto');
+    // Mesa oculta
+    expect(fixture.nativeElement.querySelector('.table-card')).toBeNull();
+
+    // Card de regalos
+    const giftsTitleEl = fixture.nativeElement.querySelector('.gifts-card__title');
+    expect(giftsTitleEl?.textContent?.trim()).toBe('Un detalle para Eloise');
+
+    const giftsImg = fixture.nativeElement.querySelector(
+      '.gifts-card__cover-image',
+    ) as HTMLImageElement;
+    expect(giftsImg).not.toBeNull();
+    expect(giftsImg.getAttribute('alt')).toBe('');
+    expect(giftsImg.src.endsWith('gift-reserved.webp')).toBe(true);
 
     // Tarjeta de código de entrada
     const entryCard = fixture.nativeElement.querySelector('.entry-code-card');
@@ -155,9 +165,8 @@ describe('GuestInvitationPage', () => {
     const deadlineEl = fixture.nativeElement.querySelector('.deadline-banner span');
     expect(deadlineEl?.textContent?.trim()).toContain('Por favor responde antes del');
 
-    // Mesa en singular
-    const tableEl = fixture.nativeElement.querySelector('.table-card__text');
-    expect(tableEl?.textContent?.trim()).toBe('Tu mesa se asignará pronto');
+    // Mesa oculta
+    expect(fixture.nativeElement.querySelector('.table-card')).toBeNull();
   });
 
   it('renders entry code card without QR image if generation fails', async () => {
@@ -238,9 +247,10 @@ describe('GuestInvitationPage', () => {
     fixture.detectChanges();
 
     const introParagraphs = fixture.nativeElement.querySelectorAll('.gifts-intro__text');
-    expect(introParagraphs.length).toBe(2);
-    expect(introParagraphs[0]?.textContent?.trim()).toContain('su compañía');
-    expect(introParagraphs[1]?.textContent?.trim()).toContain('les hace ilusión');
+    expect(introParagraphs.length).toBe(1);
+    expect(introParagraphs[0]?.textContent?.trim()).toBe(
+      'Su compañía es el mejor regalo, así que no sientan ningún compromiso. Si les hace ilusión llevar algo, preparamos una lista con algunas ideas.',
+    );
 
     const giftsIntroEl = fixture.nativeElement.querySelector('.gifts-intro');
     expect(giftsIntroEl).not.toBeNull();
@@ -262,8 +272,9 @@ describe('GuestInvitationPage', () => {
     fixture.detectChanges();
 
     const introParagraphs = fixture.nativeElement.querySelectorAll('.gifts-intro__text');
-    expect(introParagraphs.length).toBe(2);
-    expect(introParagraphs[0]?.textContent?.trim()).toContain('tu compañía');
-    expect(introParagraphs[1]?.textContent?.trim()).toContain('te hace ilusión');
+    expect(introParagraphs.length).toBe(1);
+    expect(introParagraphs[0]?.textContent?.trim()).toBe(
+      'Tu compañía es el mejor regalo, así que no sientas ningún compromiso. Si te hace ilusión llevar algo, preparamos una lista con algunas ideas.',
+    );
   });
 });

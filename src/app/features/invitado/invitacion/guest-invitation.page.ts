@@ -39,6 +39,7 @@ import {
   GuestApiService,
   GuestInvitation,
   GuestInvitationPerson,
+  TABLES_ENABLED,
   ThemeService,
   formatInvitationCode,
   formatLongDate,
@@ -76,6 +77,8 @@ export class GuestInvitationPage implements OnInit, ViewWillEnter {
   private readonly themeService = inject(ThemeService);
   private readonly toastController = inject(ToastController);
 
+  protected readonly tablesEnabled = TABLES_ENABLED;
+
   readonly code = input.required<string>();
 
   readonly loading = signal(true);
@@ -97,6 +100,11 @@ export class GuestInvitationPage implements OnInit, ViewWillEnter {
   readonly heroCoverUrl = computed(() => {
     const inv = this.invitation();
     return this.themeService.asset(inv?.event.theme_id, 'hero-cover.webp');
+  });
+
+  readonly giftsCoverUrl = computed(() => {
+    const inv = this.invitation();
+    return this.themeService.asset(inv?.event.theme_id, 'gift-reserved.webp');
   });
 
   readonly texts = computed(() => {

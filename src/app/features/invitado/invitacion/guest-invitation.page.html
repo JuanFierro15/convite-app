@@ -204,8 +204,12 @@
           </ion-card-content>
         </ion-card>
 
-        <ion-card class="section-card">
-          <ion-card-content class="section-card__content">
+        <ion-card class="section-card gifts-card">
+          <div class="gifts-card__cover" aria-hidden="true">
+            <img class="gifts-card__cover-image" [src]="giftsCoverUrl()" alt="" loading="lazy" />
+          </div>
+          <ion-card-content class="section-card__content gifts-card__content">
+            <h2 class="text-section gifts-card__title">{{ texts().giftsTitle }}</h2>
             <div class="gifts-intro">
               @for (paragraph of texts().giftsIntro; track $index) {
                 <p class="text-body gifts-intro__text">{{ paragraph }}</p>
@@ -222,16 +226,18 @@
           </ion-card-content>
         </ion-card>
 
-        <ion-card class="section-card table-card">
-          <ion-card-content class="table-card__content">
-            <ion-icon
-              class="table-card__icon"
-              name="restaurant-outline"
-              aria-hidden="true"
-            ></ion-icon>
-            <span class="text-body table-card__text">{{ texts().tableNote }}</span>
-          </ion-card-content>
-        </ion-card>
+        @if (tablesEnabled) {
+          <ion-card class="section-card table-card">
+            <ion-card-content class="table-card__content">
+              <ion-icon
+                class="table-card__icon"
+                name="restaurant-outline"
+                aria-hidden="true"
+              ></ion-icon>
+              <span class="text-body table-card__text">{{ texts().tableNote }}</span>
+            </ion-card-content>
+          </ion-card>
+        }
       </div>
     } @else {
       <div class="empty-wrapper">

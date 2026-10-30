@@ -263,6 +263,38 @@
   color: var(--ion-color-medium);
 }
 
+.gifts-card {
+  overflow: hidden;
+}
+
+.gifts-card__cover {
+  height: 150px;
+  overflow: hidden;
+  // En el contenedor y no en la imagen: la ampliación de la imagen sacaría el degradado del recorte.
+  -webkit-mask-image: linear-gradient(to bottom, black 60%, transparent);
+  mask-image: linear-gradient(to bottom, black 60%, transparent);
+}
+
+// La ampliación centra el moño; sin ella se ve el borde del papel o la caja queda flotando a 360 px.
+.gifts-card__cover-image {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 50% 42%;
+  transform: scale(1.9);
+  transform-origin: 48.5% 42%;
+}
+
+.gifts-card__content {
+  padding-top: var(--space-sm);
+}
+
+.gifts-card__title {
+  margin: 0;
+  color: var(--ion-text-color);
+}
+
 .gifts-intro {
   display: flex;
   flex-direction: column;

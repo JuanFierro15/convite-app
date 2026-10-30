@@ -63,9 +63,9 @@ describe('invitation-texts utils', () => {
       expect(texts.reserveGiftConfirm('Pañales')).toBe(
         '¿Desean apartar Pañales? Nadie más sabrá que lo eligieron ustedes.',
       );
+      expect(texts.giftsTitle).toBe('Un detalle para Eloise');
       expect(texts.giftsIntro).toEqual([
-        'Para nosotros, el mejor regalo es su compañía y compartir juntos esta tarde, así que por favor no sientan ningún compromiso de llevar algo adicional.',
-        'Si de todas formas les hace ilusión tener un detalle con Eloise, preparamos la siguiente lista con algunas ideas.',
+        'Su compañía es el mejor regalo, así que no sientan ningún compromiso. Si les hace ilusión llevar algo, preparamos una lista con algunas ideas.',
       ]);
       expect(texts.giftsAnonymityNote).toBe(
         'Lo que aparten es anónimo: ni nosotros ni los demás invitados sabremos qué regalo eligieron.',
@@ -97,9 +97,9 @@ describe('invitation-texts utils', () => {
       expect(texts.reserveGiftConfirm('Pañales')).toBe(
         '¿Quieres apartar Pañales? Nadie más sabrá que lo elegiste tú.',
       );
+      expect(texts.giftsTitle).toBe('Un detalle para Eloise');
       expect(texts.giftsIntro).toEqual([
-        'Para nosotros, el mejor regalo es tu compañía y compartir juntos esta tarde, así que por favor no sientas ningún compromiso de llevar algo adicional.',
-        'Si de todas formas te hace ilusión tener un detalle con Eloise, preparamos la siguiente lista con algunas ideas.',
+        'Tu compañía es el mejor regalo, así que no sientas ningún compromiso. Si te hace ilusión llevar algo, preparamos una lista con algunas ideas.',
       ]);
       expect(texts.giftsAnonymityNote).toBe(
         'Lo que apartes es anónimo: ni nosotros ni los demás invitados sabremos qué regalo elegiste.',
@@ -127,6 +127,7 @@ describe('invitation-texts utils', () => {
         'giftsMineHeading',
         'giftMineBadge',
         'giftChosenBadge',
+        'giftsTitle',
         'giftsAnonymityNote',
         'giftReservedConfirmation',
         'entryCodeTitle',
