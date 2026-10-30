@@ -6,6 +6,7 @@ import {
   inject,
   input,
   signal,
+  viewChild,
 } from '@angular/core';
 import { Router } from '@angular/router';
 import {
@@ -33,7 +34,13 @@ import {
   ViewWillEnter,
 } from '@ionic/angular';
 import { addIcons } from 'ionicons';
-import { add, checkmarkCircle, logoWhatsapp } from 'ionicons/icons';
+import {
+  add,
+  checkmarkCircle,
+  chevronBackOutline,
+  chevronForwardOutline,
+  logoWhatsapp,
+} from 'ionicons/icons';
 import {
   AuthService,
   EventContextService,
@@ -44,11 +51,14 @@ import {
   RealtimeService,
   invitationStatus,
   normalizeSearchText,
+  paginate,
   rsvpCounts,
 } from '../../../core';
 import { EmptyStateComponent, StatusBadgeComponent } from '../../../shared';
 import { InvitationFormComponent } from '../formulario/invitation-form.component';
 import { InvitationActionsService } from '../invitation-actions.service';
+
+export const INVITATIONS_PAGE_SIZE = 10;
 
 export type InvitationFilter = 'all' | InvitationStatus;
 
@@ -139,6 +149,9 @@ export class InvitationListPage implements ViewWillEnter {
 
   readonly defaultBackHref = computed(() => `/eventos/${this.id()}/panel`);
 
+  readonly content = viewChild(IonContent);
+  readonly currentPage = signal<number>(1);
+
   private readonly mappedItems = computed<InvitationListItem[]>(() =>
     this.invitations().map((invitation) => ({
       invitation,
@@ -201,6 +214,10 @@ export class InvitationListPage implements ViewWillEnter {
     return items.filter((item) => item.status === filter);
   });
 
+  readonly pagedItems = computed(() =>
+    paginate(this.filteredItems(), this.currentPage(), INVITATIONS_PAGE_SIZE),
+  );
+
   readonly totalsLabel = computed<string>(() => {
     const items = this.filteredItems();
     const invitationCount = items.length;
@@ -223,7 +240,13 @@ export class InvitationListPage implements ViewWillEnter {
   );
 
   constructor() {
-    addIcons({ add, logoWhatsapp, checkmarkCircle });
+    addIcons({
+      add,
+      logoWhatsapp,
+      checkmarkCircle,
+      'chevron-back-outline': chevronBackOutline,
+      'chevron-forward-outline': chevronForwardOutline,
+    });
   }
 
   ionViewWillEnter(): void {
@@ -241,12 +264,41 @@ export class InvitationListPage implements ViewWillEnter {
 
   onSearchInput(event: SearchbarCustomEvent): void {
     this.searchQuery.set(event.detail.value ?? '');
+    this.currentPage.set(1);
   }
 
   onFilterChange(event: SegmentCustomEvent): void {
     const value = event.detail.value as InvitationFilter | undefined;
     if (value) {
       this.selectedFilter.set(value);
+      this.currentPage.set(1);
+    }
+  }
+
+  goToPreviousPage(): void {
+    const current = this.pagedItems().page;
+    if (current > 1) {
+      this.currentPage.set(current - 1);
+      this.scrollToTop();
+    }
+  }
+
+  goToNextPage(): void {
+    const { page, totalPages } = this.pagedItems();
+    if (page < totalPages) {
+      this.currentPage.set(page + 1);
+      this.scrollToTop();
+    }
+  }
+
+  private scrollToTop(): void {
+    try {
+      const ionContent = this.content();
+      if (ionContent && typeof ionContent.scrollToTop === 'function') {
+        void ionContent.scrollToTop(300);
+      }
+    } catch {
+      // Entorno sin soporte de scrollToTop (como jsdom)
     }
   }
 

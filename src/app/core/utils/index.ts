@@ -5,6 +5,7 @@ export * from './invitation-code';
 export * from './invitation-status';
 export * from './invitation-texts';
 export * from './messages';
+export * from './pagination';
 export * from './phone';
 export * from './qr';
 export * from './text';

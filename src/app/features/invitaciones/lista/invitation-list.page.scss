@@ -105,3 +105,17 @@
   min-width: 44px;
   min-height: 44px;
 }
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+}
+
+.pagination__status {
+  color: var(--ion-color-medium);
+  text-align: center;
+  white-space: nowrap;
+}

@@ -79,7 +79,7 @@
       <p class="totals-label text-label">{{ totalsLabel() }}</p>
 
       <div class="cards-list">
-        @for (item of filteredItems(); track item.invitation.id) {
+        @for (item of pagedItems().items; track item.invitation.id) {
           <ion-card
             button="true"
             class="invitation-card"
@@ -128,6 +128,36 @@
           </ion-card>
         }
       </div>
+
+      @if (pagedItems().totalPages > 1) {
+        <nav class="pagination" aria-label="Paginación de invitaciones">
+          <ion-button
+            fill="outline"
+            size="small"
+            class="pagination__button"
+            [disabled]="pagedItems().page <= 1"
+            aria-label="Página anterior"
+            (click)="goToPreviousPage()"
+          >
+            <ion-icon slot="start" name="chevron-back-outline" aria-hidden="true"></ion-icon>
+            Anterior
+          </ion-button>
+          <span class="text-label pagination__status" aria-live="polite">
+            Página {{ pagedItems().page }} de {{ pagedItems().totalPages }}
+          </span>
+          <ion-button
+            fill="outline"
+            size="small"
+            class="pagination__button"
+            [disabled]="pagedItems().page >= pagedItems().totalPages"
+            aria-label="Página siguiente"
+            (click)="goToNextPage()"
+          >
+            Siguiente
+            <ion-icon slot="end" name="chevron-forward-outline" aria-hidden="true"></ion-icon>
+          </ion-button>
+        </nav>
+      }
     </div>
   }
 

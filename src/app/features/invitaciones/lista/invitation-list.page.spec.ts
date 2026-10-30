@@ -250,4 +250,148 @@ describe('InvitationListPage', () => {
     await component.onShareWhatsApp(new Event('click'), invWithoutSend);
     expect(mockInvitationsRepo.list).not.toHaveBeenCalled();
   });
+
+  describe('paginación', () => {
+    function buildFakeInvitations(count: number): InvitationWithGuests[] {
+      return Array.from({ length: count }, (_, i) => {
+        const index = i + 1;
+        const id = `inv-${index}`;
+        return {
+          id,
+          event_id: 'evt-123',
+          group_name: `Familia Ejemplo ${index}`,
+          kind: 'group',
+          phone: `+5730000000${index.toString().padStart(2, '0')}`,
+          code: `CODE${index}`,
+          created_at: '2026-10-01T00:00:00-05:00',
+          updated_at: '2026-10-01T00:00:00-05:00',
+          whatsapp_sent_at: null,
+          guests: [
+            {
+              id: `g-${index}`,
+              invitation_id: id,
+              event_id: 'evt-123',
+              full_name: `Persona Ejemplo ${index}`,
+              rsvp: 'pending',
+              rsvp_updated_at: null,
+              arrived_at: null,
+              arrived_by: null,
+              sort_order: 0,
+              created_at: '2026-10-01T00:00:00-05:00',
+            },
+          ],
+        };
+      });
+    }
+
+    it('con 25 invitaciones muestra 10 cards, existe paginación con "Página 1 de 3" y botón anterior deshabilitado', () => {
+      component.invitations.set(buildFakeInvitations(25));
+      component.loading.set(false);
+      fixture.detectChanges();
+
+      const cards = fixture.nativeElement.querySelectorAll('ion-card.invitation-card');
+      expect(cards.length).toBe(10);
+
+      const pagination = fixture.nativeElement.querySelector('nav.pagination');
+      expect(pagination).not.toBeNull();
+
+      const status = fixture.nativeElement.querySelector('.pagination__status');
+      expect(status?.textContent?.trim()).toBe('Página 1 de 3');
+
+      const prevButton = fixture.nativeElement.querySelector(
+        'ion-button[aria-label="Página anterior"]',
+      );
+      expect(prevButton?.disabled ?? prevButton?.hasAttribute('disabled')).toBe(true);
+    });
+
+    it('goToNextPage muestra las invitaciones 11 a 20 con estado "Página 2 de 3"', () => {
+      component.invitations.set(buildFakeInvitations(25));
+      component.loading.set(false);
+      fixture.detectChanges();
+
+      component.goToNextPage();
+      fixture.detectChanges();
+
+      const cards = fixture.nativeElement.querySelectorAll('ion-card.invitation-card');
+      expect(cards.length).toBe(10);
+      expect(cards[0].querySelector('.group-name')?.textContent?.trim()).toBe('Familia Ejemplo 11');
+
+      const status = fixture.nativeElement.querySelector('.pagination__status');
+      expect(status?.textContent?.trim()).toBe('Página 2 de 3');
+    });
+
+    it('en la página 3 se ven 5 cards y el botón siguiente está deshabilitado', () => {
+      component.invitations.set(buildFakeInvitations(25));
+      component.loading.set(false);
+      fixture.detectChanges();
+
+      component.goToNextPage();
+      component.goToNextPage();
+      fixture.detectChanges();
+
+      const cards = fixture.nativeElement.querySelectorAll('ion-card.invitation-card');
+      expect(cards.length).toBe(5);
+      expect(cards[0].querySelector('.group-name')?.textContent?.trim()).toBe('Familia Ejemplo 21');
+
+      const nextButton = fixture.nativeElement.querySelector(
+        'ion-button[aria-label="Página siguiente"]',
+      );
+      expect(nextButton?.disabled ?? nextButton?.hasAttribute('disabled')).toBe(true);
+    });
+
+    it('estando en la página 2, cambiar el filtro o la búsqueda deja currentPage en 1', () => {
+      component.invitations.set(buildFakeInvitations(25));
+      component.loading.set(false);
+      fixture.detectChanges();
+
+      component.goToNextPage();
+      expect(component.currentPage()).toBe(2);
+
+      component.onFilterChange({ detail: { value: 'pending' } } as never);
+      expect(component.currentPage()).toBe(1);
+
+      component.goToNextPage();
+      expect(component.currentPage()).toBe(2);
+
+      component.onSearchInput({ detail: { value: 'Ejemplo' } } as never);
+      expect(component.currentPage()).toBe(1);
+    });
+
+    it('con 10 invitaciones o menos no existe nav.pagination', () => {
+      component.invitations.set(buildFakeInvitations(10));
+      component.loading.set(false);
+      fixture.detectChanges();
+
+      const pagination = fixture.nativeElement.querySelector('nav.pagination');
+      expect(pagination).toBeNull();
+    });
+
+    it('si estando en la página 3 la lista baja a 12 invitaciones, se ve la página 2 con 2 cards', () => {
+      component.invitations.set(buildFakeInvitations(25));
+      component.loading.set(false);
+      fixture.detectChanges();
+
+      component.goToNextPage();
+      component.goToNextPage();
+      expect(component.currentPage()).toBe(3);
+
+      component.invitations.set(buildFakeInvitations(12));
+      fixture.detectChanges();
+
+      const cards = fixture.nativeElement.querySelectorAll('ion-card.invitation-card');
+      expect(cards.length).toBe(2);
+      expect(cards[0].querySelector('.group-name')?.textContent?.trim()).toBe('Familia Ejemplo 11');
+
+      const status = fixture.nativeElement.querySelector('.pagination__status');
+      expect(status?.textContent?.trim()).toBe('Página 2 de 2');
+    });
+
+    it('totalsLabel con 25 invitaciones sigue contando las 25', () => {
+      component.invitations.set(buildFakeInvitations(25));
+      component.loading.set(false);
+      fixture.detectChanges();
+
+      expect(component.totalsLabel()).toBe('25 invitaciones · 25 personas');
+    });
+  });
 });
