@@ -27,6 +27,23 @@
           Volver a la invitación
         </ion-button>
 
+        @if (suggestions().length > 0) {
+          <ion-card class="basics-card" aria-labelledby="basics-title">
+            <ion-card-content class="basics-card__content">
+              <ion-icon class="basics-card__icon" name="heart-outline" aria-hidden="true"></ion-icon>
+              <h2 id="basics-title" class="text-section basics-card__title">Básicos que nunca sobran, tráelos si quieres</h2>
+              <ul class="basics-card__list">
+                @for (item of suggestions(); track item.id) {
+                  <li class="basics-card__item">
+                    <ion-icon name="checkmark-circle-outline" aria-hidden="true"></ion-icon>
+                    <span class="text-name">{{ item.name }}</span>
+                  </li>
+                }
+              </ul>
+            </ion-card-content>
+          </ion-card>
+        }
+
         @if (!inv.gifts_open) {
           <div class="closed-banner" role="status">
             <ion-icon
@@ -220,27 +237,6 @@
                 <ion-icon slot="end" name="chevron-forward-outline" aria-hidden="true"></ion-icon>
               </ion-button>
             </nav>
-          }
-
-          @if (showSuggestions()) {
-            <section class="suggestions" aria-labelledby="suggestions-title">
-              <div class="suggestions__header">
-                <h2 id="suggestions-title" class="text-section suggestions__title">
-                  También nos ayudan
-                </h2>
-                <span class="suggestions__note text-label">(no hace falta reservarlos)</span>
-              </div>
-              <ul class="suggestions__list">
-                @for (sug of suggestions(); track sug.id) {
-                  <li class="suggestions__item">
-                    <p class="text-name suggestions__name">{{ sug.name }}</p>
-                    @if (sug.description; as desc) {
-                      <p class="text-body suggestions__description">{{ desc }}</p>
-                    }
-                  </li>
-                }
-              </ul>
-            </section>
           }
         }
       </div>

@@ -33,9 +33,11 @@ import { addIcons } from 'ionicons';
 import {
   arrowBackOutline,
   checkmarkCircle,
+  checkmarkCircleOutline,
   chevronBackOutline,
   chevronForwardOutline,
   eyeOffOutline,
+  heartOutline,
   lockClosedOutline,
 } from 'ionicons/icons';
 import {
@@ -137,19 +139,17 @@ export class GuestGiftsPage implements OnInit, ViewWillEnter {
   readonly paged = computed(() =>
     paginate(this.visible(), this.page(), GUEST_GIFTS_PAGE_SIZE),
   );
-  readonly showSuggestions = computed(
-    () =>
-      this.suggestions().length > 0 &&
-      (this.activeCategory() === 'repeatable' || !this.showFilter()),
-  );
+  readonly showSuggestions = computed(() => this.suggestions().length > 0);
 
   constructor() {
     addIcons({
       'arrow-back-outline': arrowBackOutline,
       'checkmark-circle': checkmarkCircle,
+      'checkmark-circle-outline': checkmarkCircleOutline,
       'chevron-back-outline': chevronBackOutline,
       'chevron-forward-outline': chevronForwardOutline,
       'eye-off-outline': eyeOffOutline,
+      'heart-outline': heartOutline,
       'lock-closed-outline': lockClosedOutline,
     });
   }
