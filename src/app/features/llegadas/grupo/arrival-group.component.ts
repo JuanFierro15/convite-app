@@ -30,11 +30,15 @@ import { addIcons } from 'ionicons';
 import { closeOutline } from 'ionicons/icons';
 import { Haptics, NotificationType } from '@capacitor/haptics';
 import {
+  ARRIVAL_RSVP_LABELS,
   ArrivalGuestView,
   ArrivalInvitationView,
   ArrivalSessionService,
+  arrivalRsvpSummary,
   formatInvitationCode,
   formatTime,
+  normalizeRsvp,
+  Rsvp,
 } from '../../../core';
 import { StatusBadgeComponent } from '../../../shared';
 
@@ -91,6 +95,10 @@ export class ArrivalGroupComponent implements OnInit {
     return inv ? formatInvitationCode(inv.code) : '';
   });
 
+  readonly rsvpSummary = computed(() => {
+    return arrivalRsvpSummary(this.invitation()?.guests ?? []);
+  });
+
   readonly selectedGuestIds = signal<string[]>([]);
   private selectionInitialized = false;
 
@@ -138,6 +146,10 @@ export class ArrivalGroupComponent implements OnInit {
     return arrivedAt ? formatTime(arrivedAt) : '';
   }
 
+  rsvpLabel(rsvp: Rsvp | string): string {
+    return ARRIVAL_RSVP_LABELS[normalizeRsvp(rsvp)];
+  }
+
   async close(): Promise<void> {
     await this.modalCtrl.dismiss();
   }
@@ -156,16 +168,21 @@ export class ArrivalGroupComponent implements OnInit {
       return;
     }
 
-    if (guest.rsvp === 'accepted') {
+    if (normalizeRsvp(guest.rsvp) === 'accepted') {
       if (!isCurrentlySelected) {
         this.selectedGuestIds.update((ids) => [...ids, guest.id]);
       }
       return;
     }
 
+    const message =
+      normalizeRsvp(guest.rsvp) === 'declined'
+        ? 'Dijo que no asistiría. ¿Registrar su llegada de todas formas?'
+        : 'No respondió la invitación. ¿Registrar su llegada de todas formas?';
+
     const checkboxEl = event.target as HTMLIonCheckboxElement | null;
     const alert = await this.alertCtrl.create({
-      message: 'No confirmó asistencia, ¿registrar de todas formas?',
+      message,
       buttons: [
         {
           text: 'Cancelar',
@@ -269,7 +286,7 @@ export class ArrivalGroupComponent implements OnInit {
     if (inv && !this.selectionInitialized) {
       this.selectionInitialized = true;
       const acceptedPending = inv.guests
-        .filter((guest) => guest.rsvp === 'accepted' && guest.arrivedAt === null)
+        .filter((guest) => normalizeRsvp(guest.rsvp) === 'accepted' && guest.arrivedAt === null)
         .map((guest) => guest.id);
       this.selectedGuestIds.set(acceptedPending);
     }

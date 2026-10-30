@@ -1,6 +1,21 @@
-import { invitationStatus, rsvpCounts } from './invitation-status';
+import { invitationStatus, normalizeRsvp, rsvpCounts } from './invitation-status';
 
 describe('invitation-status', () => {
+  describe('normalizeRsvp', () => {
+    it('returns accepted and declined as is, and pending for any other value', () => {
+      expect(normalizeRsvp('accepted')).toBe('accepted');
+      expect(normalizeRsvp('declined')).toBe('declined');
+
+      expect(normalizeRsvp('pending')).toBe('pending');
+      expect(normalizeRsvp(null)).toBe('pending');
+      expect(normalizeRsvp(undefined)).toBe('pending');
+      expect(normalizeRsvp('')).toBe('pending');
+      expect(normalizeRsvp('ACCEPTED')).toBe('pending');
+      expect(normalizeRsvp('yes')).toBe('pending');
+      expect(normalizeRsvp(1)).toBe('pending');
+      expect(normalizeRsvp({})).toBe('pending');
+    });
+  });
   describe('invitationStatus', () => {
     it('returns pending when the invitation has no guests', () => {
       expect(invitationStatus([])).toBe('pending');

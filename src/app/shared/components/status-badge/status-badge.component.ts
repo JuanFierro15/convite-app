@@ -37,8 +37,11 @@ export class StatusBadgeComponent {
 
   readonly displayText = computed(() => {
     const customLabel = this.label()?.trim();
-    return customLabel ? customLabel : STATUS_LABELS[this.status()];
+    if (customLabel) {
+      return customLabel;
+    }
+    return STATUS_LABELS[this.status()] ?? STATUS_LABELS.pending;
   });
 
-  readonly badgeClass = computed(() => STATUS_CLASSES[this.status()]);
+  readonly badgeClass = computed(() => STATUS_CLASSES[this.status()] ?? STATUS_CLASSES.pending);
 }

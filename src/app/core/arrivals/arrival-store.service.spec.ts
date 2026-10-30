@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { Preferences } from '@capacitor/preferences';
 import { ArrivalSnapshot, PendingArrival } from './arrival.models';
 import { ArrivalStoreService } from './arrival-store.service';
 
@@ -68,20 +69,97 @@ describe('ArrivalStoreService', () => {
   });
 
   it('handles damaged JSON or wrong version gracefully without throwing', async () => {
-    localStorage.setItem('convite.arrivals.event-bad.snapshot', '{ invalid JSON');
-    localStorage.setItem('convite.arrivals.event-bad.pending', 'not an array');
+    await Preferences.set({ key: 'convite.arrivals.event-bad.snapshot', value: '{ invalid JSON' });
+    await Preferences.set({ key: 'convite.arrivals.event-bad.pending', value: 'not an array' });
 
     const readDamaged = await store.read('event-bad');
     expect(readDamaged.snapshot).toBeNull();
     expect(readDamaged.pending).toEqual([]);
 
-    localStorage.setItem(
-      'convite.arrivals.event-version.snapshot',
-      JSON.stringify({ version: 2, eventId: 'event-version' }),
-    );
+    await Preferences.set({
+      key: 'convite.arrivals.event-version.snapshot',
+      value: JSON.stringify({ version: 2, eventId: 'event-version' }),
+    });
 
     const readVersion = await store.read('event-version');
     expect(readVersion.snapshot).toBeNull();
+  });
+
+  it('normalizes guest rsvp and missing guests array on read and listSnapshots', async () => {
+    const rawSnapshot = {
+      version: 1,
+      eventId: 'event-normalize',
+      userId: 'user-organizer',
+      downloadedAt: '2026-11-29T10:00:00-05:00',
+      event: {
+        id: 'event-normalize',
+        name: 'Baby Shower Ficticio',
+        theme_id: 'default',
+        starts_at: '2026-11-29T15:00:00-05:00',
+      },
+      invitations: [
+        {
+          id: 'inv-normalize-1',
+          code: 'ABCD2345GH',
+          group_name: 'Familia Ramírez',
+          kind: 'group',
+          guests: [
+            {
+              id: 'g-1',
+              full_name: 'Persona Rsvp Null',
+              rsvp: null,
+              sort_order: 1,
+              arrived_at: null,
+              arrived_by: null,
+            },
+            {
+              id: 'g-2',
+              full_name: 'Persona Sin Rsvp',
+              sort_order: 2,
+              arrived_at: null,
+              arrived_by: null,
+            },
+            {
+              id: 'g-3',
+              full_name: 'Persona Aceptada',
+              rsvp: 'accepted',
+              sort_order: 3,
+              arrived_at: null,
+              arrived_by: null,
+            },
+          ],
+        },
+        {
+          id: 'inv-no-guests',
+          code: 'WXYZ6789KL',
+          group_name: 'Sin Invitados',
+          kind: 'individual',
+        },
+      ],
+    };
+
+    await Preferences.set({
+      key: 'convite.arrivals.event-normalize.snapshot',
+      value: JSON.stringify(rawSnapshot),
+    });
+
+    const readResult = await store.read('event-normalize');
+    expect(readResult.snapshot).not.toBeNull();
+    const guests = readResult.snapshot!.invitations[0].guests;
+    expect(guests[0].rsvp).toBe('pending');
+    expect(guests[1].rsvp).toBe('pending');
+    expect(guests[2].rsvp).toBe('accepted');
+
+    const noGuestsInv = readResult.snapshot!.invitations[1];
+    expect(noGuestsInv.guests).toEqual([]);
+
+    const snapshots = await store.listSnapshots();
+    const found = snapshots.find((s) => s.eventId === 'event-normalize');
+    expect(found).toBeDefined();
+    expect(found!.invitations[0].guests[0].rsvp).toBe('pending');
+    expect(found!.invitations[0].guests[1].rsvp).toBe('pending');
+    expect(found!.invitations[0].guests[2].rsvp).toBe('accepted');
+    expect(found!.invitations[1].guests).toEqual([]);
   });
 
   it('chains simultaneous mutate calls with Promise.all so both additions persist', async () => {

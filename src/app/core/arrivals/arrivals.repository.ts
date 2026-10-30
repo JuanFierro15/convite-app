@@ -1,8 +1,8 @@
 import { Injectable, inject } from '@angular/core';
 import { LOAD_ERROR_MESSAGE, toUserError } from '../data/errors';
-import { Rsvp } from '../models/events';
 import { Json } from '../supabase/database.types';
 import { SupabaseService } from '../supabase/supabase.service';
+import { normalizeRsvp } from '../utils/invitation-status';
 import { toInvitationKind } from '../utils/invitation-texts';
 import {
   ArrivalSnapshot,
@@ -14,7 +14,7 @@ import {
 interface RawGuestRow {
   id: string;
   full_name: string;
-  rsvp: string;
+  rsvp: string | null;
   sort_order: number;
   created_at: string;
   arrived_at: string | null;
@@ -67,7 +67,7 @@ export class ArrivalsRepository {
       const guests: ArrivalSnapshotGuest[] = sortedGuests.map((guest) => ({
         id: guest.id,
         full_name: guest.full_name,
-        rsvp: guest.rsvp as Rsvp,
+        rsvp: normalizeRsvp(guest.rsvp),
         sort_order: guest.sort_order,
         arrived_at: guest.arrived_at,
         arrived_by: guest.arrived_by,

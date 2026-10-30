@@ -1,5 +1,6 @@
 import {
   applyRecordResults,
+  arrivalRsvpSummary,
   buildInvitationViews,
   classifyScanError,
   countsFromViews,
@@ -125,9 +126,63 @@ describe('arrival-logic', () => {
       expect(views[0].guests[0].arrivedAt).toBe('2026-11-29T15:10:00-05:00');
       expect(views[0].guests[0].synced).toBe(true);
     });
+
+    it('normalizes null or missing rsvp to pending', () => {
+      const snapshotWithNullRsvp = {
+        ...mockSnapshot,
+        invitations: [
+          {
+            id: 'inv-null',
+            code: 'NULL1234AB',
+            group_name: 'Familia Test',
+            kind: 'group',
+            guests: [
+              {
+                id: 'g-1',
+                full_name: 'Persona Rsvp Null',
+                rsvp: null,
+                sort_order: 1,
+                arrived_at: null,
+                arrived_by: null,
+              },
+              {
+                id: 'g-2',
+                full_name: 'Persona Sin Rsvp',
+                sort_order: 2,
+                arrived_at: null,
+                arrived_by: null,
+              },
+            ],
+          },
+        ],
+      } as unknown as ArrivalSnapshot;
+
+      const views = buildInvitationViews(snapshotWithNullRsvp, []);
+      expect(views[0].guests[0].rsvp).toBe('pending');
+      expect(views[0].guests[1].rsvp).toBe('pending');
+    });
   });
 
   describe('countsFromViews', () => {
+    it('does not count guests with null or missing rsvp as confirmed', () => {
+      const views = [
+        {
+          id: 'inv-1',
+          code: 'TEST1234',
+          group_name: 'Grupo',
+          kind: 'group' as const,
+          arrivedCount: 0,
+          totalCount: 2,
+          guests: [
+            { id: 'g-1', full_name: 'Persona 1', rsvp: null as any, arrivedAt: null, synced: true },
+            { id: 'g-2', full_name: 'Persona 2', rsvp: undefined as any, arrivedAt: null, synced: true },
+          ],
+        },
+      ];
+
+      const counts = countsFromViews(views);
+      expect(counts.confirmed).toBe(0);
+    });
     it('computes confirmed and arrived statistics across all views', () => {
       const pending: PendingArrival[] = [
         {
@@ -243,6 +298,59 @@ describe('arrival-logic', () => {
 
       expect(added).toBe(0);
       expect(updated).toEqual(pending);
+    });
+
+    it('does not change the rsvp of any guest in the snapshot', () => {
+      const mixedSnapshot: ArrivalSnapshot = {
+        ...mockSnapshot,
+        invitations: [
+          {
+            id: 'inv-mixed',
+            code: 'MIXD1234AB',
+            group_name: 'Familia Mixta',
+            kind: 'group',
+            guests: [
+              {
+                id: 'g-acc',
+                full_name: 'Persona Accepted',
+                rsvp: 'accepted',
+                sort_order: 1,
+                arrived_at: null,
+                arrived_by: null,
+              },
+              {
+                id: 'g-pen',
+                full_name: 'Persona Pending',
+                rsvp: 'pending',
+                sort_order: 2,
+                arrived_at: null,
+                arrived_by: null,
+              },
+              {
+                id: 'g-dec',
+                full_name: 'Persona Declined',
+                rsvp: 'declined',
+                sort_order: 3,
+                arrived_at: null,
+                arrived_by: null,
+              },
+            ],
+          },
+        ],
+      };
+
+      enqueueArrivals(
+        mixedSnapshot,
+        [],
+        'inv-mixed',
+        ['g-acc', 'g-pen', 'g-dec'],
+        'user-organizer',
+        '2026-11-29T15:25:00-05:00',
+      );
+
+      expect(mixedSnapshot.invitations[0].guests[0].rsvp).toBe('accepted');
+      expect(mixedSnapshot.invitations[0].guests[1].rsvp).toBe('pending');
+      expect(mixedSnapshot.invitations[0].guests[2].rsvp).toBe('declined');
     });
 
     it('ignores guest ids not in the invitation and does not mutate inputs', () => {
@@ -387,6 +495,178 @@ describe('arrival-logic', () => {
       );
 
       expect(notices).toHaveLength(0);
+    });
+
+    it('does not change the rsvp of any guest in the snapshot', () => {
+      const mixedSnapshot: ArrivalSnapshot = {
+        ...mockSnapshot,
+        invitations: [
+          {
+            id: 'inv-mixed',
+            code: 'MIXD1234AB',
+            group_name: 'Familia Mixta',
+            kind: 'group',
+            guests: [
+              {
+                id: 'g-acc',
+                full_name: 'Persona Accepted',
+                rsvp: 'accepted',
+                sort_order: 1,
+                arrived_at: null,
+                arrived_by: null,
+              },
+              {
+                id: 'g-pen',
+                full_name: 'Persona Pending',
+                rsvp: 'pending',
+                sort_order: 2,
+                arrived_at: null,
+                arrived_by: null,
+              },
+              {
+                id: 'g-dec',
+                full_name: 'Persona Declined',
+                rsvp: 'declined',
+                sort_order: 3,
+                arrived_at: null,
+                arrived_by: null,
+              },
+            ],
+          },
+        ],
+      };
+
+      const results: RecordArrivalResult[] = [
+        {
+          guest_id: 'g-acc',
+          status: 'recorded',
+          arrived_at: '2026-11-29T15:30:00-05:00',
+          arrived_by: 'user-organizer',
+        },
+        {
+          guest_id: 'g-pen',
+          status: 'recorded',
+          arrived_at: '2026-11-29T15:30:00-05:00',
+          arrived_by: 'user-organizer',
+        },
+        {
+          guest_id: 'g-dec',
+          status: 'recorded',
+          arrived_at: '2026-11-29T15:30:00-05:00',
+          arrived_by: 'user-organizer',
+        },
+      ];
+
+      const { snapshot } = applyRecordResults(
+        mixedSnapshot,
+        [],
+        results,
+        'user-organizer',
+        'event-1',
+      );
+
+      const guests = snapshot!.invitations[0].guests;
+      expect(guests[0].rsvp).toBe('accepted');
+      expect(guests[1].rsvp).toBe('pending');
+      expect(guests[2].rsvp).toBe('declined');
+    });
+  });
+
+  describe('arrivalRsvpSummary', () => {
+    it('returns pending with Sin respuesta when empty or all pending', () => {
+      expect(arrivalRsvpSummary([])).toEqual({
+        tone: 'pending',
+        text: 'Sin respuesta',
+        accepted: 0,
+        total: 0,
+      });
+
+      expect(
+        arrivalRsvpSummary([
+          { rsvp: 'pending' },
+          { rsvp: null },
+          { rsvp: undefined },
+        ]),
+      ).toEqual({
+        tone: 'pending',
+        text: 'Sin respuesta',
+        accepted: 0,
+        total: 3,
+      });
+    });
+
+    it('returns accepted when all guests accepted', () => {
+      expect(arrivalRsvpSummary([{ rsvp: 'accepted' }])).toEqual({
+        tone: 'accepted',
+        text: 'Confirmó',
+        accepted: 1,
+        total: 1,
+      });
+
+      expect(
+        arrivalRsvpSummary([
+          { rsvp: 'accepted' },
+          { rsvp: 'accepted' },
+          { rsvp: 'accepted' },
+        ]),
+      ).toEqual({
+        tone: 'accepted',
+        text: 'Confirmaron 3 de 3',
+        accepted: 3,
+        total: 3,
+      });
+    });
+
+    it('returns declined when all guests declined', () => {
+      expect(arrivalRsvpSummary([{ rsvp: 'declined' }])).toEqual({
+        tone: 'declined',
+        text: 'No asistirá',
+        accepted: 0,
+        total: 1,
+      });
+
+      expect(
+        arrivalRsvpSummary([
+          { rsvp: 'declined' },
+          { rsvp: 'declined' },
+          { rsvp: 'declined' },
+        ]),
+      ).toEqual({
+        tone: 'declined',
+        text: 'No asistirán',
+        accepted: 0,
+        total: 3,
+      });
+    });
+
+    it('returns partial when responses are mixed with accepted guests', () => {
+      expect(
+        arrivalRsvpSummary([
+          { rsvp: 'accepted' },
+          { rsvp: 'accepted' },
+          { rsvp: 'pending' },
+          { rsvp: 'declined' },
+        ]),
+      ).toEqual({
+        tone: 'partial',
+        text: 'Confirmaron 2 de 4',
+        accepted: 2,
+        total: 4,
+      });
+    });
+
+    it('returns partial when responses are mixed without accepted guests', () => {
+      expect(
+        arrivalRsvpSummary([
+          { rsvp: 'pending' },
+          { rsvp: 'declined' },
+        ]),
+      ).toEqual({
+        tone: 'partial',
+        text: 'Confirmaron 0 de 2',
+        accepted: 0,
+        total: 2,
+      });
     });
   });
 

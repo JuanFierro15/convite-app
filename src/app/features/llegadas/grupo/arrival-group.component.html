@@ -16,13 +16,17 @@
 
 <ion-content class="group-content">
   @if (invitation(); as inv) {
+    <div class="rsvp-summary">
+      <span class="rsvp-summary__label text-label">Respuesta</span>
+      <app-status-badge [status]="rsvpSummary().tone" [label]="rsvpSummary().text" />
+    </div>
     <ion-list class="guests-list" lines="full">
       @for (guest of inv.guests; track guest.id) {
         <ion-item class="guest-item">
           <div class="guest-item__content">
             <div class="guest-item__main">
               <span class="guest-name text-name">{{ guest.full_name }}</span>
-              <app-status-badge [status]="guest.rsvp" />
+              <app-status-badge [status]="guest.rsvp" [label]="rsvpLabel(guest.rsvp)" />
             </div>
 
             @if (guest.arrivedAt !== null) {

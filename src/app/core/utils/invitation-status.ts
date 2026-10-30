@@ -1,5 +1,15 @@
 import { InvitationStatus, Rsvp, RsvpCounts } from '../models/events';
 
+export function normalizeRsvp(value: unknown): Rsvp {
+  if (value === 'accepted') {
+    return 'accepted';
+  }
+  if (value === 'declined') {
+    return 'declined';
+  }
+  return 'pending';
+}
+
 export function rsvpCounts(guests: readonly { rsvp: Rsvp | string }[]): RsvpCounts {
   let accepted = 0;
   let pending = 0;

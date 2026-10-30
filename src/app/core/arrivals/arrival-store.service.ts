@@ -1,10 +1,45 @@
 import { Injectable } from '@angular/core';
 import { Preferences } from '@capacitor/preferences';
+import { normalizeRsvp } from '../utils/invitation-status';
 import { ArrivalSnapshot, PendingArrival } from './arrival.models';
 
 const PREFIX = 'convite.arrivals.';
 const SNAPSHOT_SUFFIX = '.snapshot';
 const PENDING_SUFFIX = '.pending';
+
+function parseSnapshot(value: string): ArrivalSnapshot | null {
+  try {
+    const parsed = JSON.parse(value) as Partial<ArrivalSnapshot>;
+    if (
+      !parsed ||
+      parsed.version !== 1 ||
+      typeof parsed.eventId !== 'string' ||
+      !Array.isArray(parsed.invitations)
+    ) {
+      return null;
+    }
+
+    const invitations = parsed.invitations.map((inv) => {
+      const rawGuests = Array.isArray(inv?.guests) ? inv.guests : [];
+      const guests = rawGuests.map((guest) => ({
+        ...guest,
+        rsvp: normalizeRsvp(guest?.rsvp),
+      }));
+
+      return {
+        ...inv,
+        guests,
+      };
+    });
+
+    return {
+      ...(parsed as ArrivalSnapshot),
+      invitations,
+    };
+  } catch {
+    return null;
+  }
+}
 
 @Injectable({ providedIn: 'root' })
 export class ArrivalStoreService {
@@ -27,15 +62,7 @@ export class ArrivalStoreService {
     try {
       const { value } = await Preferences.get({ key: this.snapshotKey(eventId) });
       if (value) {
-        const parsed = JSON.parse(value) as Partial<ArrivalSnapshot>;
-        if (
-          parsed &&
-          parsed.version === 1 &&
-          typeof parsed.eventId === 'string' &&
-          Array.isArray(parsed.invitations)
-        ) {
-          snapshot = parsed as ArrivalSnapshot;
-        }
+        snapshot = parseSnapshot(value);
       }
     } catch {
       snapshot = null;
@@ -120,14 +147,9 @@ export class ArrivalStoreService {
         try {
           const { value } = await Preferences.get({ key });
           if (value) {
-            const parsed = JSON.parse(value) as Partial<ArrivalSnapshot>;
-            if (
-              parsed &&
-              parsed.version === 1 &&
-              typeof parsed.eventId === 'string' &&
-              Array.isArray(parsed.invitations)
-            ) {
-              snapshots.push(parsed as ArrivalSnapshot);
+            const parsed = parseSnapshot(value);
+            if (parsed) {
+              snapshots.push(parsed);
             }
           }
         } catch {

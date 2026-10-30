@@ -116,6 +116,57 @@ describe('ArrivalsRepository', () => {
       expect(snapshot.invitations[0].guests[1].id).toBe('g-2');
     });
 
+    it('normalizes null rsvp to pending', async () => {
+      const mockEventQuery = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        single: vi.fn().mockResolvedValue({
+          data: {
+            id: 'event-1',
+            name: 'Baby Shower Ficticio',
+            theme_id: 'default',
+            starts_at: '2026-11-29T15:00:00-05:00',
+          },
+          error: null,
+        }),
+      };
+
+      const mockInvitationsQuery = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({
+          data: [
+            {
+              id: 'inv-1',
+              code: 'ABCD2345GH',
+              group_name: 'Familia Ejemplo',
+              kind: 'individual',
+              guests: [
+                {
+                  id: 'g-null',
+                  full_name: 'Persona Sin Rsvp',
+                  rsvp: null,
+                  sort_order: 1,
+                  created_at: '2026-10-01T00:00:00Z',
+                  arrived_at: null,
+                  arrived_by: null,
+                },
+              ],
+            },
+          ],
+          error: null,
+        }),
+      };
+
+      mockSupabase.client.from.mockImplementation((table: string) => {
+        if (table === 'events') return mockEventQuery;
+        if (table === 'invitations') return mockInvitationsQuery;
+        throw new Error(`Unexpected table: ${table}`);
+      });
+
+      const snapshot = await repository.download('event-1', 'user-organizer');
+      expect(snapshot.invitations[0].guests[0].rsvp).toBe('pending');
+    });
+
     it('translates error with toUserError on failure', async () => {
       mockSupabase.client.from.mockReturnValue({
         select: vi.fn().mockReturnThis(),

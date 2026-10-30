@@ -1,6 +1,8 @@
+import { Rsvp } from '../models/events';
 import { ArrivalCounts, arrivalCounts } from '../utils/arrival-counts';
 import { formatTime } from '../utils/dates';
 import { normalizeInvitationCode } from '../utils/invitation-code';
+import { normalizeRsvp } from '../utils/invitation-status';
 import { normalizeSearchText } from '../utils/text';
 import {
   ArrivalGuestView,
@@ -10,6 +12,75 @@ import {
   PendingArrival,
   RecordArrivalResult,
 } from './arrival.models';
+
+export const ARRIVAL_RSVP_LABELS: Readonly<Record<Rsvp, string>> = {
+  accepted: 'Confirmó',
+  declined: 'No asistirá',
+  pending: 'Sin respuesta',
+};
+
+export type ArrivalRsvpSummaryTone = 'pending' | 'accepted' | 'declined' | 'partial';
+
+export interface ArrivalRsvpSummary {
+  tone: ArrivalRsvpSummaryTone;
+  text: string;
+  accepted: number;
+  total: number;
+}
+
+export function arrivalRsvpSummary(
+  guests: readonly { rsvp: Rsvp | string | null | undefined }[],
+): ArrivalRsvpSummary {
+  const total = guests.length;
+  let accepted = 0;
+  let declined = 0;
+  let pending = 0;
+
+  for (const guest of guests) {
+    const rsvp = normalizeRsvp(guest?.rsvp);
+    if (rsvp === 'accepted') {
+      accepted += 1;
+    } else if (rsvp === 'declined') {
+      declined += 1;
+    } else {
+      pending += 1;
+    }
+  }
+
+  if (total === 0 || pending === total) {
+    return {
+      tone: 'pending',
+      text: 'Sin respuesta',
+      accepted,
+      total,
+    };
+  }
+
+  if (declined === total) {
+    return {
+      tone: 'declined',
+      text: total === 1 ? 'No asistirá' : 'No asistirán',
+      accepted,
+      total,
+    };
+  }
+
+  if (accepted === total) {
+    return {
+      tone: 'accepted',
+      text: total === 1 ? 'Confirmó' : `Confirmaron ${total} de ${total}`,
+      accepted,
+      total,
+    };
+  }
+
+  return {
+    tone: 'partial',
+    text: `Confirmaron ${accepted} de ${total}`,
+    accepted,
+    total,
+  };
+}
 
 export function buildInvitationViews(
   snapshot: ArrivalSnapshot | null,
@@ -32,7 +103,7 @@ export function buildInvitationViews(
         return {
           id: guest.id,
           full_name: guest.full_name,
-          rsvp: guest.rsvp,
+          rsvp: normalizeRsvp(guest.rsvp),
           arrivedAt: guest.arrived_at,
           synced: true,
         };
@@ -44,7 +115,7 @@ export function buildInvitationViews(
         return {
           id: guest.id,
           full_name: guest.full_name,
-          rsvp: guest.rsvp,
+          rsvp: normalizeRsvp(guest.rsvp),
           arrivedAt: pendingArrival.arrivedAt,
           synced: false,
         };
@@ -53,7 +124,7 @@ export function buildInvitationViews(
       return {
         id: guest.id,
         full_name: guest.full_name,
-        rsvp: guest.rsvp,
+        rsvp: normalizeRsvp(guest.rsvp),
         arrivedAt: null,
         synced: true,
       };
@@ -76,7 +147,7 @@ export function countsFromViews(views: readonly ArrivalInvitationView[]): Arriva
   for (const view of views) {
     for (const guest of view.guests) {
       guests.push({
-        rsvp: guest.rsvp,
+        rsvp: normalizeRsvp(guest.rsvp),
         arrived: guest.arrivedAt !== null,
       });
     }

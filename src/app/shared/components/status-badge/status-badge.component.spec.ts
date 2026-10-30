@@ -41,4 +41,19 @@ describe('StatusBadgeComponent', () => {
     expect(span?.textContent?.trim()).toBe('Apartado por: Familia Ejemplo');
     expect(span?.classList.contains('badge-soft-success')).toBe(true);
   });
+
+  it('falls back to pending behavior on unknown status', () => {
+    const fixture = TestBed.createComponent(StatusBadgeComponent);
+    fixture.componentRef.setInput('status', 'unknown_status' as BadgeStatus);
+    fixture.detectChanges();
+
+    const span: HTMLElement | null = fixture.nativeElement.querySelector('span');
+    expect(span?.textContent?.trim()).toBe('Pendiente');
+    expect(span?.classList.contains('badge-soft-warning')).toBe(true);
+
+    fixture.componentRef.setInput('label', 'Etiqueta Personalizada');
+    fixture.detectChanges();
+    expect(span?.textContent?.trim()).toBe('Etiqueta Personalizada');
+    expect(span?.classList.contains('badge-soft-warning')).toBe(true);
+  });
 });

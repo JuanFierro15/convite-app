@@ -250,7 +250,7 @@ describe('ArrivalGroupComponent', () => {
 
     expect(mockAlertCtrl.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        message: 'No confirmó asistencia, ¿registrar de todas formas?',
+        message: 'No respondió la invitación. ¿Registrar su llegada de todas formas?',
         buttons: expect.arrayContaining([
           expect.objectContaining({ text: 'Cancelar', role: 'cancel' }),
           expect.objectContaining({ text: 'Registrar', role: 'confirm' }),
@@ -376,5 +376,177 @@ describe('ArrivalGroupComponent', () => {
 
     await component.close();
     expect(mockModalCtrl.dismiss).toHaveBeenCalled();
+  });
+
+  it('renders "Sin respuesta" in summary and per guest when all guests are pending', async () => {
+    const pendingGuests: ArrivalGuestView[] = [
+      { id: 'g-1', full_name: 'Persona Uno', rsvp: 'pending', arrivedAt: null, synced: true },
+      { id: 'g-2', full_name: 'Persona Dos', rsvp: 'pending', arrivedAt: null, synced: true },
+    ];
+    mockSession.invitations.set([
+      { ...sampleInvitation, id: 'inv-pending', guests: pendingGuests, arrivedCount: 0, totalCount: 2 },
+    ]);
+    component.invitationId = 'inv-pending';
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const summaryEl = fixture.nativeElement.querySelector('.rsvp-summary');
+    expect(summaryEl?.textContent).toContain('Sin respuesta');
+
+    const guestBadges = fixture.nativeElement.querySelectorAll('.guest-item app-status-badge');
+    expect(guestBadges.length).toBe(2);
+    for (const badge of guestBadges) {
+      expect(badge.textContent).toContain('Sin respuesta');
+    }
+  });
+
+  it('renders "Confirmaron 3 de 3" in summary and "Confirmó" per guest when all are accepted', async () => {
+    const acceptedGuests: ArrivalGuestView[] = [
+      { id: 'g-1', full_name: 'Persona Uno', rsvp: 'accepted', arrivedAt: null, synced: true },
+      { id: 'g-2', full_name: 'Persona Dos', rsvp: 'accepted', arrivedAt: null, synced: true },
+      { id: 'g-3', full_name: 'Persona Tres', rsvp: 'accepted', arrivedAt: null, synced: true },
+    ];
+    mockSession.invitations.set([
+      { ...sampleInvitation, id: 'inv-all-acc', guests: acceptedGuests, arrivedCount: 0, totalCount: 3 },
+    ]);
+    component.invitationId = 'inv-all-acc';
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const summaryEl = fixture.nativeElement.querySelector('.rsvp-summary');
+    expect(summaryEl?.textContent).toContain('Confirmaron 3 de 3');
+
+    const guestBadges = fixture.nativeElement.querySelectorAll('.guest-item app-status-badge');
+    expect(guestBadges.length).toBe(3);
+    for (const badge of guestBadges) {
+      expect(badge.textContent).toContain('Confirmó');
+    }
+  });
+
+  it('renders "No asistirán" in summary and "No asistirá" per guest when all are declined', async () => {
+    const declinedGuests: ArrivalGuestView[] = [
+      { id: 'g-1', full_name: 'Persona Uno', rsvp: 'declined', arrivedAt: null, synced: true },
+      { id: 'g-2', full_name: 'Persona Dos', rsvp: 'declined', arrivedAt: null, synced: true },
+    ];
+    mockSession.invitations.set([
+      { ...sampleInvitation, id: 'inv-all-dec', guests: declinedGuests, arrivedCount: 0, totalCount: 2 },
+    ]);
+    component.invitationId = 'inv-all-dec';
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const summaryEl = fixture.nativeElement.querySelector('.rsvp-summary');
+    expect(summaryEl?.textContent).toContain('No asistirán');
+
+    const guestBadges = fixture.nativeElement.querySelectorAll('.guest-item app-status-badge');
+    expect(guestBadges.length).toBe(2);
+    for (const badge of guestBadges) {
+      expect(badge.textContent).toContain('No asistirá');
+    }
+  });
+
+  it('renders "Confirmaron X de N" in summary for mixed responses', async () => {
+    const mixedGuests: ArrivalGuestView[] = [
+      { id: 'g-1', full_name: 'Persona Uno', rsvp: 'accepted', arrivedAt: null, synced: true },
+      { id: 'g-2', full_name: 'Persona Dos', rsvp: 'pending', arrivedAt: null, synced: true },
+      { id: 'g-3', full_name: 'Persona Tres', rsvp: 'declined', arrivedAt: null, synced: true },
+    ];
+    mockSession.invitations.set([
+      { ...sampleInvitation, id: 'inv-mixed', guests: mixedGuests, arrivedCount: 0, totalCount: 3 },
+    ]);
+    component.invitationId = 'inv-mixed';
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const summaryEl = fixture.nativeElement.querySelector('.rsvp-summary');
+    expect(summaryEl?.textContent).toContain('Confirmaron 1 de 3');
+  });
+
+  it('handles offline scan with null rsvp in cache: shows Sin respuesta, does not preselect, and confirms with proper message', async () => {
+    const nullRsvpGuests = [
+      { id: 'g-null-1', full_name: 'Persona Null 1', rsvp: null as any, arrivedAt: null, synced: true },
+      { id: 'g-null-2', full_name: 'Persona Null 2', rsvp: null as any, arrivedAt: null, synced: true },
+    ];
+    mockSession.invitations.set([
+      { ...sampleInvitation, id: 'inv-null-cache', guests: nullRsvpGuests as ArrivalGuestView[], arrivedCount: 0, totalCount: 2 },
+    ]);
+
+    const newFixture = TestBed.createComponent(ArrivalGroupComponent);
+    const newComp = newFixture.componentInstance;
+    newComp.invitationId = 'inv-null-cache';
+    newFixture.detectChanges();
+    await newFixture.whenStable();
+
+    const summaryEl = newFixture.nativeElement.querySelector('.rsvp-summary');
+    expect(summaryEl?.textContent).toContain('Sin respuesta');
+
+    const guestBadges = newFixture.nativeElement.querySelectorAll('.guest-item app-status-badge');
+    for (const badge of guestBadges) {
+      expect(badge.textContent).toContain('Sin respuesta');
+    }
+
+    expect(newComp.pendingSelectedCount()).toBe(0);
+
+    const alertMock = {
+      present: vi.fn().mockResolvedValue(undefined),
+      onDidDismiss: vi.fn().mockResolvedValue({ role: 'confirm' }),
+    };
+    mockAlertCtrl.create.mockResolvedValue(alertMock);
+
+    await newComp.onToggleGuest(
+      nullRsvpGuests[0] as any,
+      new CustomEvent('ionChange', { detail: { checked: true } }),
+    );
+
+    expect(mockAlertCtrl.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'No respondió la invitación. ¿Registrar su llegada de todas formas?',
+      }),
+    );
+  });
+
+  it('prompts confirmation when checking a declined guest and registers after confirmation', async () => {
+    const declinedGuest: ArrivalGuestView = {
+      id: 'g-dec',
+      full_name: 'Persona Rechazada',
+      rsvp: 'declined',
+      arrivedAt: null,
+      synced: true,
+    };
+    mockSession.invitations.set([
+      { ...sampleInvitation, id: 'inv-declined', guests: [declinedGuest], arrivedCount: 0, totalCount: 1 },
+    ]);
+    mockSession.register.mockResolvedValue(1);
+
+    const newFixture = TestBed.createComponent(ArrivalGroupComponent);
+    const newComp = newFixture.componentInstance;
+    newComp.invitationId = 'inv-declined';
+    newFixture.detectChanges();
+    await newFixture.whenStable();
+
+    const alertMock = {
+      present: vi.fn().mockResolvedValue(undefined),
+      onDidDismiss: vi.fn().mockResolvedValue({ role: 'confirm' }),
+    };
+    mockAlertCtrl.create.mockResolvedValue(alertMock);
+
+    await newComp.onToggleGuest(
+      declinedGuest,
+      new CustomEvent('ionChange', { detail: { checked: true } }),
+    );
+
+    expect(mockAlertCtrl.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Dijo que no asistiría. ¿Registrar su llegada de todas formas?',
+        buttons: expect.arrayContaining([
+          expect.objectContaining({ text: 'Cancelar', role: 'cancel' }),
+          expect.objectContaining({ text: 'Registrar', role: 'confirm' }),
+        ]),
+      }),
+    );
+    expect(newComp.isGuestSelected(declinedGuest.id)).toBe(true);
+
+    await newComp.onRegister();
+    expect(mockSession.register).toHaveBeenCalledWith('inv-declined', [declinedGuest.id]);
   });
 });
