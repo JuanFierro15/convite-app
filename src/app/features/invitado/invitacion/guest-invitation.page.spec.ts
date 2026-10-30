@@ -6,6 +6,10 @@ import {
   GuestInvitation,
   formatInvitationCode,
 } from '../../../core';
+import {
+  INTRO_ENVIRONMENT,
+  IntroEnvironment,
+} from '../intro/intro-environment';
 import { GuestInvitationPage } from './guest-invitation.page';
 
 vi.mock('qrcode', () => ({
@@ -65,6 +69,28 @@ const mockIndividualInvitation: GuestInvitation = {
   gifts_open: true,
 };
 
+const mockHoneyBeeInvitation: GuestInvitation = {
+  ...mockGroupInvitation,
+  event: {
+    ...mockGroupInvitation.event,
+    theme_id: 'honey-bee',
+  },
+};
+
+function fakeEnv(
+  overrides: Partial<IntroEnvironment> = {},
+): IntroEnvironment & { markSeen: ReturnType<typeof vi.fn> } {
+  return {
+    isNativePlatform: () => false,
+    prefersReducedMotion: () => false,
+    prefersLessData: () => false,
+    isPortrait: () => true,
+    hasSeen: () => false,
+    markSeen: vi.fn(),
+    ...overrides,
+  } as never;
+}
+
 describe('GuestInvitationPage', () => {
   let fixture: ComponentFixture<GuestInvitationPage>;
   let component: GuestInvitationPage;
@@ -74,6 +100,10 @@ describe('GuestInvitationPage', () => {
   };
 
   beforeEach(async () => {
+    vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined);
+    vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => undefined);
+    vi.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation(() => undefined);
+
     mockGuestApi = {
       getInvitation: vi.fn(),
       setRsvp: vi.fn(),
@@ -84,8 +114,14 @@ describe('GuestInvitationPage', () => {
       providers: [
         provideRouter([]),
         { provide: GuestApiService, useValue: mockGuestApi },
+        { provide: INTRO_ENVIRONMENT, useValue: fakeEnv({ hasSeen: () => true }) },
       ],
     }).compileComponents();
+  });
+
+  afterEach(() => {
+    TestBed.resetTestingModule();
+    vi.restoreAllMocks();
   });
 
   it('renders group invitation with plural texts and entry code card', async () => {
@@ -276,5 +312,142 @@ describe('GuestInvitationPage', () => {
     expect(introParagraphs[0]?.textContent?.trim()).toBe(
       'Tu compañía es el mejor regalo, así que no sientas ningún compromiso. Si te hace ilusión llevar algo, preparamos una lista con algunas ideas.',
     );
+  });
+
+  describe('video de bienvenida (intro layer)', () => {
+    it('1. shows app-guest-intro and adds inert to ion-content for honey-bee theme when offered', async () => {
+      TestBed.overrideProvider(INTRO_ENVIRONMENT, {
+        useValue: fakeEnv({ hasSeen: () => false }),
+      });
+      mockGuestApi.getInvitation.mockResolvedValue(mockHoneyBeeInvitation);
+
+      fixture = TestBed.createComponent(GuestInvitationPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('code', 'ABCD1234JK');
+
+      fixture.detectChanges();
+      await component.loadInvitation();
+      fixture.detectChanges();
+
+      const introEl = fixture.nativeElement.querySelector('app-guest-intro');
+      expect(introEl).not.toBeNull();
+
+      const contentEl = fixture.nativeElement.querySelector('ion-content');
+      expect(contentEl.hasAttribute('inert')).toBe(true);
+    });
+
+    it('2. does not show app-guest-intro or video, and ion-content is not inert for baby-shower theme', async () => {
+      TestBed.overrideProvider(INTRO_ENVIRONMENT, {
+        useValue: fakeEnv({ hasSeen: () => false }),
+      });
+      mockGuestApi.getInvitation.mockResolvedValue(mockGroupInvitation);
+
+      fixture = TestBed.createComponent(GuestInvitationPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('code', 'ABCD1234JK');
+
+      fixture.detectChanges();
+      await component.loadInvitation();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('app-guest-intro')).toBeNull();
+      expect(fixture.nativeElement.querySelector('video')).toBeNull();
+
+      const contentEl = fixture.nativeElement.querySelector('ion-content');
+      expect(contentEl.hasAttribute('inert')).toBe(false);
+    });
+
+    it('3. does not show app-guest-intro or video on native platform with honey-bee', async () => {
+      TestBed.overrideProvider(INTRO_ENVIRONMENT, {
+        useValue: fakeEnv({ isNativePlatform: () => true }),
+      });
+      mockGuestApi.getInvitation.mockResolvedValue(mockHoneyBeeInvitation);
+
+      fixture = TestBed.createComponent(GuestInvitationPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('code', 'ABCD1234JK');
+
+      fixture.detectChanges();
+      await component.loadInvitation();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('app-guest-intro')).toBeNull();
+      expect(fixture.nativeElement.querySelector('video')).toBeNull();
+    });
+
+    it('4. does not show app-guest-intro or video when prefers-reduced-motion is true', async () => {
+      TestBed.overrideProvider(INTRO_ENVIRONMENT, {
+        useValue: fakeEnv({ prefersReducedMotion: () => true }),
+      });
+      mockGuestApi.getInvitation.mockResolvedValue(mockHoneyBeeInvitation);
+
+      fixture = TestBed.createComponent(GuestInvitationPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('code', 'ABCD1234JK');
+
+      fixture.detectChanges();
+      await component.loadInvitation();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('app-guest-intro')).toBeNull();
+      expect(fixture.nativeElement.querySelector('video')).toBeNull();
+    });
+
+    it('5. does not show app-guest-intro or video on second visit (hasSeen is true)', async () => {
+      TestBed.overrideProvider(INTRO_ENVIRONMENT, {
+        useValue: fakeEnv({ hasSeen: () => true }),
+      });
+      mockGuestApi.getInvitation.mockResolvedValue(mockHoneyBeeInvitation);
+
+      fixture = TestBed.createComponent(GuestInvitationPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('code', 'ABCD1234JK');
+
+      fixture.detectChanges();
+      await component.loadInvitation();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('app-guest-intro')).toBeNull();
+      expect(fixture.nativeElement.querySelector('video')).toBeNull();
+    });
+
+    it('6. does not show app-guest-intro while invitation is loading', () => {
+      TestBed.overrideProvider(INTRO_ENVIRONMENT, {
+        useValue: fakeEnv({ hasSeen: () => false }),
+      });
+      mockGuestApi.getInvitation.mockReturnValue(new Promise(() => {}));
+
+      fixture = TestBed.createComponent(GuestInvitationPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('code', 'ABCD1234JK');
+
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('app-guest-intro')).toBeNull();
+    });
+
+    it('7. removes app-guest-intro and removes inert attribute when finished is emitted', async () => {
+      TestBed.overrideProvider(INTRO_ENVIRONMENT, {
+        useValue: fakeEnv({ hasSeen: () => false }),
+      });
+      mockGuestApi.getInvitation.mockResolvedValue(mockHoneyBeeInvitation);
+
+      fixture = TestBed.createComponent(GuestInvitationPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('code', 'ABCD1234JK');
+
+      fixture.detectChanges();
+      await component.loadInvitation();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('app-guest-intro')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('ion-content').hasAttribute('inert')).toBe(true);
+
+      component.onIntroFinished();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('app-guest-intro')).toBeNull();
+      expect(fixture.nativeElement.querySelector('ion-content').hasAttribute('inert')).toBe(false);
+    });
   });
 });

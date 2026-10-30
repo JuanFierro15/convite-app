@@ -1,12 +1,16 @@
 import {
   ChangeDetectionStrategy,
   Component,
+  ElementRef,
+  Injector,
   OnInit,
+  afterNextRender,
   computed,
   effect,
   inject,
   input,
   signal,
+  viewChild,
 } from '@angular/core';
 import { RouterLink } from '@angular/router';
 import {
@@ -41,6 +45,7 @@ import {
   GuestInvitationPerson,
   TABLES_ENABLED,
   ThemeService,
+  findTheme,
   formatInvitationCode,
   formatLongDate,
   formatTime,
@@ -52,6 +57,11 @@ import {
   toBogotaDateInput,
 } from '../../../core';
 import { EmptyStateComponent, IllustrationComponent } from '../../../shared';
+import { GuestIntroComponent } from '../intro/guest-intro.component';
+import {
+  INTRO_ENVIRONMENT,
+  shouldOfferIntro,
+} from '../intro/intro-environment';
 
 @Component({
   selector: 'app-guest-invitation',
@@ -70,16 +80,33 @@ import { EmptyStateComponent, IllustrationComponent } from '../../../shared';
     IonIcon,
     EmptyStateComponent,
     IllustrationComponent,
+    GuestIntroComponent,
   ],
 })
 export class GuestInvitationPage implements OnInit, ViewWillEnter {
   private readonly guestApi = inject(GuestApiService);
   private readonly themeService = inject(ThemeService);
   private readonly toastController = inject(ToastController);
+  private readonly introEnv = inject(INTRO_ENVIRONMENT);
+  private readonly injector = inject(Injector);
+
+  readonly welcomeTitleRef = viewChild<ElementRef<HTMLElement>>('welcomeHeading');
 
   protected readonly tablesEnabled = TABLES_ENABLED;
 
   readonly code = input.required<string>();
+
+  readonly introOffered = signal(false);
+  readonly introCode = computed(() => normalizeInvitationCode(this.code()));
+  readonly introVisible = computed(() => {
+    const inv = this.invitation();
+    return (
+      this.introOffered() &&
+      !this.loading() &&
+      inv !== null &&
+      findTheme(inv.event.theme_id)?.introVideo === true
+    );
+  });
 
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
@@ -95,6 +122,7 @@ export class GuestInvitationPage implements OnInit, ViewWillEnter {
   );
 
   private fetching = false;
+  private fetchPromise: Promise<void> | null = null;
   private lastLoadedCode: string | null = null;
 
   readonly heroCoverUrl = computed(() => {
@@ -187,7 +215,20 @@ export class GuestInvitationPage implements OnInit, ViewWillEnter {
   }
 
   ngOnInit(): void {
+    this.introOffered.set(
+      shouldOfferIntro(this.introEnv, normalizeInvitationCode(this.code())),
+    );
     void this.loadInvitation();
+  }
+
+  onIntroFinished(): void {
+    this.introOffered.set(false);
+    afterNextRender(
+      () => {
+        this.welcomeTitleRef()?.nativeElement.focus();
+      },
+      { injector: this.injector },
+    );
   }
 
   ionViewWillEnter(): void {
@@ -209,9 +250,19 @@ export class GuestInvitationPage implements OnInit, ViewWillEnter {
 
   async loadInvitation(isRefresh = false): Promise<void> {
     if (this.fetching) {
-      return;
+      return this.fetchPromise ?? undefined;
     }
     this.fetching = true;
+    this.fetchPromise = this.executeLoadInvitation(isRefresh);
+    try {
+      await this.fetchPromise;
+    } finally {
+      this.fetchPromise = null;
+      this.fetching = false;
+    }
+  }
+
+  private async executeLoadInvitation(isRefresh: boolean): Promise<void> {
     if (!isRefresh && !this.invitation()) {
       this.loading.set(true);
     }
@@ -247,7 +298,6 @@ export class GuestInvitationPage implements OnInit, ViewWillEnter {
       }
     } finally {
       this.loading.set(false);
-      this.fetching = false;
     }
   }
 

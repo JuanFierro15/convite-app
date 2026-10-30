@@ -1,0 +1,30 @@
+<div
+  class="intro"
+  [class.intro--leaving]="leaving()"
+  role="dialog"
+  aria-modal="true"
+  aria-label="Video de bienvenida"
+  (keydown.escape)="onSkip()"
+>
+  <video
+    #video
+    class="intro__video"
+    [attr.poster]="poster()"
+    muted
+    playsinline
+    autoplay
+    disablepictureinpicture
+    disableremoteplayback
+    aria-hidden="true"
+    (playing)="onPlaying()"
+    (ended)="onEnded()"
+    (error)="onError()"
+  ></video>
+  <button
+    #skipButton
+    type="button"
+    class="intro__skip"
+    aria-label="Saltar video de bienvenida"
+    (click)="onSkip()"
+  >Saltar</button>
+</div>

@@ -59,6 +59,10 @@
   margin: 0;
   font-family: var(--font-heading);
   color: var(--ion-text-color);
+
+  &:focus {
+    outline: none;
+  }
 }
 
 .welcome-card__event {

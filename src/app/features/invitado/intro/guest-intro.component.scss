@@ -1,0 +1,48 @@
+:host {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: block;
+}
+
+.intro {
+  width: 100%;
+  height: 100%;
+  background: var(--ion-background-color);
+  opacity: 1;
+  transition: opacity 300ms ease;
+  position: relative;
+}
+
+.intro--leaving {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.intro__video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.intro__skip {
+  position: absolute;
+  right: 16px;
+  bottom: calc(16px + env(safe-area-inset-bottom));
+  min-height: 44px;
+  min-width: 88px;
+  padding: 0 20px;
+  border-radius: 22px;
+  border: none;
+  background: var(--ion-color-light);
+  color: var(--ion-color-light-contrast);
+  font: inherit;
+  font-weight: 600;
+  box-shadow: var(--shadow-card);
+
+  &:focus-visible {
+    outline: 2px solid var(--ion-color-primary);
+    outline-offset: 2px;
+  }
+}

@@ -5,13 +5,32 @@ export interface ThemeDefinition {
   label: string;
   selectable: boolean;
   hasOwnAssets: boolean;
+  introVideo: boolean;
 }
 
 export const THEMES: readonly ThemeDefinition[] = [
-  { id: 'baby-shower', label: 'Jardín de algodón', selectable: true, hasOwnAssets: true },
-  { id: 'honey-bee', label: 'Miel y flores silvestres', selectable: true, hasOwnAssets: true },
+  {
+    id: 'baby-shower',
+    label: 'Jardín de algodón',
+    selectable: true,
+    hasOwnAssets: true,
+    introVideo: false,
+  },
+  {
+    id: 'honey-bee',
+    label: 'Miel y flores silvestres',
+    selectable: true,
+    hasOwnAssets: true,
+    introVideo: true,
+  },
   // Sin imágenes propias no se ofrece al crear, pero sigue válido para los eventos que ya lo tienen.
-  { id: 'bautizo', label: 'Bautizo', selectable: false, hasOwnAssets: false },
+  {
+    id: 'bautizo',
+    label: 'Bautizo',
+    selectable: false,
+    hasOwnAssets: false,
+    introVideo: false,
+  },
 ];
 
 export const DEFAULT_THEME: ThemeId = 'baby-shower';
@@ -43,3 +62,29 @@ export function themeOptionsFor(currentId?: string | null): ThemeDefinition[] {
   }
   return options;
 }
+
+// El sufijo de versión va en el nombre del archivo porque se publica con caché de un año.
+export const INTRO_VIDEO_VERSION = 'v1';
+
+export type IntroOrientation = 'vertical' | 'horizontal';
+
+export interface IntroVideoSources {
+  video: string;
+  poster: string;
+}
+
+export function introVideoSources(
+  themeId: string | null | undefined,
+  orientation: IntroOrientation,
+): IntroVideoSources | null {
+  const theme = findTheme(themeId);
+  if (!theme || !theme.introVideo) {
+    return null;
+  }
+  const prefix = `assets/video/${theme.id}/intro-${orientation}.${INTRO_VIDEO_VERSION}`;
+  return {
+    video: `${prefix}.mp4`,
+    poster: `${prefix}.webp`,
+  };
+}
+

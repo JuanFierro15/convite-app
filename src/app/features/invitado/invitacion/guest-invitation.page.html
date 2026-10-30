@@ -1,4 +1,4 @@
-<ion-content>
+<ion-content [attr.inert]="introVisible() ? '' : null">
   <ion-refresher slot="fixed" (ionRefresh)="onRefresh($event)">
     <ion-refresher-content></ion-refresher-content>
   </ion-refresher>
@@ -20,7 +20,7 @@
       <div class="guest-body">
         <ion-card class="welcome-card">
           <ion-card-content class="welcome-card__content">
-            <h1 class="text-title welcome-card__title">{{ welcomeTitle() }}</h1>
+            <h1 #welcomeHeading tabindex="-1" class="text-title welcome-card__title">{{ welcomeTitle() }}</h1>
             <p class="text-section welcome-card__event">{{ inv.event.name }}</p>
             @if (inv.event.welcome_message; as welcomeMsg) {
               <p class="text-body welcome-card__message">{{ welcomeMsg }}</p>
@@ -250,3 +250,12 @@
     }
   </div>
 </ion-content>
+
+@if (introVisible()) {
+  <app-guest-intro
+    [code]="introCode()"
+    [themeId]="invitation()!.event.theme_id"
+    (finished)="onIntroFinished()"
+  />
+}
+
