@@ -104,10 +104,10 @@ describe('GuestIntroComponent', () => {
     ) as HTMLVideoElement;
     expect(videoEl).not.toBeNull();
     expect(
-      videoEl.src.endsWith('assets/video/honey-bee/intro-vertical.v2.mp4'),
+      videoEl.src.endsWith('assets/video/honey-bee/intro-vertical.v3.mp4'),
     ).toBe(true);
     expect(
-      videoEl.getAttribute('poster')?.endsWith('intro-vertical.v2.webp'),
+      videoEl.getAttribute('poster')?.endsWith('intro-vertical.v3.webp'),
     ).toBe(true);
     expect(videoEl.muted).toBe(true);
     expect(playSpy).toHaveBeenCalledTimes(1);
@@ -122,7 +122,7 @@ describe('GuestIntroComponent', () => {
       '.intro__video',
     ) as HTMLVideoElement;
     expect(
-      videoEl.src.endsWith('assets/video/honey-bee/intro-horizontal.v2.mp4'),
+      videoEl.src.endsWith('assets/video/honey-bee/intro-horizontal.v3.mp4'),
     ).toBe(true);
   });
 

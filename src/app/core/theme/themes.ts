@@ -64,7 +64,7 @@ export function themeOptionsFor(currentId?: string | null): ThemeDefinition[] {
 }
 
 // El sufijo de versión va en el nombre del archivo porque se publica con caché de un año.
-export const INTRO_VIDEO_VERSION = 'v2';
+export const INTRO_VIDEO_VERSION = 'v3';
 
 export type IntroOrientation = 'vertical' | 'horizontal';
 
