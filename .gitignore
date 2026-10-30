@@ -84,8 +84,9 @@ skills-lock.json
 # Planificación
 /planificacion/
 
-# Imágenes originales
+# Imágenes y videos originales
 /originales-jpg/
+/originales-video/
 
 # wrangler files
 .wrangler
