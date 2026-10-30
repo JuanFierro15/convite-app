@@ -136,6 +136,12 @@ describe('EventDashboardPage - Arrivals & Attendance', () => {
     const routerLinkInstance = arrivalElement?.injector.get(RouterLink);
     expect(routerLinkInstance?.urlTree?.toString()).toBe('/eventos/event-123/llegadas');
     expect(arrivalElement?.nativeElement.textContent).not.toContain('Pronto');
+
+    const titles = Array.from(
+      fixture.nativeElement.querySelectorAll('.access-card__title'),
+    ).map((el) => (el as HTMLElement).textContent?.trim());
+    expect(titles).toContain('Invitaciones');
+    expect(titles).not.toContain('Mesas');
   });
 
   it('renders enabled Llegada con QR card with correct route for helpers', async () => {

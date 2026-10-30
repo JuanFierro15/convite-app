@@ -172,22 +172,24 @@
                 </ion-card>
               </ion-col>
 
-              <ion-col size="6">
-                <ion-card
-                  class="access-card access-card--disabled"
-                  aria-disabled="true"
-                >
-                  <ion-card-content class="access-card__content">
-                    <div class="access-card__top">
-                      <div class="access-card__icon-box access-card__icon-box--disabled">
-                        <ion-icon name="grid-outline" aria-hidden="true"></ion-icon>
+              @if (tablesEnabled) {
+                <ion-col size="6">
+                  <ion-card
+                    class="access-card access-card--disabled"
+                    aria-disabled="true"
+                  >
+                    <ion-card-content class="access-card__content">
+                      <div class="access-card__top">
+                        <div class="access-card__icon-box access-card__icon-box--disabled">
+                          <ion-icon name="grid-outline" aria-hidden="true"></ion-icon>
+                        </div>
+                        <span class="badge-soft-medium text-label">Pronto</span>
                       </div>
-                      <span class="badge-soft-medium text-label">Pronto</span>
-                    </div>
-                    <span class="text-name access-card__title">Mesas</span>
-                  </ion-card-content>
-                </ion-card>
-              </ion-col>
+                      <span class="text-name access-card__title">Mesas</span>
+                    </ion-card-content>
+                  </ion-card>
+                </ion-col>
+              }
 
               <ion-col size="6">
                 <ion-card

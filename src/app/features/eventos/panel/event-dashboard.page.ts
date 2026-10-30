@@ -48,6 +48,7 @@ import {
   EventsRepository,
   RealtimeService,
   RsvpCounts,
+  TABLES_ENABLED,
   daysUntil,
   formatTime,
 } from '../../../core';
@@ -102,6 +103,8 @@ export class EventDashboardPage implements ViewWillEnter, ViewWillLeave {
   private readonly destroyRef = inject(DestroyRef);
 
   readonly id = input.required<string>();
+
+  protected readonly tablesEnabled = TABLES_ENABLED;
 
   readonly event = this.eventContext.event;
   readonly isOwner = this.eventContext.isOwner;

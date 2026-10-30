@@ -2,6 +2,7 @@ export * from './arrivals';
 export * from './auth';
 export * from './data';
 export * from './events';
+export * from './features';
 export * from './models';
 export * from './realtime';
 export * from './supabase';
