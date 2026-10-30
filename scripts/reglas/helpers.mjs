@@ -559,6 +559,7 @@ export async function setupTestContext(ctx) {
           event_id: ctx.eventX.id,
           name: 'Regalo Repetible Evento X',
           kind: 'repeatable',
+          max_reservations: 2,
           sort_order: 2,
         })
         .select()
@@ -673,6 +674,7 @@ export async function setupTestContext(ctx) {
           event_id: ctx.eventStarted.id,
           name: 'Regalo Repetible Evento Iniciado',
           kind: 'repeatable',
+          max_reservations: 2,
           sort_order: 2,
         })
         .select()

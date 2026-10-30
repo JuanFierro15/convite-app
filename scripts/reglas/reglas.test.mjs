@@ -735,7 +735,7 @@ test(
   async () => {
     const { error: updateError } = await ctx.ownerXClient
       .from('gifts')
-      .update({ kind: 'repeatable' })
+      .update({ kind: 'repeatable', max_reservations: 2 })
       .eq('id', ctx.giftXReserved.id);
 
     assert.ok(
@@ -3182,7 +3182,7 @@ test(
         event_id: ctx.eventX.id,
         name: `PRUEBA-${ctx.run}-REGALO-35`,
         kind: 'repeatable',
-        max_reservations: 1,
+        max_reservations: 2,
         sort_order: 35,
       })
       .select()
@@ -3191,7 +3191,7 @@ test(
     assert.equal(
       createGiftError,
       null,
-      'Se esperaba crear con el administrador el regalo repetible con tope 1 sin error'
+      'Se esperaba crear con el administrador el regalo repetible con tope 2 sin error'
     );
     assert.ok(
       gift35?.id,
@@ -3206,7 +3206,7 @@ test(
     assert.equal(
       reserveAError,
       null,
-      'Se esperaba que la familia A pudiera apartar el único cupo sin error'
+      'Se esperaba que la familia A pudiera apartar el primer cupo sin error'
     );
 
     const { error: reserveBError } = await ctx.anonClient.rpc('reserve_gift', {
@@ -3214,13 +3214,24 @@ test(
       p_gift_id: gift35.id,
     });
 
-    assert.ok(
+    assert.equal(
       reserveBError,
-      'Se esperaba un error cuando la familia B intenta apartar un regalo lleno'
+      null,
+      'Se esperaba que la familia B pudiera apartar el segundo cupo sin error'
+    );
+
+    const { error: reserveCError } = await ctx.anonClient.rpc('reserve_gift', {
+      p_code: ctx.invitationC.code,
+      p_gift_id: gift35.id,
+    });
+
+    assert.ok(
+      reserveCError,
+      'Se esperaba un error cuando la familia C intenta apartar un regalo lleno'
     );
     assert.ok(
-      reserveBError.message.includes('gift_full'),
-      `Se esperaba el código gift_full, pero se recibió: ${reserveBError.message}`
+      reserveCError.message.includes('gift_full'),
+      `Se esperaba el código gift_full, pero se recibió: ${reserveCError.message}`
     );
 
     const { data: releaseData, error: releaseError } = await ctx.anonClient.rpc(
@@ -3252,31 +3263,31 @@ test(
       'Se esperaba full = false para el regalo tras ser liberado'
     );
 
-    const { data: reserveBData, error: reserveBSuccessError } =
+    const { data: reserveCData, error: reserveCSuccessError } =
       await ctx.anonClient.rpc('reserve_gift', {
-        p_code: ctx.invitationB.code,
+        p_code: ctx.invitationC.code,
         p_gift_id: gift35.id,
       });
 
     assert.equal(
-      reserveBSuccessError,
+      reserveCSuccessError,
       null,
-      'Se esperaba que la familia B pudiera apartar el regalo liberado sin error'
+      'Se esperaba que la familia C pudiera apartar el regalo liberado sin error'
     );
-    const reservedByBGift = (reserveBData ?? []).find(
+    const reservedByCGift = (reserveCData ?? []).find(
       (g) => g.id === gift35.id
     );
     assert.ok(
-      reservedByBGift,
-      'Se esperaba encontrar el regalo en la respuesta devuelta a la familia B'
+      reservedByCGift,
+      'Se esperaba encontrar el regalo en la respuesta devuelta a la familia C'
     );
     assert.equal(
-      reservedByBGift.full,
+      reservedByCGift.full,
       true,
       'Se esperaba full = true tras apartar el cupo que fue liberado'
     );
     assert.equal(
-      reservedByBGift.remaining,
+      reservedByCGift.remaining,
       0,
       'Se esperaba remaining = 0 tras apartar el cupo que fue liberado'
     );
@@ -3329,18 +3340,28 @@ test(
       'Se esperaba que la familia B pudiera apartar sin error'
     );
 
-    const { error: updateTo1Error } = await ctx.ownerXClient
+    const { error: resCError } = await ctx.anonClient.rpc('reserve_gift', {
+      p_code: ctx.invitationC.code,
+      p_gift_id: gift36.id,
+    });
+    assert.equal(
+      resCError,
+      null,
+      'Se esperaba que la familia C pudiera apartar sin error'
+    );
+
+    const { error: updateTo2Error } = await ctx.ownerXClient
       .from('gifts')
-      .update({ max_reservations: 1 })
+      .update({ max_reservations: 2 })
       .eq('id', gift36.id);
 
     assert.ok(
-      updateTo1Error,
+      updateTo2Error,
       'Se esperaba un error al intentar bajar el tope por debajo del número de reservas'
     );
     assert.ok(
-      updateTo1Error.message.includes('reservations_exceed_limit'),
-      `Se esperaba reservations_exceed_limit, pero se recibió: ${updateTo1Error.message}`
+      updateTo2Error.message.includes('reservations_exceed_limit'),
+      `Se esperaba reservations_exceed_limit, pero se recibió: ${updateTo2Error.message}`
     );
 
     const { data: giftAfterFailedUpdate, error: checkGiftError } =
@@ -3361,111 +3382,54 @@ test(
       'Se esperaba que max_reservations mantuviera su valor original de 3 tras fallar el update'
     );
 
-    const { error: updateTo2Error } = await ctx.ownerXClient
+    const { error: updateTo4Error } = await ctx.ownerXClient
       .from('gifts')
-      .update({ max_reservations: 2 })
+      .update({ max_reservations: 4 })
       .eq('id', gift36.id);
 
     assert.equal(
-      updateTo2Error,
+      updateTo4Error,
       null,
-      'Se esperaba que actualizar max_reservations a 2 fuera exitoso'
+      'Se esperaba que subir max_reservations a 4 fuera exitoso'
     );
 
-    const { error: updateToNullError } = await ctx.ownerXClient
-      .from('gifts')
-      .update({ max_reservations: null })
-      .eq('id', gift36.id);
-
-    assert.equal(
-      updateToNullError,
-      null,
-      'Se esperaba que actualizar max_reservations a null fuera exitoso'
-    );
-
-    const { data: giftsAfterNull, error: giftsNullError } =
+    const { data: giftsAfterUpdate, error: giftsUpdateError } =
       await ctx.anonClient.rpc('get_gifts', {
         p_code: ctx.invitationA.code,
       });
 
     assert.equal(
-      giftsNullError,
+      giftsUpdateError,
       null,
-      'Se esperaba consultar get_gifts tras poner el tope en null sin error'
+      'Se esperaba consultar get_gifts tras subir el tope sin error'
     );
-    const giftAfterNullItem = (giftsAfterNull ?? []).find(
+    const giftAfterUpdateItem = (giftsAfterUpdate ?? []).find(
       (g) => g.id === gift36.id
     );
     assert.ok(
-      giftAfterNullItem,
-      'Se esperaba encontrar el regalo en get_gifts tras actualizar tope a null'
+      giftAfterUpdateItem,
+      'Se esperaba encontrar el regalo en get_gifts tras actualizar el tope'
     );
     assert.equal(
-      giftAfterNullItem.remaining,
-      null,
-      'Se esperaba que remaining fuera null al actualizar el tope a null'
+      giftAfterUpdateItem.remaining,
+      1,
+      'Se esperaba que remaining fuera 1 al subir el tope a 4 con 3 reservas'
     );
     assert.equal(
-      giftAfterNullItem.full,
+      giftAfterUpdateItem.full,
       false,
-      'Se esperaba que full fuera false al actualizar el tope a null'
-    );
-
-    const { data: giftNoLimit, error: createNoLimitError } =
-      await ctx.adminClient
-        .from('gifts')
-        .insert({
-          event_id: ctx.eventX.id,
-          name: `PRUEBA-${ctx.run}-REGALO-36-SIN-TOPE`,
-          kind: 'repeatable',
-          max_reservations: null,
-          sort_order: 37,
-        })
-        .select()
-        .single();
-
-    assert.equal(
-      createNoLimitError,
-      null,
-      'Se esperaba crear un regalo sin tope sin error'
-    );
-    assert.ok(
-      giftNoLimit?.id,
-      'Se esperaba recibir el id del regalo creado sin tope'
-    );
-
-    const { data: giftsNoLimitList, error: giftsNoLimitError } =
-      await ctx.anonClient.rpc('get_gifts', {
-        p_code: ctx.invitationA.code,
-      });
-
-    assert.equal(
-      giftsNoLimitError,
-      null,
-      'Se esperaba consultar get_gifts para el regalo sin tope sin error'
-    );
-    const noLimitItem = (giftsNoLimitList ?? []).find(
-      (g) => g.id === giftNoLimit.id
-    );
-    assert.ok(
-      noLimitItem,
-      'Se esperaba encontrar el regalo sin tope en get_gifts'
+      'Se esperaba que full fuera false al subir el tope a 4 con 3 reservas'
     );
     assert.equal(
-      noLimitItem.remaining,
-      null,
-      'Se esperaba remaining = null en un regalo creado sin tope'
-    );
-    assert.equal(
-      noLimitItem.full,
-      false,
-      'Se esperaba full = false en un regalo creado sin tope'
+      giftAfterUpdateItem.max_reservations,
+      4,
+      'Se esperaba que max_reservations fuera 4 en get_gifts'
     );
   }
 );
 
 test(
-  '37. Un regalo único o libre no acepta límite y el límite debe ser 1 o más',
+  '37. Un regalo único, libre o sugerencia no acepta límite y el límite debe ser 2 o más',
   { timeout: TEST_TIMEOUT_MS },
   async () => {
     const uniqueInvalidName = `PRUEBA-${ctx.run}-REGALO-37-UNIQUE-INVALID`;
@@ -3516,6 +3480,30 @@ test(
       `Se esperaba la restricción gifts_max_reservations_valid, pero se recibió: ${freeError.message}`
     );
 
+    const suggestionInvalidName = `PRUEBA-${ctx.run}-REGALO-37-SUGGESTION-INVALID`;
+    const { error: suggestionError } = await ctx.ownerXClient
+      .from('gifts')
+      .insert({
+        event_id: ctx.eventX.id,
+        name: suggestionInvalidName,
+        kind: 'suggestion',
+        max_reservations: 2,
+      });
+
+    assert.ok(
+      suggestionError,
+      'Se esperaba un error al crear un regalo suggestion con max_reservations'
+    );
+    assert.equal(
+      suggestionError.code,
+      '23514',
+      'Se esperaba el código de error 23514 (check_violation)'
+    );
+    assert.ok(
+      suggestionError.message.includes('gifts_max_reservations_valid'),
+      `Se esperaba la restricción gifts_max_reservations_valid, pero se recibió: ${suggestionError.message}`
+    );
+
     const zeroInvalidName = `PRUEBA-${ctx.run}-REGALO-37-ZERO-INVALID`;
     const { error: zeroError } = await ctx.ownerXClient
       .from('gifts')
@@ -3538,6 +3526,30 @@ test(
     assert.ok(
       zeroError.message.includes('gifts_max_reservations_valid'),
       `Se esperaba la restricción gifts_max_reservations_valid, pero se recibió: ${zeroError.message}`
+    );
+
+    const oneInvalidName = `PRUEBA-${ctx.run}-REGALO-37-ONE-INVALID`;
+    const { error: oneError } = await ctx.ownerXClient
+      .from('gifts')
+      .insert({
+        event_id: ctx.eventX.id,
+        name: oneInvalidName,
+        kind: 'repeatable',
+        max_reservations: 1,
+      });
+
+    assert.ok(
+      oneError,
+      'Se esperaba un error al crear un regalo repeatable con max_reservations = 1'
+    );
+    assert.equal(
+      oneError.code,
+      '23514',
+      'Se esperaba el código de error 23514 (check_violation)'
+    );
+    assert.ok(
+      oneError.message.includes('gifts_max_reservations_valid'),
+      `Se esperaba la restricción gifts_max_reservations_valid, pero se recibió: ${oneError.message}`
     );
 
     const validRepeatableName = `PRUEBA-${ctx.run}-REGALO-37-REPEATABLE-VALID`;
@@ -3582,7 +3594,13 @@ test(
       `Se esperaba la restricción gifts_max_reservations_valid, pero se recibió: ${changeKindError.message}`
     );
 
-    const failedNames = [uniqueInvalidName, freeInvalidName, zeroInvalidName];
+    const failedNames = [
+      uniqueInvalidName,
+      freeInvalidName,
+      suggestionInvalidName,
+      zeroInvalidName,
+      oneInvalidName,
+    ];
     const { data: failedGifts, error: checkFailedError } = await ctx.adminClient
       .from('gifts')
       .select('id, name')
@@ -3932,6 +3950,506 @@ test(
       }
     } finally {
       await ctx.adminClient.from('invitations').delete().eq('id', invId);
+    }
+  }
+);
+
+test(
+  '41. Reservar una sugerencia falla y no deja reserva',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    const suggestionName = `PRUEBA-${ctx.run}-REGALO-41-SUGERENCIA`;
+    const repeatableName = `PRUEBA-${ctx.run}-REGALO-41-REPETIBLE`;
+    let suggestionId;
+    let repeatableId;
+
+    try {
+      const { data: suggestionGift, error: createSuggestionError } =
+        await ctx.adminClient
+          .from('gifts')
+          .insert({
+            event_id: ctx.eventX.id,
+            name: suggestionName,
+            kind: 'suggestion',
+            sort_order: 41,
+          })
+          .select()
+          .single();
+
+      assert.equal(
+        createSuggestionError,
+        null,
+        'Se esperaba crear la sugerencia con el administrador sin error'
+      );
+      assert.ok(
+        suggestionGift?.id,
+        'Se esperaba recibir el id de la sugerencia creada para la prueba 41'
+      );
+      suggestionId = suggestionGift.id;
+
+      const { data: repeatableGift, error: createRepeatableError } =
+        await ctx.adminClient
+          .from('gifts')
+          .insert({
+            event_id: ctx.eventX.id,
+            name: repeatableName,
+            kind: 'repeatable',
+            max_reservations: 2,
+            sort_order: 42,
+          })
+          .select()
+          .single();
+
+      assert.equal(
+        createRepeatableError,
+        null,
+        'Se esperaba crear el repetible con tope 2 con el administrador sin error'
+      );
+      assert.ok(
+        repeatableGift?.id,
+        'Se esperaba recibir el id del repetible creado para la prueba 41'
+      );
+      repeatableId = repeatableGift.id;
+
+      const { error: reserveSuggestionError } = await ctx.anonClient.rpc(
+        'reserve_gift',
+        {
+          p_code: ctx.invitationA.code,
+          p_gift_id: suggestionId,
+        }
+      );
+
+      assert.ok(
+        reserveSuggestionError,
+        'Se esperaba un error al apartar una sugerencia'
+      );
+      assert.equal(
+        reserveSuggestionError.message,
+        'gift_not_reservable',
+        `Se esperaba el mensaje de error gift_not_reservable, pero se recibió: ${reserveSuggestionError.message}`
+      );
+
+      const { data: reservationsForSuggestion, error: checkReservationsError } =
+        await ctx.adminClient
+          .from('gift_reservations')
+          .select('id')
+          .eq('gift_id', suggestionId);
+
+      assert.equal(
+        checkReservationsError,
+        null,
+        'Se esperaba consultar las reservas de la sugerencia sin error'
+      );
+      assert.equal(
+        reservationsForSuggestion?.length,
+        0,
+        'Se esperaba que no hubiera filas en gift_reservations para la sugerencia'
+      );
+
+      const { data: giftsList, error: getGiftsError } = await ctx.anonClient.rpc(
+        'get_gifts',
+        { p_code: ctx.invitationA.code }
+      );
+
+      assert.equal(
+        getGiftsError,
+        null,
+        'Se esperaba consultar get_gifts sin error'
+      );
+
+      const suggestionItem = (giftsList ?? []).find(
+        (g) => g.id === suggestionId
+      );
+      assert.ok(
+        suggestionItem,
+        'Se esperaba encontrar la sugerencia en get_gifts'
+      );
+      assert.equal(
+        suggestionItem.kind,
+        'suggestion',
+        'Se esperaba kind = suggestion para la sugerencia'
+      );
+      assert.equal(
+        suggestionItem.reserved_by_me,
+        false,
+        'Se esperaba reserved_by_me = false para la sugerencia'
+      );
+      assert.equal(
+        suggestionItem.taken,
+        false,
+        'Se esperaba taken = false para la sugerencia'
+      );
+      assert.equal(
+        suggestionItem.remaining,
+        null,
+        'Se esperaba remaining = null para la sugerencia'
+      );
+      assert.equal(
+        suggestionItem.full,
+        false,
+        'Se esperaba full = false para la sugerencia'
+      );
+      assert.equal(
+        suggestionItem.max_reservations,
+        null,
+        'Se esperaba max_reservations = null para la sugerencia'
+      );
+
+      const repeatableItem = (giftsList ?? []).find(
+        (g) => g.id === repeatableId
+      );
+      assert.ok(
+        repeatableItem,
+        'Se esperaba encontrar el repetible en get_gifts'
+      );
+      assert.equal(
+        repeatableItem.max_reservations,
+        2,
+        'Se esperaba max_reservations = 2 para el repetible'
+      );
+      assert.equal(
+        repeatableItem.remaining,
+        2,
+        'Se esperaba remaining = 2 para el repetible'
+      );
+
+      const { error: reserveRepeatableError } = await ctx.anonClient.rpc(
+        'reserve_gift',
+        {
+          p_code: ctx.invitationA.code,
+          p_gift_id: repeatableId,
+        }
+      );
+
+      assert.equal(
+        reserveRepeatableError,
+        null,
+        'Se esperaba que la familia A pudiera apartar el repetible sin error'
+      );
+    } finally {
+      const idsToDelete = [suggestionId, repeatableId].filter(Boolean);
+      if (idsToDelete.length > 0) {
+        await ctx.adminClient.from('gifts').delete().in('id', idsToDelete);
+      }
+    }
+  }
+);
+
+test(
+  '42. Un repetible exige tope de 2 o más y una sugerencia no acepta tope',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    const nullLimitName = `PRUEBA-${ctx.run}-REGALO-42-NULL-LIMIT`;
+    const { error: nullLimitError } = await ctx.ownerXClient
+      .from('gifts')
+      .insert({
+        event_id: ctx.eventX.id,
+        name: nullLimitName,
+        kind: 'repeatable',
+        max_reservations: null,
+      });
+
+    assert.ok(
+      nullLimitError,
+      'Se esperaba un error al crear un repetible con max_reservations = null'
+    );
+    assert.equal(
+      nullLimitError.code,
+      '23514',
+      'Se esperaba el código de error 23514 (check_violation)'
+    );
+    assert.ok(
+      nullLimitError.message.includes('gifts_max_reservations_valid'),
+      `Se esperaba la restricción gifts_max_reservations_valid, pero se recibió: ${nullLimitError.message}`
+    );
+
+    const oneLimitName = `PRUEBA-${ctx.run}-REGALO-42-ONE-LIMIT`;
+    const { error: oneLimitError } = await ctx.ownerXClient
+      .from('gifts')
+      .insert({
+        event_id: ctx.eventX.id,
+        name: oneLimitName,
+        kind: 'repeatable',
+        max_reservations: 1,
+      });
+
+    assert.ok(
+      oneLimitError,
+      'Se esperaba un error al crear un repetible con max_reservations = 1'
+    );
+    assert.equal(
+      oneLimitError.code,
+      '23514',
+      'Se esperaba el código de error 23514 (check_violation)'
+    );
+    assert.ok(
+      oneLimitError.message.includes('gifts_max_reservations_valid'),
+      `Se esperaba la restricción gifts_max_reservations_valid, pero se recibió: ${oneLimitError.message}`
+    );
+
+    const suggestionWithLimitName = `PRUEBA-${ctx.run}-REGALO-42-SUGG-WITH-LIMIT`;
+    const { error: suggWithLimitError } = await ctx.ownerXClient
+      .from('gifts')
+      .insert({
+        event_id: ctx.eventX.id,
+        name: suggestionWithLimitName,
+        kind: 'suggestion',
+        max_reservations: 2,
+      });
+
+    assert.ok(
+      suggWithLimitError,
+      'Se esperaba un error al crear una sugerencia con max_reservations = 2'
+    );
+    assert.equal(
+      suggWithLimitError.code,
+      '23514',
+      'Se esperaba el código de error 23514 (check_violation)'
+    );
+    assert.ok(
+      suggWithLimitError.message.includes('gifts_max_reservations_valid'),
+      `Se esperaba la restricción gifts_max_reservations_valid, pero se recibió: ${suggWithLimitError.message}`
+    );
+
+    let validSuggestionId;
+    let validRepeatableId;
+
+    try {
+      const validSuggestionName = `PRUEBA-${ctx.run}-REGALO-42-SUGG-VALID`;
+      const { data: createdSuggestion, error: createSuggestionError } =
+        await ctx.ownerXClient
+          .from('gifts')
+          .insert({
+            event_id: ctx.eventX.id,
+            name: validSuggestionName,
+            kind: 'suggestion',
+          })
+          .select()
+          .single();
+
+      assert.equal(
+        createSuggestionError,
+        null,
+        'Se esperaba crear una sugerencia sin tope sin error'
+      );
+      assert.ok(
+        createdSuggestion?.id,
+        'Se esperaba recibir el id de la sugerencia creada'
+      );
+      validSuggestionId = createdSuggestion.id;
+
+      const validRepeatableName = `PRUEBA-${ctx.run}-REGALO-42-REP-VALID`;
+      const { data: createdRepeatable, error: createRepeatableError } =
+        await ctx.ownerXClient
+          .from('gifts')
+          .insert({
+            event_id: ctx.eventX.id,
+            name: validRepeatableName,
+            kind: 'repeatable',
+            max_reservations: 2,
+          })
+          .select()
+          .single();
+
+      assert.equal(
+        createRepeatableError,
+        null,
+        'Se esperaba crear un repetible válido con max_reservations = 2 sin error'
+      );
+      assert.ok(
+        createdRepeatable?.id,
+        'Se esperaba recibir el id del repetible válido'
+      );
+      validRepeatableId = createdRepeatable.id;
+
+      const { error: updateToNullError } = await ctx.ownerXClient
+        .from('gifts')
+        .update({ max_reservations: null })
+        .eq('id', validRepeatableId);
+
+      assert.ok(
+        updateToNullError,
+        'Se esperaba un error al actualizar max_reservations a null en un repetible'
+      );
+      assert.equal(
+        updateToNullError.code,
+        '23514',
+        'Se esperaba el código de error 23514 (check_violation)'
+      );
+      assert.ok(
+        updateToNullError.message.includes('gifts_max_reservations_valid'),
+        `Se esperaba la restricción gifts_max_reservations_valid, pero se recibió: ${updateToNullError.message}`
+      );
+    } finally {
+      const idsToDelete = [validSuggestionId, validRepeatableId].filter(Boolean);
+      if (idsToDelete.length > 0) {
+        await ctx.adminClient.from('gifts').delete().in('id', idsToDelete);
+      }
+    }
+  }
+);
+
+test(
+  '43. Un repetible con reservas no pasa a sugerencia, y una sugerencia pasa a repetible solo con tope',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    let repeatableId;
+    let suggestionId;
+
+    try {
+      const repeatableName = `PRUEBA-${ctx.run}-REGALO-43-REPETIBLE`;
+      const { data: repeatableGift, error: createRepError } =
+        await ctx.adminClient
+          .from('gifts')
+          .insert({
+            event_id: ctx.eventX.id,
+            name: repeatableName,
+            kind: 'repeatable',
+            max_reservations: 2,
+          })
+          .select()
+          .single();
+
+      assert.equal(
+        createRepError,
+        null,
+        'Se esperaba crear el regalo repetible con tope 2 sin error'
+      );
+      assert.ok(
+        repeatableGift?.id,
+        'Se esperaba recibir el id del regalo repetible'
+      );
+      repeatableId = repeatableGift.id;
+
+      const { error: reserveError } = await ctx.anonClient.rpc('reserve_gift', {
+        p_code: ctx.invitationA.code,
+        p_gift_id: repeatableId,
+      });
+
+      assert.equal(
+        reserveError,
+        null,
+        'Se esperaba que la familia A pudiera apartar el repetible sin error'
+      );
+
+      const { error: updateToSuggError } = await ctx.ownerXClient
+        .from('gifts')
+        .update({ kind: 'suggestion', max_reservations: null })
+        .eq('id', repeatableId);
+
+      assert.ok(
+        updateToSuggError,
+        'Se esperaba un error al cambiar a sugerencia un regalo que tiene reservas'
+      );
+      assert.equal(
+        updateToSuggError.message,
+        'gift_has_reservations',
+        `Se esperaba el mensaje de error gift_has_reservations, pero se recibió: ${updateToSuggError.message}`
+      );
+
+      const { data: storedRepeatable, error: checkRepError } =
+        await ctx.adminClient
+          .from('gifts')
+          .select('id, kind, max_reservations')
+          .eq('id', repeatableId)
+          .single();
+
+      assert.equal(
+        checkRepError,
+        null,
+        'Se esperaba consultar el repetible con el administrador sin error'
+      );
+      assert.equal(
+        storedRepeatable?.kind,
+        'repeatable',
+        'Se esperaba que el regalo siguiera siendo repeatable tras fallar el update'
+      );
+      assert.equal(
+        storedRepeatable?.max_reservations,
+        2,
+        'Se esperaba que max_reservations siguiera siendo 2'
+      );
+
+      const suggestionName = `PRUEBA-${ctx.run}-REGALO-43-SUGERENCIA`;
+      const { data: suggestionGift, error: createSuggError } =
+        await ctx.ownerXClient
+          .from('gifts')
+          .insert({
+            event_id: ctx.eventX.id,
+            name: suggestionName,
+            kind: 'suggestion',
+          })
+          .select()
+          .single();
+
+      assert.equal(
+        createSuggError,
+        null,
+        'Se esperaba crear la sugerencia sin reservas sin error'
+      );
+      assert.ok(
+        suggestionGift?.id,
+        'Se esperaba recibir el id de la sugerencia'
+      );
+      suggestionId = suggestionGift.id;
+
+      const { error: updateNoLimitError } = await ctx.ownerXClient
+        .from('gifts')
+        .update({ kind: 'repeatable' })
+        .eq('id', suggestionId);
+
+      assert.ok(
+        updateNoLimitError,
+        'Se esperaba un error al cambiar la sugerencia a repetible sin tope'
+      );
+      assert.equal(
+        updateNoLimitError.code,
+        '23514',
+        'Se esperaba el código de error 23514 (check_violation)'
+      );
+      assert.ok(
+        updateNoLimitError.message.includes('gifts_max_reservations_valid'),
+        `Se esperaba la restricción gifts_max_reservations_valid, pero se recibió: ${updateNoLimitError.message}`
+      );
+
+      const { error: updateWithLimitError } = await ctx.ownerXClient
+        .from('gifts')
+        .update({ kind: 'repeatable', max_reservations: 2 })
+        .eq('id', suggestionId);
+
+      assert.equal(
+        updateWithLimitError,
+        null,
+        'Se esperaba que cambiar la sugerencia a repetible con max_reservations = 2 fuera exitoso'
+      );
+
+      const { data: storedConvertedGift, error: checkConvertedError } =
+        await ctx.adminClient
+          .from('gifts')
+          .select('id, kind, max_reservations')
+          .eq('id', suggestionId)
+          .single();
+
+      assert.equal(
+        checkConvertedError,
+        null,
+        'Se esperaba consultar el regalo convertido con el administrador sin error'
+      );
+      assert.equal(
+        storedConvertedGift?.kind,
+        'repeatable',
+        'Se esperaba kind = repeatable tras la actualización válida'
+      );
+      assert.equal(
+        storedConvertedGift?.max_reservations,
+        2,
+        'Se esperaba max_reservations = 2 tras la actualización válida'
+      );
+    } finally {
+      const idsToDelete = [repeatableId, suggestionId].filter(Boolean);
+      if (idsToDelete.length > 0) {
+        await ctx.adminClient.from('gifts').delete().in('id', idsToDelete);
+      }
     }
   }
 );
