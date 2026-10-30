@@ -68,6 +68,25 @@
             },
             "ci": {
               "progress": false
+            },
+            "web": {
+              "assets": [
+                {
+                  "glob": "**/*",
+                  "input": "src/assets",
+                  "output": "assets"
+                },
+                {
+                  "glob": "**/*",
+                  "input": "src/web/video",
+                  "output": "assets/video"
+                },
+                {
+                  "glob": "_headers",
+                  "input": "src/web",
+                  "output": "."
+                }
+              ]
             }
           },
           "defaultConfiguration": "production"
@@ -80,6 +99,9 @@
             },
             "development": {
               "buildTarget": "app:build:development"
+            },
+            "web": {
+              "buildTarget": "app:build:development,web"
             },
             "ci": {
               "progress": false

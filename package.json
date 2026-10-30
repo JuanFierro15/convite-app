@@ -11,7 +11,7 @@
     "test": "ng test",
     "lint": "ng lint",
     "test:reglas": "node --env-file=.env --test \"scripts/reglas/*.test.mjs\"",
-    "deploy:web": "ionic build --prod && wrangler pages deploy www --project-name convite --branch main"
+    "deploy:web": "ng build --configuration production,web && wrangler pages deploy www --project-name convite --branch main"
   },
   "private": true,
   "dependencies": {
