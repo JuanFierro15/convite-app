@@ -17,7 +17,7 @@ import {
   RealtimeService,
 } from '../../../core';
 import { GiftFormComponent } from '../formulario/gift-form.component';
-import { GiftListPage } from './gift-list.page';
+import { GIFTS_PAGE_SIZE, GiftListPage } from './gift-list.page';
 
 describe('GiftListPage', () => {
   beforeAll(() => {
@@ -110,6 +110,21 @@ describe('GiftListPage', () => {
     created_at: '2026-10-25T00:00:00Z',
     reservations: [],
   };
+
+  function createUniqueGift(index: number): GiftWithReservations {
+    return {
+      id: `gift-uniq-${index}`,
+      event_id: 'evt-123',
+      name: `Regalo único ${index}`,
+      description: `Descripción ${index}`,
+      category: 'General',
+      kind: 'unique',
+      max_reservations: null,
+      sort_order: index,
+      created_at: '2026-10-25T00:00:00Z',
+      reservations: [],
+    };
+  }
 
   beforeEach(async () => {
     mockModal = {
@@ -300,7 +315,7 @@ describe('GiftListPage', () => {
     });
 
     it('el filtro Sugerencias muestra solo sugerencias con "Sugerencia" y sin conteo', () => {
-      component.filter.set('suggestion');
+      component.onFilterChange(new CustomEvent('ionChange', { detail: { value: 'suggestion' } }));
       fixture.detectChanges();
 
       const headings = fixture.debugElement
@@ -312,7 +327,6 @@ describe('GiftListPage', () => {
       const suggestionSection = fixture.debugElement.query(By.css('.gift-section'));
       expect(suggestionSection).not.toBeNull();
 
-      // Muestra la card con el badge "Sugerencia" y el texto de ayuda
       const badge = suggestionSection.query(By.css('.badge-soft-medium'));
       expect(badge).not.toBeNull();
       expect(badge.nativeElement.textContent.trim()).toBe('Sugerencia');
@@ -323,13 +337,12 @@ describe('GiftListPage', () => {
         'Los invitados la ven como idea; no se reserva.',
       );
 
-      // Sin conteo de familias
       expect(suggestionSection.nativeElement.textContent).not.toContain('familias');
       expect(suggestionSection.nativeElement.textContent).not.toContain('familia');
     });
 
     it('el filtro Repetibles muestra repetibles y libre', () => {
-      component.filter.set('repeatable');
+      component.onFilterChange(new CustomEvent('ionChange', { detail: { value: 'repeatable' } }));
       fixture.detectChanges();
 
       const headings = fixture.debugElement
@@ -339,18 +352,249 @@ describe('GiftListPage', () => {
       expect(headings).toEqual(['Regalos repetibles', 'Regalo libre']);
     });
 
-    it('onFilterChange actualiza el filtro a valores válidos', () => {
+    it('onFilterChange actualiza el filtro a valores válidos y reinicia a la página 1', () => {
+      component.currentPage.set(2);
+
       component.onFilterChange(new CustomEvent('ionChange', { detail: { value: 'suggestion' } }));
       expect(component.filter()).toBe('suggestion');
+      expect(component.currentPage()).toBe(1);
 
+      component.currentPage.set(3);
       component.onFilterChange(new CustomEvent('ionChange', { detail: { value: 'repeatable' } }));
       expect(component.filter()).toBe('repeatable');
+      expect(component.currentPage()).toBe(1);
 
       component.onFilterChange(new CustomEvent('ionChange', { detail: { value: 'unique' } }));
       expect(component.filter()).toBe('unique');
+      expect(component.currentPage()).toBe(1);
 
       component.onFilterChange(new CustomEvent('ionChange', { detail: { value: 'all' } }));
       expect(component.filter()).toBe('all');
+      expect(component.currentPage()).toBe(1);
+    });
+  });
+
+  describe('paginación', () => {
+    it('GIFTS_PAGE_SIZE es 6', () => {
+      expect(GIFTS_PAGE_SIZE).toBe(6);
+    });
+
+    it('con 8 regalos en "Todos" hay "Página 1 de 2", 6 cards en la página 1 y 2 en la 2', async () => {
+      const eightGifts: GiftWithReservations[] = Array.from({ length: 8 }, (_, i) =>
+        createUniqueGift(i + 1),
+      );
+
+      mockGiftsRepo.list.mockResolvedValue(eightGifts);
+      await component.ionViewWillEnter();
+      fixture.detectChanges();
+
+      const pagination = fixture.debugElement.query(By.css('.pagination'));
+      expect(pagination).not.toBeNull();
+
+      const statusEl = fixture.debugElement.query(By.css('.pagination__status'));
+      expect(statusEl.nativeElement.textContent.trim()).toBe('Página 1 de 2');
+
+      let cards = fixture.debugElement.queryAll(By.css('.gift-card'));
+      expect(cards.length).toBe(6);
+
+      component.goToNextPage();
+      fixture.detectChanges();
+
+      expect(statusEl.nativeElement.textContent.trim()).toBe('Página 2 de 2');
+      cards = fixture.debugElement.queryAll(By.css('.gift-card'));
+      expect(cards.length).toBe(2);
+    });
+
+    it('con 6 o menos no hay controles', async () => {
+      const sixGifts: GiftWithReservations[] = Array.from({ length: 6 }, (_, i) =>
+        createUniqueGift(i + 1),
+      );
+
+      mockGiftsRepo.list.mockResolvedValue(sixGifts);
+      await component.ionViewWillEnter();
+      fixture.detectChanges();
+
+      const pagination = fixture.debugElement.query(By.css('.pagination'));
+      expect(pagination).toBeNull();
+    });
+
+    it('la primera card de cada página lleva el título de su grupo, y un cambio de grupo dentro de la página también lo lleva', async () => {
+      const fourRepeatables: GiftWithReservations[] = Array.from({ length: 4 }, (_, i) => ({
+        id: `rep-${i + 1}`,
+        event_id: 'evt-123',
+        name: `Pañales ${i + 1}`,
+        description: null,
+        category: 'Higiene',
+        kind: 'repeatable' as const,
+        max_reservations: 5,
+        sort_order: i + 1,
+        created_at: '2026-10-25T00:00:00Z',
+        reservations: [],
+      }));
+
+      const fourUniques: GiftWithReservations[] = Array.from({ length: 4 }, (_, i) => ({
+        id: `uniq-${i + 1}`,
+        event_id: 'evt-123',
+        name: `Coche ${i + 1}`,
+        description: null,
+        category: 'Paseo',
+        kind: 'unique' as const,
+        max_reservations: null,
+        sort_order: i + 5,
+        created_at: '2026-10-25T00:00:00Z',
+        reservations: [],
+      }));
+
+      mockGiftsRepo.list.mockResolvedValue([...fourRepeatables, ...fourUniques]);
+      await component.ionViewWillEnter();
+      fixture.detectChanges();
+
+      // Página 1: 4 repetibles y 2 únicos. Títulos: "Regalos repetibles" (índice 0) y "Regalos únicos" (cambio en índice 4).
+      const page1Headings = fixture.debugElement
+        .queryAll(By.css('.section-heading'))
+        .map((h) => h.nativeElement.textContent.trim());
+      expect(page1Headings).toEqual(['Regalos repetibles', 'Regalos únicos']);
+
+      // Página 2: 2 únicos restantes. Título: "Regalos únicos" (primera card de la página 2).
+      component.goToNextPage();
+      fixture.detectChanges();
+
+      const page2Headings = fixture.debugElement
+        .queryAll(By.css('.section-heading'))
+        .map((h) => h.nativeElement.textContent.trim());
+      expect(page2Headings).toEqual(['Regalos únicos']);
+    });
+
+    it('cambiar de filtro vuelve a la página 1', async () => {
+      const eightGifts: GiftWithReservations[] = Array.from({ length: 8 }, (_, i) =>
+        createUniqueGift(i + 1),
+      );
+
+      mockGiftsRepo.list.mockResolvedValue(eightGifts);
+      await component.ionViewWillEnter();
+      fixture.detectChanges();
+
+      component.goToNextPage();
+      fixture.detectChanges();
+      expect(component.currentPage()).toBe(2);
+
+      component.onFilterChange(new CustomEvent('ionChange', { detail: { value: 'unique' } }));
+      fixture.detectChanges();
+      expect(component.currentPage()).toBe(1);
+    });
+
+    it('si se borra el único regalo de la última página, la página retrocede', async () => {
+      const sevenGifts: GiftWithReservations[] = Array.from({ length: 7 }, (_, i) =>
+        createUniqueGift(i + 1),
+      );
+
+      mockGiftsRepo.list.mockResolvedValue(sevenGifts);
+      await component.ionViewWillEnter();
+      fixture.detectChanges();
+
+      component.goToNextPage();
+      fixture.detectChanges();
+      expect(component.currentPage()).toBe(2);
+      expect(component.pagedGifts().page).toBe(2);
+      expect(component.pagedGifts().items.length).toBe(1);
+
+      const sixRemaining = sevenGifts.slice(0, 6);
+      mockGiftsRepo.list.mockResolvedValue(sixRemaining);
+
+      let deleteHandler: (() => Promise<void>) | undefined;
+      mockAlertCtrl.create.mockImplementation(
+        async (options: {
+          buttons?: Array<{ text: string; role?: string; handler?: () => Promise<void> }>;
+        }) => {
+          const deleteBtn = options.buttons?.find((b) => b.role === 'destructive');
+          deleteHandler = deleteBtn?.handler;
+          return { present: vi.fn().mockResolvedValue(undefined) };
+        },
+      );
+
+      await component.confirmDelete(sevenGifts[6]);
+      expect(deleteHandler).toBeDefined();
+      await deleteHandler!();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(component.currentPage()).toBe(1);
+      expect(component.pagedGifts().page).toBe(1);
+      expect(component.pagedGifts().items.length).toBe(6);
+    });
+
+    it('las cards conservan sus detalles (conteo de familias en repetibles, "Liberar" en únicos apartados, "Sugerencia" en sugerencias)', async () => {
+      mockGiftsRepo.list.mockResolvedValue([
+        mockRepeatable,
+        mockFree,
+        mockUnique,
+        mockSuggestion,
+      ]);
+      await component.ionViewWillEnter();
+      fixture.detectChanges();
+
+      const cards = fixture.debugElement.queryAll(By.css('.gift-card'));
+      expect(cards.length).toBe(4);
+
+      // Repetible: conteo de familias
+      expect(cards[0].nativeElement.textContent).toContain('2 de 5 familias');
+
+      // Libre: subtítulo y conteo
+      expect(cards[1].nativeElement.textContent).toContain(
+        'Familias que llevarán un regalo a su elección',
+      );
+      expect(cards[1].nativeElement.textContent).toContain('1 familia');
+
+      // Único apartado: "Apartado" y botón "Liberar"
+      expect(cards[2].nativeElement.textContent).toContain('Apartado');
+      const releaseBtn = cards[2].query(By.css('ion-button[color="danger"]'));
+      expect(releaseBtn).not.toBeNull();
+      expect(releaseBtn.nativeElement.textContent).toContain('Liberar');
+
+      // Sugerencia: badge "Sugerencia" y nota
+      expect(cards[3].nativeElement.textContent).toContain('Sugerencia');
+      expect(cards[3].nativeElement.textContent).toContain(
+        'Los invitados la ven como idea; no se reserva.',
+      );
+    });
+
+    it('habilita y deshabilita los botones de navegación en los extremos y permite retroceder', async () => {
+      const eightGifts: GiftWithReservations[] = Array.from({ length: 8 }, (_, i) =>
+        createUniqueGift(i + 1),
+      );
+
+      mockGiftsRepo.list.mockResolvedValue(eightGifts);
+      await component.ionViewWillEnter();
+      fixture.detectChanges();
+
+      const prevBtn = fixture.nativeElement.querySelector(
+        'ion-button[aria-label="Página anterior"]',
+      );
+      const nextBtn = fixture.nativeElement.querySelector(
+        'ion-button[aria-label="Página siguiente"]',
+      );
+      expect(prevBtn).not.toBeNull();
+      expect(nextBtn).not.toBeNull();
+
+      // En la página 1: Anterior deshabilitado, Siguiente habilitado
+      expect(prevBtn?.disabled ?? prevBtn?.hasAttribute('disabled')).toBe(true);
+      expect(nextBtn?.disabled ?? nextBtn?.hasAttribute('disabled')).toBe(false);
+
+      // Avanzar a la página 2
+      nextBtn?.click();
+      fixture.detectChanges();
+
+      expect(component.currentPage()).toBe(2);
+      expect(prevBtn?.disabled ?? prevBtn?.hasAttribute('disabled')).toBe(false);
+      expect(nextBtn?.disabled ?? nextBtn?.hasAttribute('disabled')).toBe(true);
+
+      // Retroceder a la página 1
+      prevBtn?.click();
+      fixture.detectChanges();
+
+      expect(component.currentPage()).toBe(1);
+      expect(prevBtn?.disabled ?? prevBtn?.hasAttribute('disabled')).toBe(true);
+      expect(nextBtn?.disabled ?? nextBtn?.hasAttribute('disabled')).toBe(false);
     });
   });
 });

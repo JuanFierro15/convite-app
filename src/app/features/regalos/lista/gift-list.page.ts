@@ -2,10 +2,12 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  ElementRef,
   computed,
   inject,
   input,
   signal,
+  viewChild,
 } from '@angular/core';
 import { Router } from '@angular/router';
 import {
@@ -35,6 +37,8 @@ import { addIcons } from 'ionicons';
 import {
   add,
   addOutline,
+  chevronBackOutline,
+  chevronForwardOutline,
   closeCircleOutline,
   createOutline,
   ellipsisVerticalOutline,
@@ -44,15 +48,20 @@ import {
 } from 'ionicons/icons';
 import {
   EventContextService,
+  GiftKind,
   GiftReservationSummary,
   GiftWithReservations,
   GiftsRepository,
   RealtimeService,
+  paginate,
 } from '../../../core';
 import { EmptyStateComponent } from '../../../shared';
 import { GiftFormComponent } from '../formulario/gift-form.component';
 
+export const GIFTS_PAGE_SIZE = 6;
+
 export type GiftFilter = 'all' | 'unique' | 'repeatable' | 'suggestion';
+export type GiftGroup = 'repeatable' | 'free' | 'unique' | 'suggestion';
 
 @Component({
   selector: 'app-gift-list',
@@ -100,6 +109,10 @@ export class GiftListPage implements ViewWillEnter {
   readonly deletingGiftId = signal<string | null>(null);
   readonly releasingReservationId = signal<string | null>(null);
   readonly filter = signal<GiftFilter>('all');
+  readonly currentPage = signal<number>(1);
+
+  readonly content = viewChild(IonContent);
+  readonly giftListStart = viewChild<ElementRef<HTMLElement>>('giftListStart');
 
   private stopRealtime: (() => void) | null = null;
   private watchedEventId: string | null = null;
@@ -127,39 +140,31 @@ export class GiftListPage implements ViewWillEnter {
     () => this.uniqueGifts().filter((g) => g.reservations.length > 0).length,
   );
 
-  readonly filteredHasItems = computed<boolean>(() => {
+  readonly filteredGifts = computed<GiftWithReservations[]>(() => {
     const active = this.filter();
-    if (active === 'all') {
-      return this.gifts().length > 0;
+    switch (active) {
+      case 'repeatable':
+        return [...this.repeatableGifts(), ...this.freeGifts()];
+      case 'unique':
+        return this.uniqueGifts();
+      case 'suggestion':
+        return this.suggestionGifts();
+      case 'all':
+      default:
+        return [
+          ...this.repeatableGifts(),
+          ...this.freeGifts(),
+          ...this.uniqueGifts(),
+          ...this.suggestionGifts(),
+        ];
     }
-    if (active === 'repeatable') {
-      return this.repeatableGifts().length > 0 || this.freeGifts().length > 0;
-    }
-    if (active === 'unique') {
-      return this.uniqueGifts().length > 0;
-    }
-    return this.suggestionGifts().length > 0;
   });
 
-  readonly showRepeatableSection = computed<boolean>(() => {
-    const active = this.filter();
-    return (active === 'all' || active === 'repeatable') && this.repeatableGifts().length > 0;
-  });
+  readonly filteredHasItems = computed<boolean>(() => this.filteredGifts().length > 0);
 
-  readonly showFreeSection = computed<boolean>(() => {
-    const active = this.filter();
-    return (active === 'all' || active === 'repeatable') && this.freeGifts().length > 0;
-  });
-
-  readonly showUniqueSection = computed<boolean>(() => {
-    const active = this.filter();
-    return (active === 'all' || active === 'unique') && this.uniqueGifts().length > 0;
-  });
-
-  readonly showSuggestionSection = computed<boolean>(() => {
-    const active = this.filter();
-    return (active === 'all' || active === 'suggestion') && this.suggestionGifts().length > 0;
-  });
+  readonly pagedGifts = computed(() =>
+    paginate(this.filteredGifts(), this.currentPage(), GIFTS_PAGE_SIZE),
+  );
 
   constructor() {
     addIcons({
@@ -171,6 +176,8 @@ export class GiftListPage implements ViewWillEnter {
       lockClosed,
       createOutline,
       trashOutline,
+      'chevron-back-outline': chevronBackOutline,
+      'chevron-forward-outline': chevronForwardOutline,
     });
   }
 
@@ -224,7 +231,94 @@ export class GiftListPage implements ViewWillEnter {
     const value = (event.detail as { value?: string }).value;
     if (value === 'all' || value === 'unique' || value === 'repeatable' || value === 'suggestion') {
       this.filter.set(value);
+      this.currentPage.set(1);
     }
+  }
+
+  goToPreviousPage(): void {
+    const current = this.pagedGifts().page;
+    if (current > 1) {
+      this.currentPage.set(current - 1);
+      this.scrollToGiftListStart();
+    }
+  }
+
+  goToNextPage(): void {
+    const { page, totalPages } = this.pagedGifts();
+    if (page < totalPages) {
+      this.currentPage.set(page + 1);
+      this.scrollToGiftListStart();
+    }
+  }
+
+  giftGroup(gift: GiftWithReservations): GiftGroup {
+    if (gift.kind === 'repeatable' || gift.kind === 'free' || gift.kind === 'suggestion') {
+      return gift.kind;
+    }
+    return 'unique';
+  }
+
+  groupHeading(group: GiftGroup): string {
+    switch (group) {
+      case 'repeatable':
+        return 'Regalos repetibles';
+      case 'free':
+        return 'Regalo libre';
+      case 'unique':
+        return 'Regalos únicos';
+      case 'suggestion':
+        return 'Sugerencias';
+    }
+  }
+
+  shouldShowHeading(index: number): boolean {
+    if (index === 0) {
+      return true;
+    }
+    const items = this.pagedGifts().items;
+    const current = items[index];
+    const previous = items[index - 1];
+    if (!current || !previous) {
+      return false;
+    }
+    return this.giftGroup(current) !== this.giftGroup(previous);
+  }
+
+  private scrollToGiftListStart(): void {
+    if (typeof requestAnimationFrame === 'undefined') {
+      return;
+    }
+    requestAnimationFrame(async () => {
+      try {
+        const content = this.content();
+        const anchor = this.giftListStart()?.nativeElement;
+        if (!content || !anchor) {
+          return;
+        }
+        if (typeof content.getScrollElement !== 'function') {
+          return;
+        }
+        const scrollEl = await content.getScrollElement();
+        if (
+          !scrollEl ||
+          typeof scrollEl.getBoundingClientRect !== 'function' ||
+          typeof anchor.getBoundingClientRect !== 'function'
+        ) {
+          return;
+        }
+        const anchorRect = anchor.getBoundingClientRect();
+        const scrollRect = scrollEl.getBoundingClientRect();
+        const y = Math.max(
+          0,
+          anchorRect.top - scrollRect.top + (scrollEl.scrollTop ?? 0) - 16,
+        );
+        if (typeof content.scrollToPoint === 'function') {
+          await content.scrollToPoint(0, y, 300);
+        }
+      } catch {
+        // En jsdom u otros entornos sin soporte de scroll, no hace nada.
+      }
+    });
   }
 
   familyCountLabel(count: number, max: number | null): string {
@@ -327,9 +421,7 @@ export class GiftListPage implements ViewWillEnter {
         {
           text: 'Borrar',
           role: 'destructive',
-          handler: () => {
-            void this.deleteGift(gift.id);
-          },
+          handler: () => this.deleteGift(gift.id),
         },
       ],
     });
@@ -351,9 +443,7 @@ export class GiftListPage implements ViewWillEnter {
         {
           text: 'Liberar',
           role: 'destructive',
-          handler: () => {
-            void this.releaseReservation(reservation.id);
-          },
+          handler: () => this.releaseReservation(reservation.id),
         },
       ],
     });
@@ -418,6 +508,7 @@ export class GiftListPage implements ViewWillEnter {
     try {
       const list = await this.giftsRepo.list(this.id());
       this.gifts.set(list);
+      this.currentPage.set(this.pagedGifts().page);
       this.error.set(null);
       this.hasLoadedOnce = true;
     } catch (err) {
