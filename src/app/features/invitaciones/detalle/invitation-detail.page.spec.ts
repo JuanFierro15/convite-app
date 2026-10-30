@@ -232,4 +232,21 @@ describe('InvitationDetailPage', () => {
     await component.onShareWhatsApp();
     expect(mockInvitationsRepo.get).not.toHaveBeenCalled();
   });
+
+  it('renders guest rsvp segment with guest-rsvp-segment class and proper button labels', () => {
+    component.invitation.set(sampleInvitation);
+    component.loading.set(false);
+    fixture.detectChanges();
+
+    const segments = fixture.nativeElement.querySelectorAll('.guest-card ion-segment');
+    expect(segments.length).toBeGreaterThan(0);
+
+    segments.forEach((segment: HTMLElement) => {
+      expect(segment.classList.contains('guest-rsvp-segment')).toBe(true);
+
+      const buttons = Array.from(segment.querySelectorAll('ion-segment-button'));
+      const buttonTexts = buttons.map((btn) => btn.textContent?.trim());
+      expect(buttonTexts).toEqual(['Aceptó', 'Pendiente', 'No asiste']);
+    });
+  });
 });

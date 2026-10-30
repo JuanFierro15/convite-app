@@ -109,3 +109,14 @@
   flex-direction: column;
   gap: var(--space-sm);
 }
+
+// El estilo md pone mayúsculas y relleno que no caben en tres opciones a 360 px.
+.guest-rsvp-segment ion-segment-button {
+  min-width: 0;
+  --padding-start: 4px;
+  --padding-end: 4px;
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: 0.875rem;
+}
+

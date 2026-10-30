@@ -99,6 +99,7 @@
                 <p class="text-name guest-name">{{ guest.full_name }}</p>
 
                 <ion-segment
+                  class="guest-rsvp-segment"
                   [value]="guest.rsvp"
                   (ionChange)="onGuestRsvpChange(guest, $event)"
                 >
