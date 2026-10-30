@@ -49,10 +49,11 @@ import {
   RealtimeService,
   RsvpCounts,
   TABLES_ENABLED,
+  ThemeService,
   daysUntil,
   formatTime,
 } from '../../../core';
-import { EmptyStateComponent, IllustrationComponent } from '../../../shared';
+import { EmptyStateComponent } from '../../../shared';
 
 const DAY_MONTH_FORMATTER = new Intl.DateTimeFormat('es-CO', {
   day: 'numeric',
@@ -89,7 +90,6 @@ function formatDayMonthBogota(iso: string): string {
     IonGrid,
     IonRow,
     IonCol,
-    IllustrationComponent,
     EmptyStateComponent,
   ],
 })
@@ -98,6 +98,7 @@ export class EventDashboardPage implements ViewWillEnter, ViewWillLeave {
   private readonly eventsRepo = inject(EventsRepository);
   private readonly arrivalSession = inject(ArrivalSessionService);
   private readonly realtime = inject(RealtimeService);
+  private readonly themeService = inject(ThemeService);
   private readonly router = inject(Router);
   private readonly toastCtrl = inject(ToastController);
   private readonly destroyRef = inject(DestroyRef);
@@ -125,6 +126,10 @@ export class EventDashboardPage implements ViewWillEnter, ViewWillLeave {
 
   readonly loading = computed<boolean>(
     () => (this.initialLoading() || this.eventContext.loading()) && this.event() === null,
+  );
+
+  readonly countdownCoverUrl = computed(() =>
+    this.themeService.asset(this.event()?.theme_id, 'countdown.webp'),
   );
 
   readonly countdownTitle = computed<string>(() => {

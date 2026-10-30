@@ -16,7 +16,7 @@ const mockEvent: EventRow = {
   id: 'event-123',
   created_by: 'owner-1',
   name: 'Baby Shower Neiva',
-  theme_id: 'baby-shower',
+  theme_id: 'honey-bee',
   starts_at: '2026-11-29T15:00:00-05:00',
   venue_name: 'Salón Comunitario',
   venue_address: 'Calle 10 # 5-20',
@@ -162,5 +162,48 @@ describe('EventDashboardPage - Arrivals & Attendance', () => {
     const routerLinkInstance = arrivalElement?.injector.get(RouterLink);
     expect(routerLinkInstance?.urlTree?.toString()).toBe('/eventos/event-123/llegadas');
     expect(arrivalElement?.nativeElement.textContent).not.toContain('Pronto');
+  });
+
+  it('renders countdown card with cover image and aria-hidden wrapper', async () => {
+    component.ionViewWillEnter();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const cover = fixture.nativeElement.querySelector(
+      '.countdown-card__cover',
+    ) as HTMLElement | null;
+    expect(cover).not.toBeNull();
+    expect(cover?.getAttribute('aria-hidden')).toBe('true');
+
+    const img = fixture.nativeElement.querySelector(
+      '.countdown-card__cover img.countdown-card__cover-image',
+    ) as HTMLImageElement | null;
+    expect(img).not.toBeNull();
+    expect(img?.getAttribute('alt')).toBe('');
+    expect(img?.getAttribute('src')).toMatch(/assets\/themes\/honey-bee\/countdown\.webp$/);
+  });
+
+  it('renders countdown title, date and deadline text', async () => {
+    component.ionViewWillEnter();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const titleEl = fixture.nativeElement.querySelector(
+      '.countdown-card__title',
+    ) as HTMLElement | null;
+    const datetimeEl = fixture.nativeElement.querySelector(
+      '.countdown-card__datetime',
+    ) as HTMLElement | null;
+    const deadlineEl = fixture.nativeElement.querySelector(
+      '.countdown-card__deadline',
+    ) as HTMLElement | null;
+
+    expect(titleEl?.textContent?.trim()).toBe(component.countdownTitle());
+    expect(datetimeEl?.textContent?.replace(/\s+/g, ' ').trim()).toContain(
+      component.eventDateText(),
+    );
+    expect(deadlineEl?.textContent?.replace(/\s+/g, ' ').trim()).toContain(
+      `Límite para confirmar: ${component.deadlineDateText()}`,
+    );
   });
 });

@@ -42,24 +42,19 @@
   } @else {
     <div class="dashboard-container">
       <ion-card class="countdown-card">
+        <div class="countdown-card__cover" aria-hidden="true">
+          <img class="countdown-card__cover-image" [src]="countdownCoverUrl()" alt="" />
+        </div>
         <ion-card-content class="countdown-card__content">
-          <div class="countdown-card__info">
-            <p class="countdown-card__title">{{ countdownTitle() }}</p>
-            <p class="text-body countdown-card__datetime">
-              {{ eventDateText() }} · {{ eventTimeText() }}
-            </p>
-            <div class="countdown-card__badge-wrapper">
-              <span class="badge-soft-warning text-label countdown-card__deadline">
-                <ion-icon name="alarm-outline" aria-hidden="true"></ion-icon>
-                <span>Límite para confirmar: {{ deadlineDateText() }}</span>
-              </span>
-            </div>
-          </div>
-          <div class="countdown-card__illustration">
-            <app-illustration
-              name="countdown"
-              alt="Ilustración de cuenta regresiva del evento"
-            />
+          <p class="countdown-card__title">{{ countdownTitle() }}</p>
+          <p class="text-body countdown-card__datetime">
+            {{ eventDateText() }} · {{ eventTimeText() }}
+          </p>
+          <div class="countdown-card__badge-wrapper">
+            <span class="badge-soft-warning text-label countdown-card__deadline">
+              <ion-icon name="alarm-outline" aria-hidden="true"></ion-icon>
+              <span>Límite para confirmar: {{ deadlineDateText() }}</span>
+            </span>
           </div>
         </ion-card-content>
       </ion-card>
