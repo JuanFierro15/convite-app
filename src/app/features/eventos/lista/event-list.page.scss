@@ -8,6 +8,12 @@
   margin: 0 auto;
 }
 
+.event-list__greeting {
+  margin: 0 0 var(--space-md);
+  color: var(--ion-text-color);
+  overflow-wrap: anywhere;
+}
+
 .event-list {
   display: flex;
   flex-direction: column;

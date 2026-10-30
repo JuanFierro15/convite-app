@@ -9,7 +9,7 @@ import {
 } from '../../../core';
 import { EventListPage } from './event-list.page';
 
-describe('EventListPage - signOut', () => {
+describe('EventListPage', () => {
   let fixture: ComponentFixture<EventListPage>;
   let component: EventListPage;
   let mockAuth: {
@@ -68,6 +68,30 @@ describe('EventListPage - signOut', () => {
     component = fixture.componentInstance;
   });
 
+  describe('header and greeting', () => {
+    it('displays "Eventos" in ion-title', () => {
+      fixture.detectChanges();
+      const title = fixture.nativeElement.querySelector('ion-title');
+      expect(title?.textContent?.trim()).toBe('Eventos');
+    });
+
+    it('displays "Hola, Organizador Ejemplo" in h1.event-list__greeting when displayName is present', () => {
+      mockAuth.displayName.set('Organizador Ejemplo');
+      fixture.detectChanges();
+      const greeting = fixture.nativeElement.querySelector('h1.event-list__greeting');
+      expect(greeting?.textContent?.trim()).toBe('Hola, Organizador Ejemplo');
+    });
+
+    it('displays "Hola" in h1.event-list__greeting when displayName is empty', () => {
+      mockAuth.displayName.set('');
+      fixture.detectChanges();
+      const greeting = fixture.nativeElement.querySelector('h1.event-list__greeting');
+      expect(greeting?.textContent?.trim()).toBe('Hola');
+    });
+  });
+
+  describe('signOut', () => {
+
   it('signs out directly when there are 0 pending arrivals', async () => {
     mockStore.pendingTotal.mockResolvedValue(0);
 
@@ -123,5 +147,6 @@ describe('EventListPage - signOut', () => {
     expect(mockStore.clearAll).not.toHaveBeenCalled();
     expect(mockAuth.signOut).not.toHaveBeenCalled();
     expect(mockRouter.navigateByUrl).not.toHaveBeenCalled();
+  });
   });
 });

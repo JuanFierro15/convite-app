@@ -1,6 +1,6 @@
 <ion-header class="ion-no-border">
   <ion-toolbar>
-    <ion-title class="text-title">{{ greeting() }}</ion-title>
+    <ion-title class="text-title">Eventos</ion-title>
     <ion-buttons slot="end">
       @if (canCreateEvent()) {
         <ion-button aria-label="Crear evento" (click)="goToCreateEvent()">
@@ -20,6 +20,7 @@
   </ion-refresher>
 
   <div class="event-list-container">
+    <h1 class="text-title event-list__greeting">{{ greeting() }}</h1>
     @if (loading() && !hasLoadedOnce()) {
       <div class="event-list" aria-busy="true" aria-label="Cargando eventos">
         @for (placeholder of skeletonItems; track placeholder) {
