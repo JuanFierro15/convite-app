@@ -58,7 +58,11 @@ export function toUserError(error: unknown, fallback?: string): Error {
   const combined = `${message} ${details}`;
 
   if (combined.includes('gift_has_reservations')) {
-    return new Error('Este regalo ya tiene reservas, así que no se puede cambiar su tipo.');
+    return new Error('Ya hay familias que eligieron este regalo, así que no se puede cambiar su tipo.');
+  }
+
+  if (combined.includes('gift_not_reservable')) {
+    return new Error('Las sugerencias no se reservan.');
   }
 
   if (
@@ -85,7 +89,9 @@ export function toUserError(error: unknown, fallback?: string): Error {
   }
 
   if (combined.includes('gifts_max_reservations_valid')) {
-    return new Error('El límite de familias debe ser 1 o más y solo aplica a regalos repetibles.');
+    return new Error(
+      'Un regalo repetible necesita un límite de 2 familias o más; los demás tipos no llevan límite.',
+    );
   }
 
   if (

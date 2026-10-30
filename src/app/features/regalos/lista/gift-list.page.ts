@@ -44,7 +44,6 @@ import {
 } from 'ionicons/icons';
 import {
   EventContextService,
-  GiftKind,
   GiftReservationSummary,
   GiftWithReservations,
   GiftsRepository,
@@ -53,7 +52,7 @@ import {
 import { EmptyStateComponent } from '../../../shared';
 import { GiftFormComponent } from '../formulario/gift-form.component';
 
-export type GiftFilter = 'all' | GiftKind;
+export type GiftFilter = 'all' | 'unique' | 'repeatable' | 'suggestion';
 
 @Component({
   selector: 'app-gift-list',
@@ -118,6 +117,10 @@ export class GiftListPage implements ViewWillEnter {
     this.gifts().filter((g) => g.kind === 'unique'),
   );
 
+  readonly suggestionGifts = computed<GiftWithReservations[]>(() =>
+    this.gifts().filter((g) => g.kind === 'suggestion'),
+  );
+
   readonly uniqueCount = computed<number>(() => this.uniqueGifts().length);
 
   readonly reservedUniqueCount = computed<number>(
@@ -130,12 +133,12 @@ export class GiftListPage implements ViewWillEnter {
       return this.gifts().length > 0;
     }
     if (active === 'repeatable') {
-      return this.repeatableGifts().length > 0;
+      return this.repeatableGifts().length > 0 || this.freeGifts().length > 0;
     }
-    if (active === 'free') {
-      return this.freeGifts().length > 0;
+    if (active === 'unique') {
+      return this.uniqueGifts().length > 0;
     }
-    return this.uniqueGifts().length > 0;
+    return this.suggestionGifts().length > 0;
   });
 
   readonly showRepeatableSection = computed<boolean>(() => {
@@ -145,12 +148,17 @@ export class GiftListPage implements ViewWillEnter {
 
   readonly showFreeSection = computed<boolean>(() => {
     const active = this.filter();
-    return (active === 'all' || active === 'free') && this.freeGifts().length > 0;
+    return (active === 'all' || active === 'repeatable') && this.freeGifts().length > 0;
   });
 
   readonly showUniqueSection = computed<boolean>(() => {
     const active = this.filter();
     return (active === 'all' || active === 'unique') && this.uniqueGifts().length > 0;
+  });
+
+  readonly showSuggestionSection = computed<boolean>(() => {
+    const active = this.filter();
+    return (active === 'all' || active === 'suggestion') && this.suggestionGifts().length > 0;
   });
 
   constructor() {
@@ -214,7 +222,7 @@ export class GiftListPage implements ViewWillEnter {
 
   onFilterChange(event: CustomEvent): void {
     const value = (event.detail as { value?: string }).value;
-    if (value === 'all' || value === 'unique' || value === 'repeatable' || value === 'free') {
+    if (value === 'all' || value === 'unique' || value === 'repeatable' || value === 'suggestion') {
       this.filter.set(value);
     }
   }

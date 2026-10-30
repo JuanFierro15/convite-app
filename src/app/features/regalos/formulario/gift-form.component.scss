@@ -39,20 +39,27 @@
   font-weight: 600;
 }
 
-ion-segment {
-  background: var(--ion-color-light);
-  border-radius: var(--radius-md);
-  padding: var(--space-xs);
+.kind-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
 }
 
-ion-segment-button {
-  --border-radius: var(--radius-sm);
+.radio-option {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xxs, 2px);
+}
+
+.radio-option ion-radio {
   --color: var(--ion-color-medium);
   --color-checked: var(--ion-color-primary);
-  --indicator-color: var(--ion-card-background);
-  min-height: 44px;
-  text-transform: none;
-  font-weight: 600;
+  font-size: 1rem;
+}
+
+.radio-option .field-help {
+  margin: 0;
+  margin-left: 2rem;
 }
 
 .footer-toolbar {

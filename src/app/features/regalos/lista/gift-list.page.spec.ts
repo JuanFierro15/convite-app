@@ -56,6 +56,61 @@ describe('GiftListPage', () => {
   let mockActionSheetCtrl: { create: ReturnType<typeof vi.fn> };
   let mockToastCtrl: { create: ReturnType<typeof vi.fn> };
 
+  const mockRepeatable: GiftWithReservations = {
+    id: 'gift-rep',
+    event_id: 'evt-123',
+    name: 'Pañales',
+    description: 'Etapa 1',
+    category: 'Higiene',
+    kind: 'repeatable',
+    max_reservations: 5,
+    sort_order: 1,
+    created_at: '2026-10-25T00:00:00Z',
+    reservations: [
+      { id: 'res-1', created_at: '2026-10-25T01:00:00Z' },
+      { id: 'res-2', created_at: '2026-10-25T02:00:00Z' },
+    ],
+  };
+
+  const mockFree: GiftWithReservations = {
+    id: 'gift-free',
+    event_id: 'evt-123',
+    name: 'Regalo libre',
+    description: 'A elección',
+    category: null,
+    kind: 'free',
+    max_reservations: null,
+    sort_order: 2,
+    created_at: '2026-10-25T00:00:00Z',
+    reservations: [{ id: 'res-free-1', created_at: '2026-10-25T02:30:00Z' }],
+  };
+
+  const mockUnique: GiftWithReservations = {
+    id: 'gift-uniq',
+    event_id: 'evt-123',
+    name: 'Coche paseador',
+    description: 'Color gris',
+    category: 'Paseo',
+    kind: 'unique',
+    max_reservations: null,
+    sort_order: 3,
+    created_at: '2026-10-25T00:00:00Z',
+    reservations: [{ id: 'res-3', created_at: '2026-10-25T03:00:00Z' }],
+  };
+
+  const mockSuggestion: GiftWithReservations = {
+    id: 'gift-sug',
+    event_id: 'evt-123',
+    name: 'Lluvia de sobres',
+    description: 'Para ahorrar para el bebé',
+    category: null,
+    kind: 'suggestion',
+    max_reservations: null,
+    sort_order: 4,
+    created_at: '2026-10-25T00:00:00Z',
+    reservations: [],
+  };
+
   beforeEach(async () => {
     mockModal = {
       present: vi.fn().mockResolvedValue(undefined),
@@ -165,35 +220,6 @@ describe('GiftListPage', () => {
   });
 
   describe('anonymity in list', () => {
-    const mockRepeatable: GiftWithReservations = {
-      id: 'gift-rep',
-      event_id: 'evt-123',
-      name: 'Pañales',
-      description: 'Etapa 1',
-      category: 'Higiene',
-      kind: 'repeatable',
-      max_reservations: 5,
-      sort_order: 1,
-      created_at: '2026-10-25T00:00:00Z',
-      reservations: [
-        { id: 'res-1', created_at: '2026-10-25T01:00:00Z' },
-        { id: 'res-2', created_at: '2026-10-25T02:00:00Z' },
-      ],
-    };
-
-    const mockUnique: GiftWithReservations = {
-      id: 'gift-uniq',
-      event_id: 'evt-123',
-      name: 'Coche paseador',
-      description: 'Color gris',
-      category: 'Paseo',
-      kind: 'unique',
-      max_reservations: null,
-      sort_order: 2,
-      created_at: '2026-10-25T00:00:00Z',
-      reservations: [{ id: 'res-3', created_at: '2026-10-25T03:00:00Z' }],
-    };
-
     beforeEach(async () => {
       mockGiftsRepo.list.mockResolvedValue([mockRepeatable, mockUnique]);
       await component.ionViewWillEnter();
@@ -241,6 +267,90 @@ describe('GiftListPage', () => {
           message: '¿Liberar Coche paseador? Volverá a quedar disponible en la lista.',
         }),
       );
+    });
+  });
+
+  describe('sections and filters', () => {
+    beforeEach(async () => {
+      mockGiftsRepo.list.mockResolvedValue([
+        mockRepeatable,
+        mockFree,
+        mockUnique,
+        mockSuggestion,
+      ]);
+      await component.ionViewWillEnter();
+      fixture.detectChanges();
+      await fixture.whenStable();
+    });
+
+    it('"Todos" muestra las cuatro secciones en el orden indicado: Repetibles, Libre, Únicos, Sugerencias', () => {
+      component.filter.set('all');
+      fixture.detectChanges();
+
+      const headings = fixture.debugElement
+        .queryAll(By.css('.section-heading'))
+        .map((h) => h.nativeElement.textContent.trim());
+
+      expect(headings).toEqual([
+        'Regalos repetibles',
+        'Regalo libre',
+        'Regalos únicos',
+        'Sugerencias',
+      ]);
+    });
+
+    it('el filtro Sugerencias muestra solo sugerencias con "Sugerencia" y sin conteo', () => {
+      component.filter.set('suggestion');
+      fixture.detectChanges();
+
+      const headings = fixture.debugElement
+        .queryAll(By.css('.section-heading'))
+        .map((h) => h.nativeElement.textContent.trim());
+
+      expect(headings).toEqual(['Sugerencias']);
+
+      const suggestionSection = fixture.debugElement.query(By.css('.gift-section'));
+      expect(suggestionSection).not.toBeNull();
+
+      // Muestra la card con el badge "Sugerencia" y el texto de ayuda
+      const badge = suggestionSection.query(By.css('.badge-soft-medium'));
+      expect(badge).not.toBeNull();
+      expect(badge.nativeElement.textContent.trim()).toBe('Sugerencia');
+
+      const hint = suggestionSection.query(By.css('.gift-card__hint'));
+      expect(hint).not.toBeNull();
+      expect(hint.nativeElement.textContent.trim()).toBe(
+        'Los invitados la ven como idea; no se reserva.',
+      );
+
+      // Sin conteo de familias
+      expect(suggestionSection.nativeElement.textContent).not.toContain('familias');
+      expect(suggestionSection.nativeElement.textContent).not.toContain('familia');
+    });
+
+    it('el filtro Repetibles muestra repetibles y libre', () => {
+      component.filter.set('repeatable');
+      fixture.detectChanges();
+
+      const headings = fixture.debugElement
+        .queryAll(By.css('.section-heading'))
+        .map((h) => h.nativeElement.textContent.trim());
+
+      expect(headings).toEqual(['Regalos repetibles', 'Regalo libre']);
+    });
+
+    it('onFilterChange actualiza el filtro a valores válidos', () => {
+      component.onFilterChange(new CustomEvent('ionChange', { detail: { value: 'suggestion' } }));
+      expect(component.filter()).toBe('suggestion');
+
+      component.onFilterChange(new CustomEvent('ionChange', { detail: { value: 'repeatable' } }));
+      expect(component.filter()).toBe('repeatable');
+
+      component.onFilterChange(new CustomEvent('ionChange', { detail: { value: 'unique' } }));
+      expect(component.filter()).toBe('unique');
+
+      component.onFilterChange(new CustomEvent('ionChange', { detail: { value: 'all' } }));
+      expect(component.filter()).toBe('all');
     });
   });
 });

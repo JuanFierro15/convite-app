@@ -66,6 +66,75 @@ describe('GiftsRepository', () => {
         created_at: '2026-10-25T01:00:00Z',
       });
     });
+
+    it('orders gifts by kind with suggestions at the end', async () => {
+      const mockQuery = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({
+          data: [
+            {
+              id: 'g-sug',
+              event_id: 'event-1',
+              name: 'Pañales',
+              description: null,
+              category: null,
+              kind: 'suggestion',
+              max_reservations: null,
+              sort_order: 1,
+              created_at: '2026-10-25T00:00:00Z',
+              gift_reservations: [],
+            },
+            {
+              id: 'g-uniq',
+              event_id: 'event-1',
+              name: 'Cuna',
+              description: null,
+              category: null,
+              kind: 'unique',
+              max_reservations: null,
+              sort_order: 1,
+              created_at: '2026-10-25T00:00:00Z',
+              gift_reservations: [],
+            },
+            {
+              id: 'g-rep',
+              event_id: 'event-1',
+              name: 'Ropa',
+              description: null,
+              category: null,
+              kind: 'repeatable',
+              max_reservations: 5,
+              sort_order: 1,
+              created_at: '2026-10-25T00:00:00Z',
+              gift_reservations: [],
+            },
+            {
+              id: 'g-free',
+              event_id: 'event-1',
+              name: 'Regalo libre',
+              description: null,
+              category: null,
+              kind: 'free',
+              max_reservations: null,
+              sort_order: 1,
+              created_at: '2026-10-25T00:00:00Z',
+              gift_reservations: [],
+            },
+          ],
+          error: null,
+        }),
+      };
+
+      mockSupabase.client.from.mockReturnValue(mockQuery);
+
+      const result = await repository.list('event-1');
+      expect(result.map((g) => g.kind)).toEqual([
+        'repeatable',
+        'free',
+        'unique',
+        'suggestion',
+      ]);
+    });
   });
 
   describe('create', () => {
@@ -123,6 +192,35 @@ describe('GiftsRepository', () => {
         description: null,
         category: null,
         kind: 'unique',
+        max_reservations: null,
+      });
+    });
+
+    it('sends null for max_reservations when kind is suggestion', async () => {
+      const mockSingle = vi.fn().mockResolvedValue({
+        data: { id: 'gift-sug', name: 'Pañales', kind: 'suggestion', max_reservations: null },
+        error: null,
+      });
+      const mockSelect = vi.fn().mockReturnValue({ single: mockSingle });
+      const mockInsert = vi.fn().mockReturnValue({ select: mockSelect });
+      mockSupabase.client.from.mockReturnValue({ insert: mockInsert });
+
+      const input: GiftInput = {
+        name: 'Pañales',
+        description: null,
+        category: null,
+        kind: 'suggestion',
+        max_reservations: 5,
+      };
+
+      await repository.create('event-1', input);
+
+      expect(mockInsert).toHaveBeenCalledWith({
+        event_id: 'event-1',
+        name: 'Pañales',
+        description: null,
+        category: null,
+        kind: 'suggestion',
         max_reservations: null,
       });
     });
@@ -187,6 +285,95 @@ describe('GiftsRepository', () => {
         max_reservations: null,
       });
       expect(mockEq).toHaveBeenCalledWith('id', 'gift-uniq');
+    });
+
+    it('sends null for max_reservations when kind is suggestion', async () => {
+      const mockSingle = vi.fn().mockResolvedValue({
+        data: { id: 'gift-sug', name: 'Pañales', kind: 'suggestion', max_reservations: null },
+        error: null,
+      });
+      const mockSelect = vi.fn().mockReturnValue({ single: mockSingle });
+      const mockEq = vi.fn().mockReturnValue({ select: mockSelect });
+      const mockUpdate = vi.fn().mockReturnValue({ eq: mockEq });
+      mockSupabase.client.from.mockReturnValue({ update: mockUpdate });
+
+      const input: GiftInput = {
+        name: 'Pañales',
+        description: null,
+        category: null,
+        kind: 'suggestion',
+        max_reservations: 4,
+      };
+
+      await repository.update('gift-sug', input);
+
+      expect(mockUpdate).toHaveBeenCalledWith({
+        name: 'Pañales',
+        description: null,
+        category: null,
+        kind: 'suggestion',
+        max_reservations: null,
+      });
+      expect(mockEq).toHaveBeenCalledWith('id', 'gift-sug');
+    });
+  });
+
+  describe('addSuggested', () => {
+    it('creates suggested gifts with kind suggestion (first 3) and free (last 1)', async () => {
+      const mockSelect = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({ data: [], error: null }),
+      };
+      const mockInsert = vi.fn().mockResolvedValue({ error: null });
+
+      mockSupabase.client.from.mockImplementation((table: string) => {
+        if (table === 'gifts') {
+          return {
+            select: mockSelect.select,
+            eq: mockSelect.eq,
+            insert: mockInsert,
+          };
+        }
+        return {};
+      });
+
+      const count = await repository.addSuggested('event-1');
+
+      expect(count).toBe(4);
+      expect(mockInsert).toHaveBeenCalledWith([
+        {
+          event_id: 'event-1',
+          name: 'Lluvia de sobres',
+          description: null,
+          category: null,
+          kind: 'suggestion',
+          sort_order: 0,
+        },
+        {
+          event_id: 'event-1',
+          name: 'Pañales',
+          description: null,
+          category: null,
+          kind: 'suggestion',
+          sort_order: 1,
+        },
+        {
+          event_id: 'event-1',
+          name: 'Pañitos húmedos',
+          description: null,
+          category: null,
+          kind: 'suggestion',
+          sort_order: 2,
+        },
+        {
+          event_id: 'event-1',
+          name: 'Regalo libre',
+          description: null,
+          category: null,
+          kind: 'free',
+          sort_order: 3,
+        },
+      ]);
     });
   });
 });

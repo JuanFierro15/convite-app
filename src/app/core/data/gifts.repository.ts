@@ -13,12 +13,13 @@ const KIND_ORDER: Record<string, number> = {
   repeatable: 0,
   free: 1,
   unique: 2,
+  suggestion: 3,
 };
 
 const SUGGESTED_GIFTS: readonly { name: string; kind: GiftKind; sort_order: number }[] = [
-  { name: 'Lluvia de sobres', kind: 'repeatable', sort_order: 0 },
-  { name: 'Pañales', kind: 'repeatable', sort_order: 1 },
-  { name: 'Pañitos húmedos', kind: 'repeatable', sort_order: 2 },
+  { name: 'Lluvia de sobres', kind: 'suggestion', sort_order: 0 },
+  { name: 'Pañales', kind: 'suggestion', sort_order: 1 },
+  { name: 'Pañitos húmedos', kind: 'suggestion', sort_order: 2 },
   { name: 'Regalo libre', kind: 'free', sort_order: 3 },
 ];
 

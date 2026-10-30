@@ -38,7 +38,14 @@ describe('core exports and error translation', () => {
   describe('toUserError and isConnectionError', () => {
     it('translates gift_has_reservations', () => {
       const err = toUserError({ message: 'gift_has_reservations' });
-      expect(err.message).toBe('Este regalo ya tiene reservas, así que no se puede cambiar su tipo.');
+      expect(err.message).toBe(
+        'Ya hay familias que eligieron este regalo, así que no se puede cambiar su tipo.',
+      );
+    });
+
+    it('translates gift_not_reservable', () => {
+      const err = toUserError({ message: 'gift_not_reservable' });
+      expect(err.message).toBe('Las sugerencias no se reservan.');
     });
 
     it('translates unique violation 23505 on gifts_one_free_per_event', () => {
@@ -106,7 +113,7 @@ describe('core exports and error translation', () => {
           'new row for relation "gifts" violates check constraint "gifts_max_reservations_valid"',
       });
       expect(err.message).toBe(
-        'El límite de familias debe ser 1 o más y solo aplica a regalos repetibles.',
+        'Un regalo repetible necesita un límite de 2 familias o más; los demás tipos no llevan límite.',
       );
     });
 
@@ -145,22 +152,25 @@ describe('core exports and error translation', () => {
         'El plazo para responder ya terminó. Si necesitas cambiar tu respuesta, escríbenos.',
       );
       expect(guestErrorMessage('already_reserved')).toBe(
-        'Alguien acaba de apartar este regalo. Elige otro de la lista.',
+        'Alguien acaba de elegir este regalo. Elige otro de la lista.',
       );
       expect(guestErrorMessage('gifts_closed')).toBe('La lista de regalos ya está cerrada.');
       expect(GUEST_ERROR_MESSAGES['network_error']).toBe(CONNECTION_ERROR_MESSAGE);
       expect(GUEST_ERROR_MESSAGES['not_reserved_by_you']).toBe(
-        'Este regalo ya no está apartado para esta invitación.',
+        'Este regalo ya no está elegido en esta invitación.',
       );
       expect(GUEST_ERROR_MESSAGES['load_failed']).toBe(
         'No pudimos cargar tu invitación. Inténtalo de nuevo.',
       );
       expect(guestErrorMessage('network_error')).toBe(CONNECTION_ERROR_MESSAGE);
       expect(guestErrorMessage('not_reserved_by_you')).toBe(
-        'Este regalo ya no está apartado para esta invitación.',
+        'Este regalo ya no está elegido en esta invitación.',
       );
       expect(guestErrorMessage('load_failed')).toBe(
         'No pudimos cargar tu invitación. Inténtalo de nuevo.',
+      );
+      expect(guestErrorMessage('gift_not_reservable')).toBe(
+        'Esta opción es solo una idea: no hace falta reservarla.',
       );
       expect(guestErrorMessage('other_code')).toBe(
         'No pudimos guardar el cambio. Inténtalo de nuevo.',
@@ -173,7 +183,7 @@ describe('core exports and error translation', () => {
       expect(error).toBeInstanceOf(GuestApiError);
       expect(error.code).toBe('already_reserved');
       expect(error.message).toBe(
-        'Alguien acaba de apartar este regalo. Elige otro de la lista.',
+        'Alguien acaba de elegir este regalo. Elige otro de la lista.',
       );
     });
 

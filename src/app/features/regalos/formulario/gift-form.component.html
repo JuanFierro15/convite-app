@@ -60,46 +60,53 @@
     </div>
 
     <div class="field-group">
-      <span class="field-label text-name">Tipo</span>
-      <ion-segment
+      <span class="field-label text-name" id="gift-kind-label">Tipo</span>
+      <ion-radio-group
         formControlName="kind"
-        [disabled]="isTypeLocked()"
         aria-label="Tipo de regalo"
+        class="kind-radio-group"
       >
-        <ion-segment-button value="unique" [disabled]="isTypeLocked()">
-          <ion-label>Único</ion-label>
-        </ion-segment-button>
-        <ion-segment-button value="repeatable" [disabled]="isTypeLocked()">
-          <ion-label>Repetible</ion-label>
-        </ion-segment-button>
-        <ion-segment-button
-          value="free"
-          [disabled]="isTypeLocked() || freeOptionDisabled()"
-        >
-          <ion-label>Regalo libre</ion-label>
-        </ion-segment-button>
-      </ion-segment>
+        <div class="radio-option">
+          <ion-radio value="unique" labelPlacement="end" justify="start" [disabled]="isTypeLocked()">
+            Único
+          </ion-radio>
+          <p class="field-help text-label">Lo elige una sola familia.</p>
+        </div>
 
-      <p class="field-help text-label">
-        Único: lo aparta una sola familia. Repetible: varias familias pueden elegirlo. Regalo libre: la familia lleva lo que quiera.
-      </p>
+        <div class="radio-option">
+          <ion-radio value="repeatable" labelPlacement="end" justify="start" [disabled]="isTypeLocked()">
+            Repetible con cupo
+          </ion-radio>
+          <p class="field-help text-label">Lo eligen varias familias, hasta el número que pongas.</p>
+        </div>
+
+        <div class="radio-option">
+          <ion-radio value="suggestion" labelPlacement="end" justify="start" [disabled]="isTypeLocked()">
+            Sugerencia
+          </ion-radio>
+          <p class="field-help text-label">Una idea para los invitados. No se reserva.</p>
+        </div>
+
+        @if (showFreeOption()) {
+          <div class="radio-option">
+            <ion-radio value="free" labelPlacement="end" justify="start" [disabled]="isTypeLocked()">
+              Regalo libre
+            </ion-radio>
+            <p class="field-help text-label">La familia lleva lo que quiera.</p>
+          </div>
+        }
+      </ion-radio-group>
 
       @if (isTypeLocked()) {
         <p class="field-notice text-label" role="status">
-          No puedes cambiar el tipo porque ya tiene reservas.
-        </p>
-      }
-
-      @if (freeOptionDisabled()) {
-        <p class="field-notice text-label" role="status">
-          El evento ya tiene un regalo libre.
+          Ya hay familias que eligieron este regalo, así que no puedes cambiar su tipo. Una sugerencia no se reserva y esas elecciones se perderían.
         </p>
       }
     </div>
 
     @if (selectedKind() === 'repeatable') {
       <div class="field-group">
-        <span class="field-label text-name" id="gift-max-reservations-label">Límite de familias</span>
+        <span class="field-label text-name" id="gift-max-reservations-label">Número de familias</span>
         <ion-input
           aria-labelledby="gift-max-reservations-label"
           formControlName="maxReservations"
@@ -107,10 +114,10 @@
           inputmode="numeric"
           [maxlength]="4"
           fill="outline"
-          placeholder="Sin límite"
+          placeholder="Ej. 3"
         ></ion-input>
         <p class="field-help text-label">
-          Déjalo vacío si cualquier número de familias puede elegirlo.
+          Cuántas familias pueden elegirlo. Mínimo 2.
         </p>
         @if (maxReservationsError; as errorMsg) {
           <p class="field-error text-label" role="alert">{{ errorMsg }}</p>

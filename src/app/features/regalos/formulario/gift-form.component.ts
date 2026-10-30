@@ -23,9 +23,8 @@ import {
   IonHeader,
   IonIcon,
   IonInput,
-  IonLabel,
-  IonSegment,
-  IonSegmentButton,
+  IonRadio,
+  IonRadioGroup,
   IonSpinner,
   IonTextarea,
   IonTitle,
@@ -43,7 +42,7 @@ function notBlankValidator(control: AbstractControl<string>): ValidationErrors |
 }
 
 function toGiftKind(value: string): GiftKind {
-  if (value === 'repeatable' || value === 'free') {
+  if (value === 'repeatable' || value === 'free' || value === 'suggestion') {
     return value;
   }
   return 'unique';
@@ -67,9 +66,8 @@ function toGiftKind(value: string): GiftKind {
     IonFooter,
     IonInput,
     IonTextarea,
-    IonSegment,
-    IonSegmentButton,
-    IonLabel,
+    IonRadioGroup,
+    IonRadio,
     IonSpinner,
   ],
 })
@@ -117,13 +115,15 @@ export class GiftFormComponent implements OnInit {
     return current !== null && current.reservations.length > 0;
   });
 
-  readonly freeOptionDisabled = computed<boolean>(() => {
+  readonly showFreeOption = computed<boolean>(() => {
     const current = this.giftSignal();
     if (current?.kind === 'free') {
-      return false;
+      return true;
     }
-    return this.hasFreeGiftSignal();
+    return !this.hasFreeGiftSignal();
   });
+
+  readonly freeOptionDisabled = computed<boolean>(() => !this.showFreeOption());
 
   readonly form = this.fb.nonNullable.group({
     name: ['', [Validators.required, notBlankValidator, Validators.maxLength(120)]],
@@ -150,10 +150,15 @@ export class GiftFormComponent implements OnInit {
         category: current.category ?? '',
         kind: toGiftKind(current.kind),
         maxReservations:
-          current.max_reservations !== null && current.max_reservations !== undefined
+          current.kind === 'repeatable' &&
+          current.max_reservations !== null &&
+          current.max_reservations !== undefined
             ? String(current.max_reservations)
             : '',
       });
+      if (this.isTypeLocked()) {
+        this.form.controls.kind.disable();
+      }
     }
   }
 
@@ -188,11 +193,15 @@ export class GiftFormComponent implements OnInit {
     const value = this.form.controls.maxReservations.value ?? '';
     const trimmed = value.trim();
     if (trimmed === '') {
-      return null;
+      return 'Escribe cuántas familias pueden elegirlo (2 o más).';
     }
 
     if (!/^[1-9]\d*$/.test(trimmed)) {
-      return 'Escribe un número entero de 1 en adelante o déjalo vacío.';
+      return 'Escribe un número entero de 2 en adelante.';
+    }
+
+    if (trimmed === '1') {
+      return 'Si solo una familia puede elegirlo, usa Único.';
     }
 
     const num = Number(trimmed);
@@ -251,8 +260,7 @@ export class GiftFormComponent implements OnInit {
 
     let parsedMaxReservations: number | null = null;
     if (resolvedKind === 'repeatable') {
-      const trimmed = raw.maxReservations.trim();
-      parsedMaxReservations = trimmed === '' ? null : Number(trimmed);
+      parsedMaxReservations = Number(raw.maxReservations.trim());
     }
 
     const input: GiftInput = {
