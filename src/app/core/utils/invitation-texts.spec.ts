@@ -57,21 +57,21 @@ describe('invitation-texts utils', () => {
         '¡Gracias! Recibimos su respuesta. Pueden cambiarla hasta el 24 de noviembre.',
       );
       expect(texts.tableNote).toBe('Su mesa se asignará pronto');
-      expect(texts.giftsMineHeading).toBe('Apartados por ustedes');
-      expect(texts.giftMineBadge).toBe('Apartado por ustedes');
-      expect(texts.giftChosenBadge).toBe('Ustedes eligieron esta opción');
+      expect(texts.giftsMineHeading(1)).toBe('Su regalo');
+      expect(texts.giftsMineHeading(2)).toBe('Sus regalos');
+      expect(texts.giftChosenBadge).toBe('Su elección');
       expect(texts.reserveGiftConfirm('Pañales')).toBe(
-        '¿Desean apartar Pañales? Nadie más sabrá que lo eligieron ustedes.',
+        '¿Desean elegir Pañales? Nadie más sabrá que lo eligieron ustedes.',
       );
       expect(texts.giftsTitle).toBe('Un detalle para Eloise');
       expect(texts.giftsIntro).toEqual([
         'Su compañía es el mejor regalo, así que no sientan ningún compromiso. Si les hace ilusión llevar algo, preparamos una lista con algunas ideas.',
       ]);
       expect(texts.giftsAnonymityNote).toBe(
-        'Lo que aparten es anónimo: ni nosotros ni los demás invitados sabremos qué regalo eligieron.',
+        'Lo que elijan es anónimo: ni nosotros ni los demás invitados sabremos qué regalo eligieron.',
       );
       expect(texts.giftReservedConfirmation).toBe(
-        '¡Listo! Quedó apartado. Solo ustedes saben que lo eligieron.',
+        '¡Listo! Quedó elegido. Solo ustedes saben que lo eligieron.',
       );
       expect(texts.entryCodeTitle).toBe('Código de entrada');
       expect(texts.entryCodeInstruction).toBe('Muestra este código en la entrada');
@@ -91,21 +91,21 @@ describe('invitation-texts utils', () => {
         '¡Gracias! Recibimos tu respuesta. Puedes cambiarla hasta el 24 de noviembre.',
       );
       expect(texts.tableNote).toBe('Tu mesa se asignará pronto');
-      expect(texts.giftsMineHeading).toBe('Apartados por ti');
-      expect(texts.giftMineBadge).toBe('Apartado por ti');
-      expect(texts.giftChosenBadge).toBe('Elegiste esta opción');
+      expect(texts.giftsMineHeading(1)).toBe('Tu regalo');
+      expect(texts.giftsMineHeading(2)).toBe('Tus regalos');
+      expect(texts.giftChosenBadge).toBe('Tu elección');
       expect(texts.reserveGiftConfirm('Pañales')).toBe(
-        '¿Quieres apartar Pañales? Nadie más sabrá que lo elegiste tú.',
+        '¿Quieres elegir Pañales? Nadie más sabrá que lo elegiste tú.',
       );
       expect(texts.giftsTitle).toBe('Un detalle para Eloise');
       expect(texts.giftsIntro).toEqual([
         'Tu compañía es el mejor regalo, así que no sientas ningún compromiso. Si te hace ilusión llevar algo, preparamos una lista con algunas ideas.',
       ]);
       expect(texts.giftsAnonymityNote).toBe(
-        'Lo que apartes es anónimo: ni nosotros ni los demás invitados sabremos qué regalo elegiste.',
+        'Lo que elijas es anónimo: ni nosotros ni los demás invitados sabremos qué regalo elegiste.',
       );
       expect(texts.giftReservedConfirmation).toBe(
-        '¡Listo! Quedó apartado. Solo tú sabes que lo elegiste.',
+        '¡Listo! Quedó elegido. Solo tú sabes que lo elegiste.',
       );
       expect(texts.entryCodeTitle).toBe('Código de entrada');
       expect(texts.entryCodeInstruction).toBe('Muestra este código en la entrada');
@@ -121,11 +121,13 @@ describe('invitation-texts utils', () => {
 
       expect(texts.welcomeTitle).toContain(namePart);
 
-      const stringKeys: Array<keyof typeof texts> = [
+      const stringKeys: Array<
+        {
+          [K in keyof typeof texts]: (typeof texts)[K] extends string ? K : never;
+        }[keyof typeof texts]
+      > = [
         'deadlinePassed',
         'tableNote',
-        'giftsMineHeading',
-        'giftMineBadge',
         'giftChosenBadge',
         'giftsTitle',
         'giftsAnonymityNote',
@@ -142,6 +144,8 @@ describe('invitation-texts utils', () => {
         expect(paragraph).not.toContain(namePart);
       }
 
+      expect(texts.giftsMineHeading(1)).not.toContain(namePart);
+      expect(texts.giftsMineHeading(2)).not.toContain(namePart);
       expect(texts.deadlineReminder('24 de noviembre')).not.toContain(namePart);
       expect(texts.rsvpThanks('24 de noviembre')).not.toContain(namePart);
       expect(texts.reserveGiftConfirm('Coche para bebé')).not.toContain(namePart);

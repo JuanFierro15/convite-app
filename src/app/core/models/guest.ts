@@ -51,12 +51,13 @@ export const GUEST_ERROR_MESSAGES: Record<string, string> = {
   invalid_code: 'No encontramos esta invitación. Revisa el enlace que te enviaron.',
   deadline_passed:
     'El plazo para responder ya terminó. Si necesitas cambiar tu respuesta, escríbenos.',
-  already_reserved: 'Alguien acaba de apartar este regalo. Elige otro de la lista.',
+  already_reserved: 'Alguien acaba de elegir este regalo. Elige otro de la lista.',
   gifts_closed: 'La lista de regalos ya está cerrada.',
   network_error: CONNECTION_ERROR_MESSAGE,
-  not_reserved_by_you: 'Este regalo ya no está apartado para esta invitación.',
+  not_reserved_by_you: 'Este regalo ya no está elegido en esta invitación.',
   load_failed: 'No pudimos cargar tu invitación. Inténtalo de nuevo.',
-  gift_full: 'Esta opción ya completó sus cupos. Elige otra de la lista.',
+  gift_full: 'Este regalo ya completó sus cupos. Elige otro de la lista.',
+  gift_not_reservable: 'Esta opción es solo una idea: no hace falta reservarla.',
 };
 
 const DEFAULT_GUEST_ERROR_MESSAGE = 'No pudimos guardar el cambio. Inténtalo de nuevo.';

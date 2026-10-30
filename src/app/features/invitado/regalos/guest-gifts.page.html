@@ -63,14 +63,14 @@
         @if (gifts().length === 0) {
           <app-empty-state message="Todavía no hay regalos en la lista." />
         } @else {
-          @if (unlimitedGifts().length > 0) {
-            <section class="gift-section" aria-labelledby="section-unlimited">
-              <h2 id="section-unlimited" class="text-section gift-section__title">
-                Para elegir entre varias familias
+          @if (mine().length > 0) {
+            <section class="gift-section gift-section--mine" aria-labelledby="section-mine">
+              <h2 id="section-mine" class="text-section gift-section__title">
+                {{ texts().giftsMineHeading(mine().length) }}
               </h2>
               <div class="gift-list">
-                @for (gift of unlimitedGifts(); track gift.id) {
-                  <ion-card class="gift-card">
+                @for (gift of mine(); track gift.id) {
+                  <ion-card class="gift-card" [class.gift-card--sold-out]="isSoldOut(gift)">
                     <ion-card-content class="gift-card__content">
                       <p class="text-name gift-card__name">{{ gift.name }}</p>
                       @if (gift.description; as desc) {
@@ -86,41 +86,32 @@
                           color="primary"
                           expand="block"
                           [disabled]="!inv.gifts_open || processingGiftId() !== null"
-                          (click)="onToggleUnlimitedGift(gift)"
+                          (click)="onConfirmRelease(gift)"
                         >
                           @if (processingGiftId() === gift.id) {
                             <ion-spinner slot="start" name="crescent"></ion-spinner>
                           }
-                          Quitar mi elección
+                          Liberar
                         </ion-button>
-                      } @else if (gift.full) {
+                      } @else if (isSoldOut(gift)) {
                         <div class="taken-badge badge-soft-medium">
                           <ion-icon name="lock-closed-outline" aria-hidden="true"></ion-icon>
-                          <span>Completo</span>
+                          <span>Ya lo eligieron</span>
                         </div>
-                        <ion-button
-                          color="primary"
-                          expand="block"
-                          [disabled]="true"
-                        >
-                          Elegir esta opción
-                        </ion-button>
                       } @else {
-                        @if (gift.remaining !== null) {
-                          <p class="text-label gift-card__remaining">
-                            {{ remainingLabel(gift.remaining) }}
-                          </p>
+                        @if (remainingLabel(gift); as rem) {
+                          <p class="text-label gift-card__remaining">{{ rem }}</p>
                         }
                         <ion-button
                           color="primary"
                           expand="block"
                           [disabled]="!inv.gifts_open || processingGiftId() !== null"
-                          (click)="onToggleUnlimitedGift(gift)"
+                          (click)="onConfirmReserve(gift)"
                         >
                           @if (processingGiftId() === gift.id) {
                             <ion-spinner slot="start" name="crescent"></ion-spinner>
                           }
-                          Elegir esta opción
+                          Elegir este regalo
                         </ion-button>
                       }
                     </ion-card-content>
@@ -130,93 +121,125 @@
             </section>
           }
 
-          @if (availableUniqueGifts().length > 0) {
-            <section class="gift-section" aria-labelledby="section-available">
-              <h2 id="section-available" class="text-section gift-section__title">
-                Regalos disponibles
-              </h2>
-              <div class="gift-list">
-                @for (gift of availableUniqueGifts(); track gift.id) {
-                  <ion-card class="gift-card">
-                    <ion-card-content class="gift-card__content">
-                      <p class="text-name gift-card__name">{{ gift.name }}</p>
-                      @if (gift.description; as desc) {
-                        <p class="text-body gift-card__description">{{ desc }}</p>
-                      }
+          <div #giftListStart class="gift-list-anchor"></div>
+
+          @if (showFilter()) {
+            <ion-segment
+              class="gift-filter-segment"
+              [value]="activeCategory()"
+              (ionChange)="onFilterChange($event)"
+              aria-label="Filtrar regalos"
+            >
+              <ion-segment-button value="unique">
+                <ion-label>Únicos ({{ counts().unique }})</ion-label>
+              </ion-segment-button>
+              <ion-segment-button value="repeatable">
+                <ion-label>Repetibles ({{ counts().repeatable }})</ion-label>
+              </ion-segment-button>
+            </ion-segment>
+          }
+
+          @if (visible().length > 0) {
+            <div class="gift-list">
+              @for (gift of paged().items; track gift.id) {
+                <ion-card class="gift-card" [class.gift-card--sold-out]="isSoldOut(gift)">
+                  <ion-card-content class="gift-card__content">
+                    <p class="text-name gift-card__name">{{ gift.name }}</p>
+                    @if (gift.description; as desc) {
+                      <p class="text-body gift-card__description">{{ desc }}</p>
+                    }
+                    @if (gift.reserved_by_me) {
+                      <div class="chosen-badge badge-soft-success">
+                        <ion-icon name="checkmark-circle" aria-hidden="true"></ion-icon>
+                        <span>{{ texts().giftChosenBadge }}</span>
+                      </div>
                       <ion-button
+                        fill="outline"
                         color="primary"
                         expand="block"
                         [disabled]="!inv.gifts_open || processingGiftId() !== null"
-                        (click)="onConfirmReserveUnique(gift)"
-                      >
-                        @if (processingGiftId() === gift.id) {
-                          <ion-spinner slot="start" name="crescent"></ion-spinner>
-                        }
-                        Apartar este regalo
-                      </ion-button>
-                    </ion-card-content>
-                  </ion-card>
-                }
-              </div>
-            </section>
-          }
-
-          @if (myUniqueGifts().length > 0) {
-            <section class="gift-section" aria-labelledby="section-mine">
-              <h2 id="section-mine" class="text-section gift-section__title">
-                {{ texts().giftsMineHeading }}
-              </h2>
-              <div class="gift-list">
-                @for (gift of myUniqueGifts(); track gift.id) {
-                  <ion-card class="gift-card">
-                    <ion-card-content class="gift-card__content">
-                      <div class="gift-card__header">
-                        <p class="text-name gift-card__name">{{ gift.name }}</p>
-                        <span class="badge-soft-success">{{ texts().giftMineBadge }}</span>
-                      </div>
-                      @if (gift.description; as desc) {
-                        <p class="text-body gift-card__description">{{ desc }}</p>
-                      }
-                      <ion-button
-                        fill="outline"
-                        color="medium"
-                        expand="block"
-                        [disabled]="!inv.gifts_open || processingGiftId() !== null"
-                        (click)="onConfirmReleaseUnique(gift)"
+                        (click)="onConfirmRelease(gift)"
                       >
                         @if (processingGiftId() === gift.id) {
                           <ion-spinner slot="start" name="crescent"></ion-spinner>
                         }
                         Liberar
                       </ion-button>
-                    </ion-card-content>
-                  </ion-card>
-                }
-              </div>
-            </section>
-          }
-
-          @if (takenUniqueGifts().length > 0) {
-            <section class="gift-section" aria-labelledby="section-taken">
-              <h2 id="section-taken" class="text-section gift-section__title">
-                Ya apartados
-              </h2>
-              <div class="gift-list">
-                @for (gift of takenUniqueGifts(); track gift.id) {
-                  <ion-card class="gift-card gift-card--taken">
-                    <ion-card-content class="gift-card__content">
-                      <p class="text-name gift-card__name">{{ gift.name }}</p>
-                      @if (gift.description; as desc) {
-                        <p class="text-body gift-card__description">{{ desc }}</p>
-                      }
+                    } @else if (isSoldOut(gift)) {
                       <div class="taken-badge badge-soft-medium">
                         <ion-icon name="lock-closed-outline" aria-hidden="true"></ion-icon>
-                        <span>Ya apartado</span>
+                        <span>Ya lo eligieron</span>
                       </div>
-                    </ion-card-content>
-                  </ion-card>
-                }
+                    } @else {
+                      @if (remainingLabel(gift); as rem) {
+                        <p class="text-label gift-card__remaining">{{ rem }}</p>
+                      }
+                      <ion-button
+                        color="primary"
+                        expand="block"
+                        [disabled]="!inv.gifts_open || processingGiftId() !== null"
+                        (click)="onConfirmReserve(gift)"
+                      >
+                        @if (processingGiftId() === gift.id) {
+                          <ion-spinner slot="start" name="crescent"></ion-spinner>
+                        }
+                        Elegir este regalo
+                      </ion-button>
+                    }
+                  </ion-card-content>
+                </ion-card>
+              }
+            </div>
+          }
+
+          @if (paged().totalPages > 1) {
+            <nav class="pagination" aria-label="Paginación de regalos">
+              <ion-button
+                fill="outline"
+                size="small"
+                class="pagination__button"
+                [disabled]="paged().page <= 1"
+                aria-label="Página anterior"
+                (click)="goToPreviousPage()"
+              >
+                <ion-icon slot="start" name="chevron-back-outline" aria-hidden="true"></ion-icon>
+                Anterior
+              </ion-button>
+              <span class="text-label pagination__status" aria-live="polite">
+                Página {{ paged().page }} de {{ paged().totalPages }}
+              </span>
+              <ion-button
+                fill="outline"
+                size="small"
+                class="pagination__button"
+                [disabled]="paged().page >= paged().totalPages"
+                aria-label="Página siguiente"
+                (click)="goToNextPage()"
+              >
+                Siguiente
+                <ion-icon slot="end" name="chevron-forward-outline" aria-hidden="true"></ion-icon>
+              </ion-button>
+            </nav>
+          }
+
+          @if (showSuggestions()) {
+            <section class="suggestions" aria-labelledby="suggestions-title">
+              <div class="suggestions__header">
+                <h2 id="suggestions-title" class="text-section suggestions__title">
+                  También nos ayudan
+                </h2>
+                <span class="suggestions__note text-label">(no hace falta reservarlos)</span>
               </div>
+              <ul class="suggestions__list">
+                @for (sug of suggestions(); track sug.id) {
+                  <li class="suggestions__item">
+                    <p class="text-name suggestions__name">{{ sug.name }}</p>
+                    @if (sug.description; as desc) {
+                      <p class="text-body suggestions__description">{{ desc }}</p>
+                    }
+                  </li>
+                }
+              </ul>
             </section>
           }
         }

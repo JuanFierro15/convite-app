@@ -10,8 +10,7 @@ export interface GuestTexts {
   deadlinePassed: string;
   rsvpThanks(date: string): string;
   tableNote: string;
-  giftsMineHeading: string;
-  giftMineBadge: string;
+  giftsMineHeading(count: number): string;
   giftChosenBadge: string;
   reserveGiftConfirm(giftName: string): string;
   giftsTitle: string;
@@ -58,13 +57,19 @@ export function guestTexts(kind: InvitationKind, groupName: string): GuestTexts 
         ? `¡Gracias! Recibimos tu respuesta. Puedes cambiarla hasta el ${date}.`
         : `¡Gracias! Recibimos su respuesta. Pueden cambiarla hasta el ${date}.`,
     tableNote: isIndividual ? 'Tu mesa se asignará pronto' : 'Su mesa se asignará pronto',
-    giftsMineHeading: isIndividual ? 'Apartados por ti' : 'Apartados por ustedes',
-    giftMineBadge: isIndividual ? 'Apartado por ti' : 'Apartado por ustedes',
-    giftChosenBadge: isIndividual ? 'Elegiste esta opción' : 'Ustedes eligieron esta opción',
+    giftsMineHeading: (count: number) =>
+      isIndividual
+        ? count === 1
+          ? 'Tu regalo'
+          : 'Tus regalos'
+        : count === 1
+          ? 'Su regalo'
+          : 'Sus regalos',
+    giftChosenBadge: isIndividual ? 'Tu elección' : 'Su elección',
     reserveGiftConfirm: (giftName: string) =>
       isIndividual
-        ? `¿Quieres apartar ${giftName}? Nadie más sabrá que lo elegiste tú.`
-        : `¿Desean apartar ${giftName}? Nadie más sabrá que lo eligieron ustedes.`,
+        ? `¿Quieres elegir ${giftName}? Nadie más sabrá que lo elegiste tú.`
+        : `¿Desean elegir ${giftName}? Nadie más sabrá que lo eligieron ustedes.`,
     giftsTitle: 'Un detalle para Eloise',
     giftsIntro: isIndividual
       ? [
@@ -74,11 +79,11 @@ export function guestTexts(kind: InvitationKind, groupName: string): GuestTexts 
           'Su compañía es el mejor regalo, así que no sientan ningún compromiso. Si les hace ilusión llevar algo, preparamos una lista con algunas ideas.',
         ],
     giftsAnonymityNote: isIndividual
-      ? 'Lo que apartes es anónimo: ni nosotros ni los demás invitados sabremos qué regalo elegiste.'
-      : 'Lo que aparten es anónimo: ni nosotros ni los demás invitados sabremos qué regalo eligieron.',
+      ? 'Lo que elijas es anónimo: ni nosotros ni los demás invitados sabremos qué regalo elegiste.'
+      : 'Lo que elijan es anónimo: ni nosotros ni los demás invitados sabremos qué regalo eligieron.',
     giftReservedConfirmation: isIndividual
-      ? '¡Listo! Quedó apartado. Solo tú sabes que lo elegiste.'
-      : '¡Listo! Quedó apartado. Solo ustedes saben que lo eligieron.',
+      ? '¡Listo! Quedó elegido. Solo tú sabes que lo elegiste.'
+      : '¡Listo! Quedó elegido. Solo ustedes saben que lo eligieron.',
     entryCodeTitle: 'Código de entrada',
     entryCodeInstruction: 'Muestra este código en la entrada',
     entryCodeTip: 'Tómale una captura de pantalla para tenerlo a mano, aunque no haya señal.',

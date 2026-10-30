@@ -30,7 +30,7 @@ describe('GuestApiService', () => {
       const err = toGuestApiError({ message: 'gift_full' });
       expect(err.code).toBe('gift_full');
       expect(err.message).toBe(GUEST_ERROR_MESSAGES['gift_full']);
-      expect(err.message).toBe('Esta opción ya completó sus cupos. Elige otra de la lista.');
+      expect(err.message).toBe('Este regalo ya completó sus cupos. Elige otro de la lista.');
     });
   });
 

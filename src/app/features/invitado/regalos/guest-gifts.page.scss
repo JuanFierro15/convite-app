@@ -107,6 +107,14 @@
   color: var(--ion-text-color);
 }
 
+.gift-list-anchor {
+  scroll-margin-top: var(--space-md);
+}
+
+.gift-filter-segment {
+  width: 100%;
+}
+
 .gift-list {
   display: flex;
   flex-direction: column;
@@ -119,8 +127,11 @@
   box-shadow: var(--shadow-card);
 }
 
-.gift-card--taken {
-  opacity: 0.85;
+.gift-card--sold-out {
+  --background: var(--ion-color-light);
+  box-shadow: none;
+  --box-shadow: none;
+  border: 1px solid var(--ion-color-light-shade);
 }
 
 .gift-card__content {
@@ -128,14 +139,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
-}
-
-.gift-card__header {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-sm);
 }
 
 .gift-card__name {
@@ -162,4 +165,74 @@
 .chosen-badge ion-icon,
 .taken-badge ion-icon {
   font-size: 18px;
+}
+
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-top: var(--space-md);
+}
+
+// La vista del invitado agranda el texto: a 360 px los dos botones y el estado no caben en una fila.
+.pagination__status {
+  order: -1;
+  flex-basis: 100%;
+  color: var(--ion-color-medium-shade);
+  text-align: center;
+}
+
+.pagination__button {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0;
+}
+
+.suggestions {
+  background-color: rgba(var(--ion-color-primary-rgb), 0.06);
+  border-radius: var(--radius-md);
+  padding: var(--space-md);
+}
+
+.suggestions__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-sm);
+}
+
+.suggestions__title {
+  margin: 0;
+  color: var(--ion-text-color);
+}
+
+.suggestions__note {
+  color: var(--ion-color-medium-shade);
+}
+
+.suggestions__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.suggestions__item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.suggestions__name {
+  margin: 0;
+  color: var(--ion-text-color);
+}
+
+.suggestions__description {
+  margin: 0;
+  color: var(--ion-color-medium);
 }
