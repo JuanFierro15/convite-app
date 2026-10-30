@@ -14,8 +14,8 @@ import { introVideoSources } from '../../../core';
 import { INTRO_ENVIRONMENT } from './intro-environment';
 
 export const INTRO_START_TIMEOUT_MS = 2000;
-export const INTRO_MAX_DURATION_MS = 15000;
-export const INTRO_FADE_MS = 300;
+export const INTRO_MAX_DURATION_MS = 8000;
+export const INTRO_FADE_MS = 450;
 
 @Component({
   selector: 'app-guest-intro',
@@ -26,8 +26,10 @@ export const INTRO_FADE_MS = 300;
 export class GuestIntroComponent {
   readonly code = input.required<string>();
   readonly themeId = input.required<string>();
+  readonly exitStarted = output<void>();
   readonly finished = output<void>();
   readonly leaving = signal(false);
+  readonly videoHidden = signal(false);
   readonly poster = signal<string | null>(null);
 
   private readonly env = inject(INTRO_ENVIRONMENT);
@@ -62,16 +64,16 @@ export class GuestIntroComponent {
     if (!this.hasPlayed) {
       this.hasPlayed = true;
       this.env.markSeen(this.code());
-      this.maxDurationTimer = setTimeout(() => this.leave(), INTRO_MAX_DURATION_MS);
+      this.maxDurationTimer = setTimeout(() => this.leave(false), INTRO_MAX_DURATION_MS);
     }
   }
 
   onEnded(): void {
-    this.leave();
+    this.leave(true);
   }
 
   onError(): void {
-    this.leave();
+    this.leave(false);
   }
 
   onSkip(): void {
@@ -79,14 +81,14 @@ export class GuestIntroComponent {
       return;
     }
     this.env.markSeen(this.code());
-    this.leave();
+    this.leave(false);
   }
 
   private startIntro(): void {
     const orientation = this.env.isPortrait() ? 'vertical' : 'horizontal';
     const sources = introVideoSources(this.themeId(), orientation);
     if (!sources) {
-      this.leave();
+      this.leave(false);
       return;
     }
 
@@ -99,17 +101,17 @@ export class GuestIntroComponent {
 
     this.skipButton().nativeElement.focus();
 
-    this.startTimer = setTimeout(() => this.leave(), INTRO_START_TIMEOUT_MS);
+    this.startTimer = setTimeout(() => this.leave(false), INTRO_START_TIMEOUT_MS);
 
     try {
       const playPromise = videoEl.play();
-      void Promise.resolve(playPromise).catch(() => this.leave());
+      void Promise.resolve(playPromise).catch(() => this.leave(false));
     } catch {
-      this.leave();
+      this.leave(false);
     }
   }
 
-  private leave(): void {
+  private leave(keepFrame: boolean): void {
     if (this.leaving()) {
       return;
     }
@@ -121,8 +123,12 @@ export class GuestIntroComponent {
       clearTimeout(this.maxDurationTimer);
       this.maxDurationTimer = null;
     }
-    this.releaseVideo();
+    if (!keepFrame) {
+      this.releaseVideo();
+      this.videoHidden.set(true);
+    }
     this.leaving.set(true);
+    this.exitStarted.emit();
     this.fadeTimer = setTimeout(() => {
       this.finished.emit();
     }, INTRO_FADE_MS);

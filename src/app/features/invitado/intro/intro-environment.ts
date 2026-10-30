@@ -10,8 +10,6 @@ export interface IntroEnvironment {
   markSeen(code: string): void;
 }
 
-export const INTRO_SEEN_KEY_PREFIX = 'convite.intro-visto.';
-
 export const INTRO_ENVIRONMENT = new InjectionToken<IntroEnvironment>('INTRO_ENVIRONMENT', {
   providedIn: 'root',
   factory: () => browserIntroEnvironment(),
@@ -71,28 +69,11 @@ export function browserIntroEnvironment(): IntroEnvironment {
     },
 
     hasSeen(code: string): boolean {
-      if (seenCodesInMemory.has(code)) {
-        return true;
-      }
-      try {
-        return (
-          typeof localStorage !== 'undefined' &&
-          localStorage.getItem(INTRO_SEEN_KEY_PREFIX + code) === '1'
-        );
-      } catch {
-        return false;
-      }
+      return seenCodesInMemory.has(code);
     },
 
     markSeen(code: string): void {
       seenCodesInMemory.add(code);
-      try {
-        if (typeof localStorage !== 'undefined') {
-          localStorage.setItem(INTRO_SEEN_KEY_PREFIX + code, '1');
-        }
-      } catch {
-        // Si el almacenamiento local no está disponible, se mantiene solo en memoria.
-      }
     },
   };
 }

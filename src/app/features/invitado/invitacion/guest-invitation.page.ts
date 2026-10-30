@@ -97,6 +97,7 @@ export class GuestInvitationPage implements OnInit, ViewWillEnter {
   readonly code = input.required<string>();
 
   readonly introOffered = signal(false);
+  readonly introExiting = signal(false);
   readonly introCode = computed(() => normalizeInvitationCode(this.code()));
   readonly introVisible = computed(() => {
     const inv = this.invitation();
@@ -107,6 +108,9 @@ export class GuestInvitationPage implements OnInit, ViewWillEnter {
       findTheme(inv.event.theme_id)?.introVideo === true
     );
   });
+  readonly introPending = computed(
+    () => this.introVisible() && !this.introExiting(),
+  );
 
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
@@ -219,6 +223,10 @@ export class GuestInvitationPage implements OnInit, ViewWillEnter {
       shouldOfferIntro(this.introEnv, normalizeInvitationCode(this.code())),
     );
     void this.loadInvitation();
+  }
+
+  onIntroExitStarted(): void {
+    this.introExiting.set(true);
   }
 
   onIntroFinished(): void {

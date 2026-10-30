@@ -3,7 +3,11 @@
     <ion-refresher-content></ion-refresher-content>
   </ion-refresher>
 
-  <div class="guest-accessibility-view guest-container">
+  <div
+    class="guest-accessibility-view guest-container"
+    [class.intro-pending]="introPending()"
+    [class.intro-reveal]="introExiting()"
+  >
     @if (loading()) {
       <div class="loading-state" role="status" aria-live="polite">
         <ion-spinner name="crescent" color="primary" aria-label="Cargando invitación"></ion-spinner>
@@ -255,6 +259,7 @@
   <app-guest-intro
     [code]="introCode()"
     [themeId]="invitation()!.event.theme_id"
+    (exitStarted)="onIntroExitStarted()"
     (finished)="onIntroFinished()"
   />
 }

@@ -327,3 +327,34 @@
   font-weight: 600;
   color: var(--ion-text-color);
 }
+
+// Mientras la capa del video tapa la invitación, el contenido espera abajo y transparente
+// para entrar subiendo cuando el video se desvanece.
+.intro-pending {
+  .hero-wrapper,
+  .guest-body > * {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+}
+
+.intro-reveal {
+  .hero-wrapper,
+  .guest-body > * {
+    transition:
+      opacity 600ms ease-out,
+      transform 700ms cubic-bezier(0.2, 0.7, 0.2, 1);
+  }
+
+  .hero-wrapper {
+    transition-delay: 200ms;
+  }
+
+  .guest-body > .welcome-card {
+    transition-delay: 350ms;
+  }
+
+  .guest-body > :not(.welcome-card) {
+    transition-delay: 500ms;
+  }
+}

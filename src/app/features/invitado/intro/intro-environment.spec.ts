@@ -1,6 +1,5 @@
 import { Capacitor } from '@capacitor/core';
 import {
-  INTRO_SEEN_KEY_PREFIX,
   IntroEnvironment,
   browserIntroEnvironment,
   resetIntroMemoryForTests,
@@ -69,25 +68,35 @@ describe('intro-environment', () => {
       expect(env.isNativePlatform()).toBe(false);
     });
 
-    it('marks seen in memory and in localStorage with the configured prefix', () => {
+    it('does not read or write localStorage when marking and checking seen', () => {
+      const getItemSpy = vi.spyOn(Storage.prototype, 'getItem');
+      const setItemSpy = vi.spyOn(Storage.prototype, 'setItem');
+
+      env.markSeen('AAAA');
+      expect(setItemSpy).not.toHaveBeenCalled();
+
+      expect(env.hasSeen('AAAA')).toBe(true);
+      expect(getItemSpy).not.toHaveBeenCalled();
+    });
+
+    it('returns false for hasSeen even if legacy localStorage key is set', () => {
+      localStorage.setItem('convite.intro-visto.BBBB', '1');
+      expect(env.hasSeen('BBBB')).toBe(false);
+    });
+
+    it('marks seen in memory only for the specified code', () => {
       expect(env.hasSeen('AAAA')).toBe(false);
       env.markSeen('AAAA');
       expect(env.hasSeen('AAAA')).toBe(true);
-      expect(env.hasSeen('BBBB')).toBe(false);
-      expect(localStorage.getItem(`${INTRO_SEEN_KEY_PREFIX}AAAA`)).toBe('1');
+      expect(env.hasSeen('CCCC')).toBe(false);
     });
 
-    it('handles localStorage throwing without errors and retains memory fallback', () => {
-      vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
-        throw new Error('Access denied');
-      });
-      vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => {
-        throw new Error('QuotaExceeded');
-      });
+    it('resets seen codes in memory after resetIntroMemoryForTests', () => {
+      env.markSeen('AAAA');
+      expect(env.hasSeen('AAAA')).toBe(true);
 
-      expect(env.hasSeen('CCCC')).toBe(false);
-      expect(() => env.markSeen('CCCC')).not.toThrow();
-      expect(env.hasSeen('CCCC')).toBe(true);
+      resetIntroMemoryForTests();
+      expect(env.hasSeen('AAAA')).toBe(false);
     });
 
     describe('prefersLessData', () => {

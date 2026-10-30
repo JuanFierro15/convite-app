@@ -10,13 +10,17 @@
   height: 100%;
   background: var(--ion-background-color);
   opacity: 1;
-  transition: opacity 300ms ease;
+  transition: opacity 450ms ease;
   position: relative;
 }
 
 .intro--leaving {
   opacity: 0;
   pointer-events: none;
+
+  .intro__skip {
+    opacity: 0;
+  }
 }
 
 .intro__video {
@@ -24,6 +28,10 @@
   height: 100%;
   object-fit: cover;
   display: block;
+}
+
+.intro__video--hidden {
+  visibility: hidden;
 }
 
 .intro__skip {
@@ -40,6 +48,7 @@
   font: inherit;
   font-weight: 600;
   box-shadow: var(--shadow-card);
+  transition: opacity 150ms ease;
 
   &:focus-visible {
     outline: 2px solid var(--ion-color-primary);

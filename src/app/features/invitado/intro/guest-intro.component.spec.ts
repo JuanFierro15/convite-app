@@ -60,6 +60,7 @@ describe('GuestIntroComponent', () => {
     fixture: ComponentFixture<GuestIntroComponent>;
     component: GuestIntroComponent;
     getFinishedCount: () => number;
+    getExitStartedCount: () => number;
   }> {
     if (options.envOverrides) {
       mockEnv = fakeEnv(options.envOverrides);
@@ -73,8 +74,12 @@ describe('GuestIntroComponent', () => {
     const fixture = TestBed.createComponent(GuestIntroComponent);
     const component = fixture.componentInstance;
     let finishedCount = 0;
+    let exitStartedCount = 0;
     component.finished.subscribe(() => {
       finishedCount++;
+    });
+    component.exitStarted.subscribe(() => {
+      exitStartedCount++;
     });
 
     fixture.componentRef.setInput('code', options.code ?? 'ABCD1234JK');
@@ -87,6 +92,7 @@ describe('GuestIntroComponent', () => {
       fixture,
       component,
       getFinishedCount: () => finishedCount,
+      getExitStartedCount: () => exitStartedCount,
     };
   }
 
@@ -121,7 +127,7 @@ describe('GuestIntroComponent', () => {
   });
 
   it('3. theme without video emits finished after fade without play or src', async () => {
-    const { fixture, getFinishedCount } = await createIntroComponent({
+    const { fixture, getFinishedCount, getExitStartedCount } = await createIntroComponent({
       themeId: 'baby-shower',
     });
 
@@ -131,6 +137,7 @@ describe('GuestIntroComponent', () => {
     expect(videoEl.getAttribute('src')).toBeNull();
     expect(playSpy).not.toHaveBeenCalled();
 
+    expect(getExitStartedCount()).toBe(1);
     expect(getFinishedCount()).toBe(0);
     await vi.advanceTimersByTimeAsync(INTRO_FADE_MS - 1);
     expect(getFinishedCount()).toBe(0);
@@ -139,7 +146,7 @@ describe('GuestIntroComponent', () => {
   });
 
   it('4. manual skip marks code as seen, releases video, fades out and emits once', async () => {
-    const { fixture, getFinishedCount } = await createIntroComponent();
+    const { fixture, component, getFinishedCount, getExitStartedCount } = await createIntroComponent();
 
     const skipBtn = fixture.nativeElement.querySelector(
       '.intro__skip',
@@ -155,9 +162,14 @@ describe('GuestIntroComponent', () => {
     expect(pauseSpy).toHaveBeenCalled();
     expect(loadSpy).toHaveBeenCalled();
     expect(videoEl.getAttribute('src')).toBeNull();
+    expect(component.videoHidden()).toBe(true);
+    expect(videoEl.classList.contains('intro__video--hidden')).toBe(true);
 
     const introDiv = fixture.nativeElement.querySelector('.intro');
     expect(introDiv.classList.contains('intro--leaving')).toBe(true);
+
+    expect(getExitStartedCount()).toBe(1);
+    expect(getFinishedCount()).toBe(0);
 
     await vi.advanceTimersByTimeAsync(INTRO_FADE_MS - 1);
     expect(getFinishedCount()).toBe(0);
@@ -169,17 +181,20 @@ describe('GuestIntroComponent', () => {
     skipBtn.click();
     await vi.advanceTimersByTimeAsync(INTRO_FADE_MS);
     expect(getFinishedCount()).toBe(1);
+    expect(getExitStartedCount()).toBe(1);
     expect(mockEnv.markSeen).toHaveBeenCalledTimes(1);
   });
 
   it('5. timeout skip: play resolves but no playing event arrives within 2s, does not call markSeen', async () => {
-    const { getFinishedCount } = await createIntroComponent();
+    const { getFinishedCount, getExitStartedCount } = await createIntroComponent();
 
     await vi.advanceTimersByTimeAsync(INTRO_START_TIMEOUT_MS - 1);
+    expect(getExitStartedCount()).toBe(0);
     expect(getFinishedCount()).toBe(0);
     expect(mockEnv.markSeen).not.toHaveBeenCalled();
 
     await vi.advanceTimersByTimeAsync(1);
+    expect(getExitStartedCount()).toBe(1);
     expect(getFinishedCount()).toBe(0);
 
     await vi.advanceTimersByTimeAsync(INTRO_FADE_MS);
@@ -187,8 +202,8 @@ describe('GuestIntroComponent', () => {
     expect(mockEnv.markSeen).not.toHaveBeenCalled();
   });
 
-  it('6. playing event cancels start timer, marks seen once, and waits for ended event', async () => {
-    const { fixture, getFinishedCount } = await createIntroComponent();
+  it('6. playing event cancels start timer, marks seen once, and keeps frame on ended event', async () => {
+    const { fixture, component, getFinishedCount, getExitStartedCount } = await createIntroComponent();
 
     const videoEl = fixture.nativeElement.querySelector(
       '.intro__video',
@@ -203,20 +218,40 @@ describe('GuestIntroComponent', () => {
 
     // Avanza 5000 ms más: el video sigue reproduciéndose y no ha terminado
     await vi.advanceTimersByTimeAsync(5000);
+    expect(getExitStartedCount()).toBe(0);
     expect(getFinishedCount()).toBe(0);
+
+    const removeAttributeSpy = vi.spyOn(videoEl, 'removeAttribute');
+    loadSpy.mockClear();
 
     // Se despacha ended
     videoEl.dispatchEvent(new Event('ended'));
     fixture.detectChanges();
 
+    expect(removeAttributeSpy).not.toHaveBeenCalledWith('src');
+    expect(loadSpy).not.toHaveBeenCalled();
+    expect(videoEl.getAttribute('src')).not.toBeNull();
+    expect(component.videoHidden()).toBe(false);
+    expect(videoEl.classList.contains('intro__video--hidden')).toBe(false);
+
+    const introDiv = fixture.nativeElement.querySelector('.intro');
+    expect(introDiv.classList.contains('intro--leaving')).toBe(true);
+
+    expect(getExitStartedCount()).toBe(1);
+    expect(getFinishedCount()).toBe(0);
+
     await vi.advanceTimersByTimeAsync(INTRO_FADE_MS - 1);
     expect(getFinishedCount()).toBe(0);
     await vi.advanceTimersByTimeAsync(1);
     expect(getFinishedCount()).toBe(1);
+
+    // Al destruir el fixture, cleanup() libera el video
+    fixture.destroy();
+    expect(loadSpy).toHaveBeenCalled();
   });
 
   it('7. maximum duration timeout: exits at INTRO_MAX_DURATION_MS + INTRO_FADE_MS if ended never arrives', async () => {
-    const { fixture, getFinishedCount } = await createIntroComponent();
+    const { fixture, getFinishedCount, getExitStartedCount } = await createIntroComponent();
 
     const videoEl = fixture.nativeElement.querySelector(
       '.intro__video',
@@ -227,9 +262,11 @@ describe('GuestIntroComponent', () => {
     fixture.detectChanges();
 
     await vi.advanceTimersByTimeAsync(INTRO_MAX_DURATION_MS - 1);
+    expect(getExitStartedCount()).toBe(0);
     expect(getFinishedCount()).toBe(0);
 
     await vi.advanceTimersByTimeAsync(1);
+    expect(getExitStartedCount()).toBe(1);
     expect(getFinishedCount()).toBe(0);
 
     await vi.advanceTimersByTimeAsync(INTRO_FADE_MS);
@@ -239,11 +276,12 @@ describe('GuestIntroComponent', () => {
   it('8. play rejection triggers immediate exit without markSeen and emits after fade', async () => {
     playSpy.mockRejectedValue(new Error('NotAllowedError'));
 
-    const { getFinishedCount } = await createIntroComponent();
+    const { getFinishedCount, getExitStartedCount } = await createIntroComponent();
 
     // Espera a que se procese el rechazo de la promesa
     await vi.advanceTimersByTimeAsync(0);
 
+    expect(getExitStartedCount()).toBe(1);
     expect(getFinishedCount()).toBe(0);
     expect(mockEnv.markSeen).not.toHaveBeenCalled();
 
@@ -253,7 +291,7 @@ describe('GuestIntroComponent', () => {
   });
 
   it('9. error event triggers exit after fade without markSeen', async () => {
-    const { fixture, getFinishedCount } = await createIntroComponent();
+    const { fixture, getFinishedCount, getExitStartedCount } = await createIntroComponent();
 
     const videoEl = fixture.nativeElement.querySelector(
       '.intro__video',
@@ -262,13 +300,15 @@ describe('GuestIntroComponent', () => {
     videoEl.dispatchEvent(new Event('error'));
     fixture.detectChanges();
 
+    expect(getExitStartedCount()).toBe(1);
+    expect(getFinishedCount()).toBe(0);
     await vi.advanceTimersByTimeAsync(INTRO_FADE_MS);
     expect(getFinishedCount()).toBe(1);
     expect(mockEnv.markSeen).not.toHaveBeenCalled();
   });
 
   it('10. Escape key on container triggers skip flow', async () => {
-    const { fixture, getFinishedCount } = await createIntroComponent();
+    const { fixture, getFinishedCount, getExitStartedCount } = await createIntroComponent();
 
     const introDiv = fixture.nativeElement.querySelector(
       '.intro',
@@ -280,6 +320,8 @@ describe('GuestIntroComponent', () => {
     fixture.detectChanges();
 
     expect(mockEnv.markSeen).toHaveBeenCalledWith('ABCD1234JK');
+    expect(getExitStartedCount()).toBe(1);
+    expect(getFinishedCount()).toBe(0);
     await vi.advanceTimersByTimeAsync(INTRO_FADE_MS);
     expect(getFinishedCount()).toBe(1);
   });

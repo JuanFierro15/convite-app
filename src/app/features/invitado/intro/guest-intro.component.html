@@ -9,6 +9,7 @@
   <video
     #video
     class="intro__video"
+    [class.intro__video--hidden]="videoHidden()"
     [attr.poster]="poster()"
     muted
     playsinline

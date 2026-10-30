@@ -1,4 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
 import QRCode from 'qrcode';
 import {
@@ -6,6 +7,7 @@ import {
   GuestInvitation,
   formatInvitationCode,
 } from '../../../core';
+import { GuestIntroComponent } from '../intro/guest-intro.component';
 import {
   INTRO_ENVIRONMENT,
   IntroEnvironment,
@@ -448,6 +450,60 @@ describe('GuestInvitationPage', () => {
 
       expect(fixture.nativeElement.querySelector('app-guest-intro')).toBeNull();
       expect(fixture.nativeElement.querySelector('ion-content').hasAttribute('inert')).toBe(false);
+    });
+
+    it('8. manages intro-pending and intro-reveal classes through exitStarted and finished transitions', async () => {
+      TestBed.overrideProvider(INTRO_ENVIRONMENT, {
+        useValue: fakeEnv({ hasSeen: () => false }),
+      });
+      mockGuestApi.getInvitation.mockResolvedValue(mockHoneyBeeInvitation);
+
+      fixture = TestBed.createComponent(GuestInvitationPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('code', 'ABCD1234JK');
+
+      fixture.detectChanges();
+      await component.loadInvitation();
+      fixture.detectChanges();
+
+      const container = fixture.nativeElement.querySelector('.guest-accessibility-view');
+      expect(container.classList.contains('intro-pending')).toBe(true);
+      expect(container.classList.contains('intro-reveal')).toBe(false);
+
+      const introDebug = fixture.debugElement.query(By.directive(GuestIntroComponent));
+      expect(introDebug).not.toBeNull();
+      introDebug.componentInstance.exitStarted.emit();
+      fixture.detectChanges();
+
+      expect(container.classList.contains('intro-pending')).toBe(false);
+      expect(container.classList.contains('intro-reveal')).toBe(true);
+      expect(fixture.nativeElement.querySelector('app-guest-intro')).not.toBeNull();
+
+      introDebug.componentInstance.finished.emit();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('app-guest-intro')).toBeNull();
+      expect(fixture.nativeElement.querySelector('ion-content').hasAttribute('inert')).toBe(false);
+      expect(container.classList.contains('intro-reveal')).toBe(true);
+    });
+
+    it('9. does not apply intro-pending or intro-reveal when intro video is not shown', async () => {
+      TestBed.overrideProvider(INTRO_ENVIRONMENT, {
+        useValue: fakeEnv({ hasSeen: () => false }),
+      });
+      mockGuestApi.getInvitation.mockResolvedValue(mockGroupInvitation);
+
+      fixture = TestBed.createComponent(GuestInvitationPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('code', 'ABCD1234JK');
+
+      fixture.detectChanges();
+      await component.loadInvitation();
+      fixture.detectChanges();
+
+      const container = fixture.nativeElement.querySelector('.guest-accessibility-view');
+      expect(container.classList.contains('intro-pending')).toBe(false);
+      expect(container.classList.contains('intro-reveal')).toBe(false);
     });
   });
 });
