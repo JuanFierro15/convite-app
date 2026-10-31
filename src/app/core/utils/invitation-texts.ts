@@ -79,8 +79,8 @@ export function guestTexts(kind: InvitationKind, groupName: string): GuestTexts 
           'Su compañía es el mejor regalo, así que no sientan ningún compromiso. Si les hace ilusión llevar algo, preparamos una lista con algunas ideas.',
         ],
     giftsAnonymityNote: isIndividual
-      ? 'Lo que elijas es anónimo: ni nosotros ni los demás invitados sabremos qué regalo elegiste. La única intención de seleccionarlos es que los regalos no se repitan.'
-      : 'Lo que elijan es anónimo: ni nosotros ni los demás invitados sabremos qué regalo eligieron. La única intención de seleccionarlos es que los regalos no se repitan.',
+      ? 'Lo que elijas es anónimo: ni nosotros ni los demás invitados sabremos qué regalo elegiste. Solo te pedimos elegirlo para que los regalos no se repitan.'
+      : 'Lo que elijan es anónimo: ni nosotros ni los demás invitados sabremos qué regalo eligieron. Solo les pedimos elegirlo para que los regalos no se repitan.',
     giftReservedConfirmation: isIndividual
       ? '¡Listo! Quedó elegido. Solo tú sabes que lo elegiste.'
       : '¡Listo! Quedó elegido. Solo ustedes saben que lo eligieron.',

@@ -327,7 +327,7 @@ describe('GuestGiftsPage', () => {
     const bannerEl = fixture.nativeElement.querySelector('.anonymity-banner');
     expect(bannerEl).not.toBeNull();
     expect(bannerEl?.textContent?.trim()).toBe(
-      'Lo que elijan es anónimo: ni nosotros ni los demás invitados sabremos qué regalo eligieron. La única intención de seleccionarlos es que los regalos no se repitan.',
+      'Lo que elijan es anónimo: ni nosotros ni los demás invitados sabremos qué regalo eligieron. Solo les pedimos elegirlo para que los regalos no se repitan.',
     );
   });
 
@@ -345,7 +345,7 @@ describe('GuestGiftsPage', () => {
     const bannerEl = fixture.nativeElement.querySelector('.anonymity-banner');
     expect(bannerEl).not.toBeNull();
     expect(bannerEl?.textContent?.trim()).toBe(
-      'Lo que elijas es anónimo: ni nosotros ni los demás invitados sabremos qué regalo elegiste. La única intención de seleccionarlos es que los regalos no se repitan.',
+      'Lo que elijas es anónimo: ni nosotros ni los demás invitados sabremos qué regalo elegiste. Solo te pedimos elegirlo para que los regalos no se repitan.',
     );
   });
 
