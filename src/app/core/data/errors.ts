@@ -62,7 +62,7 @@ export function toUserError(error: unknown, fallback?: string): Error {
   }
 
   if (combined.includes('gift_not_reservable')) {
-    return new Error('Las sugerencias no se reservan.');
+    return new Error('Las sugerencias y la lluvia de sobres no se reservan.');
   }
 
   if (
@@ -70,6 +70,13 @@ export function toUserError(error: unknown, fallback?: string): Error {
     (code === '23505' && combined.includes('gifts_one_free_per_event'))
   ) {
     return new Error('Este evento ya tiene un regalo libre.');
+  }
+
+  if (
+    combined.includes('gifts_one_envelope_per_event') ||
+    (code === '23505' && combined.includes('gifts_one_envelope_per_event'))
+  ) {
+    return new Error('Este evento ya tiene una lluvia de sobres.');
   }
 
   if (combined.includes('invitations_phone_format') || message === 'invalid_phone') {

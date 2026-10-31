@@ -42,7 +42,12 @@ function notBlankValidator(control: AbstractControl<string>): ValidationErrors |
 }
 
 function toGiftKind(value: string): GiftKind {
-  if (value === 'repeatable' || value === 'free' || value === 'suggestion') {
+  if (
+    value === 'repeatable' ||
+    value === 'free' ||
+    value === 'suggestion' ||
+    value === 'envelope'
+  ) {
     return value;
   }
   return 'unique';
@@ -80,6 +85,7 @@ export class GiftFormComponent implements OnInit {
   private readonly eventIdSignal = signal<string>('');
   private readonly giftSignal = signal<GiftWithReservations | null>(null);
   private readonly hasFreeGiftSignal = signal<boolean>(false);
+  private readonly hasEnvelopeGiftSignal = signal<boolean>(false);
 
   @Input({ required: true })
   set eventId(value: string) {
@@ -105,6 +111,14 @@ export class GiftFormComponent implements OnInit {
     return this.hasFreeGiftSignal();
   }
 
+  @Input()
+  set hasEnvelopeGift(value: boolean) {
+    this.hasEnvelopeGiftSignal.set(Boolean(value));
+  }
+  get hasEnvelopeGift(): boolean {
+    return this.hasEnvelopeGiftSignal();
+  }
+
   readonly saving = signal<boolean>(false);
   readonly submitted = signal<boolean>(false);
 
@@ -114,6 +128,16 @@ export class GiftFormComponent implements OnInit {
     const current = this.giftSignal();
     return current !== null && current.reservations.length > 0;
   });
+
+  readonly showEnvelopeOption = computed<boolean>(() => {
+    const current = this.giftSignal();
+    if (current?.kind === 'envelope') {
+      return true;
+    }
+    return !this.hasEnvelopeGiftSignal();
+  });
+
+  readonly envelopeOptionDisabled = computed<boolean>(() => !this.showEnvelopeOption());
 
   readonly showFreeOption = computed<boolean>(() => {
     const current = this.giftSignal();
@@ -226,6 +250,9 @@ export class GiftFormComponent implements OnInit {
   }
 
   get categoryError(): string | null {
+    if (this.selectedKind() === 'envelope') {
+      return null;
+    }
     const ctrl = this.form.controls.category;
     if (!ctrl.invalid || (!ctrl.touched && !this.submitted())) {
       return null;
@@ -253,6 +280,11 @@ export class GiftFormComponent implements OnInit {
     const resolvedKind: GiftKind =
       this.isTypeLocked() && current ? toGiftKind(current.kind) : raw.kind;
 
+    if (resolvedKind === 'envelope' && this.envelopeOptionDisabled()) {
+      await this.showErrorToast('El evento ya tiene una lluvia de sobres.');
+      return;
+    }
+
     if (resolvedKind === 'free' && this.freeOptionDisabled()) {
       await this.showErrorToast('El evento ya tiene un regalo libre.');
       return;
@@ -266,7 +298,12 @@ export class GiftFormComponent implements OnInit {
     const input: GiftInput = {
       name: raw.name.trim(),
       description: raw.description.trim() ? raw.description.trim() : null,
-      category: raw.category.trim() ? raw.category.trim() : null,
+      category:
+        resolvedKind === 'envelope'
+          ? null
+          : raw.category.trim()
+            ? raw.category.trim()
+            : null,
       kind: resolvedKind,
       max_reservations: parsedMaxReservations,
     };

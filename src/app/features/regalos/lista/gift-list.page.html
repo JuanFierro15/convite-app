@@ -281,6 +281,44 @@
                 </ion-card-content>
               </ion-card>
             }
+
+            @case ('envelope') {
+              <ion-card class="gift-card">
+                <ion-card-content class="gift-card__content">
+                  <div class="gift-card__header">
+                    <div class="gift-card__titles">
+                      <h3 class="gift-card__name text-name">{{ gift.name }}</h3>
+                      @if (gift.description) {
+                        <p class="gift-card__description text-body">{{ gift.description }}</p>
+                      }
+                    </div>
+                    <ion-button
+                      fill="clear"
+                      color="medium"
+                      class="options-button"
+                      (click)="openGiftOptions(gift)"
+                      [disabled]="deletingGiftId() === gift.id"
+                      [attr.aria-label]="'Opciones de ' + gift.name"
+                    >
+                      @if (deletingGiftId() === gift.id) {
+                        <ion-spinner slot="icon-only" name="crescent"></ion-spinner>
+                      } @else {
+                        <ion-icon
+                          slot="icon-only"
+                          name="ellipsis-vertical-outline"
+                          aria-hidden="true"
+                        ></ion-icon>
+                      }
+                    </ion-button>
+                  </div>
+
+                  <div class="suggestion-status-row">
+                    <span class="text-label badge-soft-medium">Lluvia de sobres</span>
+                    <p class="text-body gift-card__hint">Los invitados la ven en su propia card; no se reserva.</p>
+                  </div>
+                </ion-card-content>
+              </ion-card>
+            }
           }
         }
       </div>

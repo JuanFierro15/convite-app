@@ -45,7 +45,7 @@ describe('core exports and error translation', () => {
 
     it('translates gift_not_reservable', () => {
       const err = toUserError({ message: 'gift_not_reservable' });
-      expect(err.message).toBe('Las sugerencias no se reservan.');
+      expect(err.message).toBe('Las sugerencias y la lluvia de sobres no se reservan.');
     });
 
     it('translates unique violation 23505 on gifts_one_free_per_event', () => {
@@ -54,6 +54,14 @@ describe('core exports and error translation', () => {
         message: 'duplicate key value violates unique constraint "gifts_one_free_per_event"',
       });
       expect(err.message).toBe('Este evento ya tiene un regalo libre.');
+    });
+
+    it('translates unique violation 23505 on gifts_one_envelope_per_event', () => {
+      const err = toUserError({
+        code: '23505',
+        message: 'duplicate key value violates unique constraint "gifts_one_envelope_per_event"',
+      });
+      expect(err.message).toBe('Este evento ya tiene una lluvia de sobres.');
     });
 
     it('translates invitations_phone_format and invalid_phone', () => {

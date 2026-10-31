@@ -61,7 +61,7 @@ import { GiftFormComponent } from '../formulario/gift-form.component';
 export const GIFTS_PAGE_SIZE = 6;
 
 export type GiftFilter = 'all' | 'unique' | 'repeatable' | 'suggestion';
-export type GiftGroup = 'repeatable' | 'free' | 'unique' | 'suggestion';
+export type GiftGroup = 'repeatable' | 'free' | 'unique' | 'suggestion' | 'envelope';
 
 @Component({
   selector: 'app-gift-list',
@@ -134,6 +134,10 @@ export class GiftListPage implements ViewWillEnter {
     this.gifts().filter((g) => g.kind === 'suggestion'),
   );
 
+  readonly envelopeGifts = computed<GiftWithReservations[]>(() =>
+    this.gifts().filter((g) => g.kind === 'envelope'),
+  );
+
   readonly uniqueCount = computed<number>(() => this.uniqueGifts().length);
 
   readonly reservedUniqueCount = computed<number>(
@@ -148,7 +152,7 @@ export class GiftListPage implements ViewWillEnter {
       case 'unique':
         return this.uniqueGifts();
       case 'suggestion':
-        return this.suggestionGifts();
+        return [...this.suggestionGifts(), ...this.envelopeGifts()];
       case 'all':
       default:
         return [
@@ -156,6 +160,7 @@ export class GiftListPage implements ViewWillEnter {
           ...this.freeGifts(),
           ...this.uniqueGifts(),
           ...this.suggestionGifts(),
+          ...this.envelopeGifts(),
         ];
     }
   });
@@ -252,7 +257,12 @@ export class GiftListPage implements ViewWillEnter {
   }
 
   giftGroup(gift: GiftWithReservations): GiftGroup {
-    if (gift.kind === 'repeatable' || gift.kind === 'free' || gift.kind === 'suggestion') {
+    if (
+      gift.kind === 'repeatable' ||
+      gift.kind === 'free' ||
+      gift.kind === 'suggestion' ||
+      gift.kind === 'envelope'
+    ) {
       return gift.kind;
     }
     return 'unique';
@@ -268,6 +278,8 @@ export class GiftListPage implements ViewWillEnter {
         return 'Regalos únicos';
       case 'suggestion':
         return 'Sugerencias';
+      case 'envelope':
+        return 'Lluvia de sobres';
     }
   }
 
@@ -361,6 +373,9 @@ export class GiftListPage implements ViewWillEnter {
     const hasFreeGift = this.gifts().some(
       (item) => item.kind === 'free' && item.id !== gift?.id,
     );
+    const hasEnvelopeGift = this.gifts().some(
+      (item) => item.kind === 'envelope' && item.id !== gift?.id,
+    );
 
     const modal = await this.modalCtrl.create({
       component: GiftFormComponent,
@@ -368,6 +383,7 @@ export class GiftListPage implements ViewWillEnter {
         eventId: this.id(),
         gift: gift ?? null,
         hasFreeGift,
+        hasEnvelopeGift,
       },
       breakpoints: [0, 0.9, 1],
       initialBreakpoint: 0.9,

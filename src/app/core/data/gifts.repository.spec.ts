@@ -120,6 +120,18 @@ describe('GiftsRepository', () => {
               created_at: '2026-10-25T00:00:00Z',
               gift_reservations: [],
             },
+            {
+              id: 'g-env',
+              event_id: 'event-1',
+              name: 'Lluvia de sobres',
+              description: null,
+              category: null,
+              kind: 'envelope',
+              max_reservations: null,
+              sort_order: 1,
+              created_at: '2026-10-25T00:00:00Z',
+              gift_reservations: [],
+            },
           ],
           error: null,
         }),
@@ -133,6 +145,7 @@ describe('GiftsRepository', () => {
         'free',
         'unique',
         'suggestion',
+        'envelope',
       ]);
     });
   });
@@ -319,7 +332,7 @@ describe('GiftsRepository', () => {
   });
 
   describe('addSuggested', () => {
-    it('creates suggested gifts with kind suggestion (first 3) and free (last 1)', async () => {
+    it('creates suggested gifts with envelope (first), suggestion (next 2) and free (last 1)', async () => {
       const mockSelect = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockResolvedValue({ data: [], error: null }),
@@ -346,9 +359,61 @@ describe('GiftsRepository', () => {
           name: 'Lluvia de sobres',
           description: null,
           category: null,
-          kind: 'suggestion',
+          kind: 'envelope',
           sort_order: 0,
         },
+        {
+          event_id: 'event-1',
+          name: 'Pañales',
+          description: null,
+          category: null,
+          kind: 'suggestion',
+          sort_order: 1,
+        },
+        {
+          event_id: 'event-1',
+          name: 'Pañitos húmedos',
+          description: null,
+          category: null,
+          kind: 'suggestion',
+          sort_order: 2,
+        },
+        {
+          event_id: 'event-1',
+          name: 'Regalo libre',
+          description: null,
+          category: null,
+          kind: 'free',
+          sort_order: 3,
+        },
+      ]);
+    });
+
+    it('does not create envelope gift if event already has an envelope gift with another name', async () => {
+      const mockSelect = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockResolvedValue({
+          data: [{ name: 'Aporte en sobre', kind: 'envelope' }],
+          error: null,
+        }),
+      };
+      const mockInsert = vi.fn().mockResolvedValue({ error: null });
+
+      mockSupabase.client.from.mockImplementation((table: string) => {
+        if (table === 'gifts') {
+          return {
+            select: mockSelect.select,
+            eq: mockSelect.eq,
+            insert: mockInsert,
+          };
+        }
+        return {};
+      });
+
+      const count = await repository.addSuggested('event-1');
+
+      expect(count).toBe(3);
+      expect(mockInsert).toHaveBeenCalledWith([
         {
           event_id: 'event-1',
           name: 'Pañales',

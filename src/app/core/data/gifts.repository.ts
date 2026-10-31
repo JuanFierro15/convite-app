@@ -14,10 +14,11 @@ const KIND_ORDER: Record<string, number> = {
   free: 1,
   unique: 2,
   suggestion: 3,
+  envelope: 4,
 };
 
 const SUGGESTED_GIFTS: readonly { name: string; kind: GiftKind; sort_order: number }[] = [
-  { name: 'Lluvia de sobres', kind: 'suggestion', sort_order: 0 },
+  { name: 'Lluvia de sobres', kind: 'envelope', sort_order: 0 },
   { name: 'Pañales', kind: 'suggestion', sort_order: 1 },
   { name: 'Pañitos húmedos', kind: 'suggestion', sort_order: 2 },
   { name: 'Regalo libre', kind: 'free', sort_order: 3 },
@@ -145,12 +146,16 @@ export class GiftsRepository {
 
     const existingNames = new Set((existing ?? []).map((g) => g.name.trim().toLowerCase()));
     const hasFreeGift = (existing ?? []).some((g) => g.kind === 'free');
+    const hasEnvelopeGift = (existing ?? []).some((g) => g.kind === 'envelope');
 
     const toCreate = SUGGESTED_GIFTS.filter((item) => {
       if (existingNames.has(item.name.toLowerCase())) {
         return false;
       }
       if (item.kind === 'free' && hasFreeGift) {
+        return false;
+      }
+      if (item.kind === 'envelope' && hasEnvelopeGift) {
         return false;
       }
       return true;

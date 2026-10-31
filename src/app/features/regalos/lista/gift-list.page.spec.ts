@@ -101,12 +101,25 @@ describe('GiftListPage', () => {
   const mockSuggestion: GiftWithReservations = {
     id: 'gift-sug',
     event_id: 'evt-123',
-    name: 'Lluvia de sobres',
-    description: 'Para ahorrar para el bebé',
+    name: 'Pañales',
+    description: 'Talla recién nacido',
     category: null,
     kind: 'suggestion',
     max_reservations: null,
     sort_order: 4,
+    created_at: '2026-10-25T00:00:00Z',
+    reservations: [],
+  };
+
+  const mockEnvelope: GiftWithReservations = {
+    id: 'gift-env',
+    event_id: 'evt-123',
+    name: 'Lluvia de sobres',
+    description: 'Para ahorrar para el bebé',
+    category: null,
+    kind: 'envelope',
+    max_reservations: null,
+    sort_order: 5,
     created_at: '2026-10-25T00:00:00Z',
     reservations: [],
   };
@@ -192,6 +205,7 @@ describe('GiftListPage', () => {
           eventId: 'evt-123',
           gift: null,
           hasFreeGift: false,
+          hasEnvelopeGift: false,
         },
         breakpoints: [0, 0.9, 1],
         initialBreakpoint: 0.9,
@@ -292,13 +306,14 @@ describe('GiftListPage', () => {
         mockFree,
         mockUnique,
         mockSuggestion,
+        mockEnvelope,
       ]);
       await component.ionViewWillEnter();
       fixture.detectChanges();
       await fixture.whenStable();
     });
 
-    it('"Todos" muestra las cuatro secciones en el orden indicado: Repetibles, Libre, Únicos, Sugerencias', () => {
+    it('"Todos" muestra las cinco secciones en el orden indicado: Repetibles, Libre, Únicos, Sugerencias, Lluvia de sobres', () => {
       component.filter.set('all');
       fixture.detectChanges();
 
@@ -311,10 +326,11 @@ describe('GiftListPage', () => {
         'Regalo libre',
         'Regalos únicos',
         'Sugerencias',
+        'Lluvia de sobres',
       ]);
     });
 
-    it('el filtro Sugerencias muestra solo sugerencias con "Sugerencia" y sin conteo', () => {
+    it('con el filtro Sugerencias se ven las sugerencias y después la sección "Lluvia de sobres", sin conteo de familias', () => {
       component.onFilterChange(new CustomEvent('ionChange', { detail: { value: 'suggestion' } }));
       fixture.detectChanges();
 
@@ -322,23 +338,75 @@ describe('GiftListPage', () => {
         .queryAll(By.css('.section-heading'))
         .map((h) => h.nativeElement.textContent.trim());
 
-      expect(headings).toEqual(['Sugerencias']);
+      expect(headings).toEqual(['Sugerencias', 'Lluvia de sobres']);
 
-      const suggestionSection = fixture.debugElement.query(By.css('.gift-section'));
-      expect(suggestionSection).not.toBeNull();
+      const cards = fixture.debugElement.queryAll(By.css('.gift-card'));
+      expect(cards.length).toBe(2);
 
-      const badge = suggestionSection.query(By.css('.badge-soft-medium'));
-      expect(badge).not.toBeNull();
-      expect(badge.nativeElement.textContent.trim()).toBe('Sugerencia');
-
-      const hint = suggestionSection.query(By.css('.gift-card__hint'));
-      expect(hint).not.toBeNull();
-      expect(hint.nativeElement.textContent.trim()).toBe(
+      expect(cards[0].nativeElement.textContent).toContain('Sugerencia');
+      expect(cards[0].nativeElement.textContent).toContain(
         'Los invitados la ven como idea; no se reserva.',
       );
+      expect(cards[0].nativeElement.textContent).not.toContain('familias');
+      expect(cards[0].nativeElement.textContent).not.toContain('familia');
 
-      expect(suggestionSection.nativeElement.textContent).not.toContain('familias');
-      expect(suggestionSection.nativeElement.textContent).not.toContain('familia');
+      expect(cards[1].nativeElement.textContent).toContain('Lluvia de sobres');
+      expect(cards[1].nativeElement.textContent).toContain(
+        'Los invitados la ven en su propia card; no se reserva.',
+      );
+      expect(cards[1].nativeElement.textContent).not.toContain('familias');
+      expect(cards[1].nativeElement.textContent).not.toContain('familia');
+    });
+
+    it('en Únicos y Repetibles no sale la lluvia de sobres', () => {
+      component.onFilterChange(new CustomEvent('ionChange', { detail: { value: 'unique' } }));
+      fixture.detectChanges();
+
+      let headings = fixture.debugElement
+        .queryAll(By.css('.section-heading'))
+        .map((h) => h.nativeElement.textContent.trim());
+      expect(headings).toEqual(['Regalos únicos']);
+      expect(fixture.nativeElement.textContent).not.toContain('Lluvia de sobres');
+
+      component.onFilterChange(new CustomEvent('ionChange', { detail: { value: 'repeatable' } }));
+      fixture.detectChanges();
+
+      headings = fixture.debugElement
+        .queryAll(By.css('.section-heading'))
+        .map((h) => h.nativeElement.textContent.trim());
+      expect(headings).toEqual(['Regalos repetibles', 'Regalo libre']);
+      expect(fixture.nativeElement.textContent).not.toContain('Lluvia de sobres');
+    });
+
+    it('openForm pasa hasEnvelopeGift correcto según los regalos del evento', async () => {
+      component.gifts.set([mockRepeatable]);
+      await component.openForm();
+      expect(mockModalCtrl.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          componentProps: expect.objectContaining({
+            hasEnvelopeGift: false,
+          }),
+        }),
+      );
+
+      component.gifts.set([mockRepeatable, mockEnvelope]);
+      await component.openForm();
+      expect(mockModalCtrl.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          componentProps: expect.objectContaining({
+            hasEnvelopeGift: true,
+          }),
+        }),
+      );
+
+      await component.openForm(mockEnvelope);
+      expect(mockModalCtrl.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          componentProps: expect.objectContaining({
+            hasEnvelopeGift: false,
+          }),
+        }),
+      );
     });
 
     it('el filtro Repetibles muestra repetibles y libre', () => {
@@ -529,12 +597,13 @@ describe('GiftListPage', () => {
         mockFree,
         mockUnique,
         mockSuggestion,
+        mockEnvelope,
       ]);
       await component.ionViewWillEnter();
       fixture.detectChanges();
 
       const cards = fixture.debugElement.queryAll(By.css('.gift-card'));
-      expect(cards.length).toBe(4);
+      expect(cards.length).toBe(5);
 
       // Repetible: conteo de familias
       expect(cards[0].nativeElement.textContent).toContain('2 de 5 familias');
@@ -556,6 +625,14 @@ describe('GiftListPage', () => {
       expect(cards[3].nativeElement.textContent).toContain(
         'Los invitados la ven como idea; no se reserva.',
       );
+
+      // Lluvia de sobres: badge "Lluvia de sobres" y nota
+      expect(cards[4].nativeElement.textContent).toContain('Lluvia de sobres');
+      expect(cards[4].nativeElement.textContent).toContain(
+        'Los invitados la ven en su propia card; no se reserva.',
+      );
+      expect(cards[4].nativeElement.textContent).not.toContain('familias');
+      expect(cards[4].nativeElement.textContent).not.toContain('familia');
     });
 
     it('habilita y deshabilita los botones de navegación en los extremos y permite retroceder', async () => {

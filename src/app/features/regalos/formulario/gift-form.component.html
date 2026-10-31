@@ -28,32 +28,41 @@
       }
     </div>
 
-    <div class="field-group">
-      <span class="field-label text-name" id="gift-category-label">Categoría</span>
-      <ion-input
-        aria-labelledby="gift-category-label"
-        formControlName="category"
-        fill="outline"
-        placeholder="Opcional"
-        [maxlength]="60"
-      ></ion-input>
-      <p class="field-help text-label">Por ejemplo: Ropa, Baño, Juguetes</p>
-      @if (categoryError; as errorMsg) {
-        <p class="field-error text-label" role="alert">{{ errorMsg }}</p>
-      }
-    </div>
+    @if (selectedKind() !== 'envelope') {
+      <div class="field-group">
+        <span class="field-label text-name" id="gift-category-label">Categoría</span>
+        <ion-input
+          aria-labelledby="gift-category-label"
+          formControlName="category"
+          fill="outline"
+          placeholder="Opcional"
+          [maxlength]="60"
+        ></ion-input>
+        <p class="field-help text-label">Por ejemplo: Ropa, Baño, Juguetes</p>
+        @if (categoryError; as errorMsg) {
+          <p class="field-error text-label" role="alert">{{ errorMsg }}</p>
+        }
+      </div>
+    }
 
     <div class="field-group">
-      <span class="field-label text-name" id="gift-description-label">Descripción</span>
+      <span class="field-label text-name" id="gift-description-label">
+        {{ selectedKind() === 'envelope' ? 'Texto que verán los invitados' : 'Descripción' }}
+      </span>
       <ion-textarea
         aria-labelledby="gift-description-label"
         formControlName="description"
         fill="outline"
-        placeholder="Detalles opcionales: talla, color o referencia"
+        [placeholder]="selectedKind() === 'envelope' ? 'Opcional' : 'Detalles opcionales: talla, color o referencia'"
         [rows]="3"
         [maxlength]="300"
         [counter]="true"
       ></ion-textarea>
+      @if (selectedKind() === 'envelope') {
+        <p class="field-help text-label">
+          Si lo dejas vacío, verán: «Si prefieren hacer un aporte en sobre, el día del evento habrá un lugar para dejarlo.»
+        </p>
+      }
       @if (descriptionError; as errorMsg) {
         <p class="field-error text-label" role="alert">{{ errorMsg }}</p>
       }
@@ -86,6 +95,15 @@
           </ion-radio>
           <p class="field-help text-label">Una idea para los invitados. No se reserva.</p>
         </div>
+
+        @if (showEnvelopeOption()) {
+          <div class="radio-option">
+            <ion-radio value="envelope" labelPlacement="end" justify="start" [disabled]="isTypeLocked()">
+              Lluvia de sobres
+            </ion-radio>
+            <p class="field-help text-label">Aportes en sobre el día del evento. No se reserva y solo puede haber una.</p>
+          </div>
+        }
 
         @if (showFreeOption()) {
           <div class="radio-option">

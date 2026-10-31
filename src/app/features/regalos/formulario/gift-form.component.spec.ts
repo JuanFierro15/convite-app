@@ -317,4 +317,104 @@ describe('GiftFormComponent', () => {
       }),
     );
   });
+
+  it('el radio "Lluvia de sobres" aparece sin hasEnvelopeGift, no aparece con hasEnvelopeGift = true, y sí aparece al editar un envelope aunque hasEnvelopeGift = true', () => {
+    // Caso 1: sin hasEnvelopeGift -> opción visible
+    component.hasEnvelopeGift = false;
+    component.ngOnInit();
+    fixture.detectChanges();
+    expect(fixture.debugElement.query(By.css('ion-radio[value="envelope"]'))).not.toBeNull();
+
+    // Caso 2: con hasEnvelopeGift = true -> opción oculta
+    component.hasEnvelopeGift = true;
+    fixture.detectChanges();
+    expect(fixture.debugElement.query(By.css('ion-radio[value="envelope"]'))).toBeNull();
+
+    // Caso 3: editando un envelope aunque hasEnvelopeGift = true -> opción visible
+    const mockEnvelopeGift: GiftWithReservations = {
+      id: 'gift-env-1',
+      event_id: 'event-1',
+      name: 'Lluvia de sobres',
+      description: null,
+      category: null,
+      kind: 'envelope',
+      max_reservations: null,
+      sort_order: 0,
+      created_at: '2026-10-25T00:00:00Z',
+      reservations: [],
+    };
+    component.gift = mockEnvelopeGift;
+    component.hasEnvelopeGift = true;
+    component.ngOnInit();
+    fixture.detectChanges();
+    expect(fixture.debugElement.query(By.css('ion-radio[value="envelope"]'))).not.toBeNull();
+  });
+
+  it('con envelope elegido, la etiqueta "Texto que verán los invitados" y su ayuda aparecen y "Categoría" no', () => {
+    component.ngOnInit();
+    component.form.controls.kind.setValue('envelope');
+    fixture.detectChanges();
+
+    // Categoría no se muestra
+    expect(fixture.debugElement.query(By.css('#gift-category-label'))).toBeNull();
+
+    // Etiqueta de descripción es "Texto que verán los invitados"
+    const descLabel = fixture.debugElement.query(By.css('#gift-description-label'));
+    expect(descLabel).not.toBeNull();
+    expect(descLabel.nativeElement.textContent.trim()).toBe('Texto que verán los invitados');
+
+    // Placeholder es "Opcional"
+    const textarea = fixture.debugElement.query(By.css('ion-textarea[formControlName="description"]'));
+    expect(textarea).not.toBeNull();
+    expect(
+      textarea.attributes['placeholder'] ??
+        textarea.nativeElement.getAttribute('placeholder') ??
+        textarea.nativeElement.placeholder,
+    ).toBe('Opcional');
+
+    // Ayuda debajo aparece
+    const helps = fixture.debugElement.queryAll(By.css('.field-help'));
+    const envelopeHelp = helps.find((h) =>
+      h.nativeElement.textContent.includes('Si lo dejas vacío, verán: «Si prefieren hacer un aporte en sobre'),
+    );
+    expect(envelopeHelp).toBeTruthy();
+  });
+
+  it('guardar un envelope llama a create con kind: \'envelope\', max_reservations: null y category: null', async () => {
+    component.ngOnInit();
+    component.form.controls.name.setValue('Lluvia de sobres');
+    component.form.controls.kind.setValue('envelope');
+    component.form.controls.category.setValue('Cualquiera');
+    component.form.controls.maxReservations.setValue('5');
+    fixture.detectChanges();
+
+    await component.save();
+
+    expect(mockGiftsRepo.create).toHaveBeenCalledWith(
+      'event-1',
+      expect.objectContaining({
+        name: 'Lluvia de sobres',
+        kind: 'envelope',
+        max_reservations: null,
+        category: null,
+      }),
+    );
+  });
+
+  it('con hasEnvelopeGift = true y envelope forzado en el control, no guarda', async () => {
+    component.hasEnvelopeGift = true;
+    component.ngOnInit();
+    component.form.controls.name.setValue('Lluvia de sobres');
+    component.form.controls.kind.setValue('envelope');
+    fixture.detectChanges();
+
+    await component.save();
+
+    expect(mockGiftsRepo.create).not.toHaveBeenCalled();
+    expect(mockToastCtrl.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'El evento ya tiene una lluvia de sobres.',
+      }),
+    );
+  });
 });
