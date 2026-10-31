@@ -33,12 +33,12 @@ import { addIcons } from 'ionicons';
 import {
   arrowBackOutline,
   checkmarkCircle,
-  checkmarkCircleOutline,
   chevronBackOutline,
   chevronForwardOutline,
   eyeOffOutline,
   heartOutline,
   lockClosedOutline,
+  mailOutline,
 } from 'ionicons/icons';
 import {
   GUEST_GIFTS_PAGE_SIZE,
@@ -48,6 +48,7 @@ import {
   GuestGiftCategory,
   GuestInvitation,
   ThemeService,
+  envelopeGuestGift,
   guestErrorMessage,
   guestTexts,
   isGuestGiftSoldOut,
@@ -133,6 +134,11 @@ export class GuestGiftsPage implements OnInit, ViewWillEnter {
   readonly counts = computed(() => selectableGuestGiftCounts(this.gifts()));
   readonly mine = computed(() => myGuestGifts(this.gifts()));
   readonly suggestions = computed(() => suggestionGuestGifts(this.gifts()));
+  readonly envelope = computed(() => envelopeGuestGift(this.gifts()));
+  readonly envelopeText = computed(() => {
+    const desc = this.envelope()?.description?.trim();
+    return desc && desc.length > 0 ? desc : this.texts().giftsEnvelopeDefault;
+  });
   readonly visible = computed(() =>
     visibleGuestGifts(this.gifts(), this.activeCategory(), this.frozenIds()),
   );
@@ -145,12 +151,12 @@ export class GuestGiftsPage implements OnInit, ViewWillEnter {
     addIcons({
       'arrow-back-outline': arrowBackOutline,
       'checkmark-circle': checkmarkCircle,
-      'checkmark-circle-outline': checkmarkCircleOutline,
       'chevron-back-outline': chevronBackOutline,
       'chevron-forward-outline': chevronForwardOutline,
       'eye-off-outline': eyeOffOutline,
       'heart-outline': heartOutline,
       'lock-closed-outline': lockClosedOutline,
+      'mail-outline': mailOutline,
     });
   }
 

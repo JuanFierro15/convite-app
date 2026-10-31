@@ -35,11 +35,20 @@
               <ul class="basics-card__list">
                 @for (item of suggestions(); track item.id) {
                   <li class="basics-card__item">
-                    <ion-icon name="checkmark-circle-outline" aria-hidden="true"></ion-icon>
                     <span class="text-name">{{ item.name }}</span>
                   </li>
                 }
               </ul>
+            </ion-card-content>
+          </ion-card>
+        }
+
+        @if (envelope()) {
+          <ion-card class="envelope-card" aria-labelledby="envelope-title">
+            <ion-card-content class="envelope-card__content">
+              <ion-icon class="envelope-card__icon" name="mail-outline" aria-hidden="true"></ion-icon>
+              <h2 id="envelope-title" class="text-section envelope-card__title">Lluvia de sobres</h2>
+              <p class="text-body envelope-card__text">{{ envelopeText() }}</p>
             </ion-card-content>
           </ion-card>
         }

@@ -510,6 +510,7 @@ describe('GuestGiftsPage', () => {
     expect(items[0].textContent).not.toContain('Cualquier edición ilustrada');
     expect(items[1].textContent).toContain('Ropa de 3 a 6 meses');
     expect(items[1].textContent).not.toContain('Colores pastel');
+    expect(basicsCard.querySelectorAll('.basics-card__item ion-icon').length).toBe(0);
 
     expect(basicsCard.querySelectorAll('ion-button').length).toBe(0);
   });
@@ -729,5 +730,288 @@ describe('GuestGiftsPage', () => {
     // g1 pasó a "mine", mientras que g2 (agotado) y g3 conservan su orden inicial
     expect(component.visible().map((g) => g.id)).toEqual(['g-2', 'g-3']);
     expect(component.visible()[0].full).toBe(true);
+  });
+
+  it('con un envelope con descripción, aparece .envelope-card con el título "Lluvia de sobres" y la descripción', async () => {
+    const envelopeGift: GuestGift = {
+      id: 'env-1',
+      name: 'Lluvia de sobres',
+      description: 'Lluvia de sobres para la alcancía de Martina',
+      category: null,
+      kind: 'envelope',
+      reserved_by_me: false,
+      taken: false,
+      remaining: null,
+      full: false,
+      max_reservations: null,
+    };
+    mockGuestApi.getInvitation.mockResolvedValue(mockGroupInvitation);
+    mockGuestApi.getGifts.mockResolvedValue([envelopeGift]);
+
+    fixture = TestBed.createComponent(GuestGiftsPage);
+    component = fixture.componentInstance;
+    fixture.componentRef.setInput('code', 'ABCD1234JK');
+
+    await component.loadData();
+    fixture.detectChanges();
+
+    const envelopeCard = fixture.nativeElement.querySelector('.envelope-card');
+    expect(envelopeCard).not.toBeNull();
+    const titleEl = envelopeCard.querySelector('.envelope-card__title');
+    expect(titleEl?.textContent?.trim()).toBe('Lluvia de sobres');
+    const textEl = envelopeCard.querySelector('.envelope-card__text');
+    expect(textEl?.textContent?.trim()).toBe('Lluvia de sobres para la alcancía de Martina');
+  });
+
+  it('con descripción vacía o solo espacios, muestra el texto por defecto de grupo o individual', async () => {
+    const emptyDescEnvelope: GuestGift = {
+      id: 'env-1',
+      name: 'Lluvia de sobres',
+      description: '   ',
+      category: null,
+      kind: 'envelope',
+      reserved_by_me: false,
+      taken: false,
+      remaining: null,
+      full: false,
+      max_reservations: null,
+    };
+
+    // Caso grupo
+    mockGuestApi.getInvitation.mockResolvedValue(mockGroupInvitation);
+    mockGuestApi.getGifts.mockResolvedValue([emptyDescEnvelope]);
+
+    fixture = TestBed.createComponent(GuestGiftsPage);
+    component = fixture.componentInstance;
+    fixture.componentRef.setInput('code', 'ABCD1234JK');
+
+    await component.loadData();
+    fixture.detectChanges();
+
+    let textEl = fixture.nativeElement.querySelector('.envelope-card__text');
+    expect(textEl?.textContent?.trim()).toBe(
+      'Si prefieren hacer un aporte en sobre, el día del evento habrá un lugar para dejarlo.',
+    );
+
+    // Caso individual (con descripción null)
+    const nullDescEnvelope: GuestGift = { ...emptyDescEnvelope, description: null };
+    mockGuestApi.getInvitation.mockResolvedValue(mockIndividualInvitation);
+    mockGuestApi.getGifts.mockResolvedValue([nullDescEnvelope]);
+
+    const indFixture = TestBed.createComponent(GuestGiftsPage);
+    const indComponent = indFixture.componentInstance;
+    indFixture.componentRef.setInput('code', 'WXYZ5678LM');
+
+    await indComponent.loadData();
+    indFixture.detectChanges();
+
+    textEl = indFixture.nativeElement.querySelector('.envelope-card__text');
+    expect(textEl?.textContent?.trim()).toBe(
+      'Si prefieres hacer un aporte en sobre, el día del evento habrá un lugar para dejarlo.',
+    );
+  });
+
+  it('sin envelope, no hay .envelope-card', async () => {
+    mockGuestApi.getInvitation.mockResolvedValue(mockIndividualInvitation);
+    mockGuestApi.getGifts.mockResolvedValue(mockGifts);
+
+    fixture = TestBed.createComponent(GuestGiftsPage);
+    component = fixture.componentInstance;
+    fixture.componentRef.setInput('code', 'WXYZ5678LM');
+
+    await component.loadData();
+    fixture.detectChanges();
+
+    expect(fixture.nativeElement.querySelector('.envelope-card')).toBeNull();
+  });
+
+  it('la card de básicos no muestra la lluvia de sobres aunque haya sugerencias y envelope a la vez', async () => {
+    const list: GuestGift[] = [
+      {
+        id: 's-1',
+        name: 'Pañales ecológicos',
+        description: null,
+        category: null,
+        kind: 'suggestion',
+        reserved_by_me: false,
+        taken: false,
+        remaining: null,
+        full: false,
+        max_reservations: null,
+      },
+      {
+        id: 'env-1',
+        name: 'Lluvia de sobres',
+        description: null,
+        category: null,
+        kind: 'envelope',
+        reserved_by_me: false,
+        taken: false,
+        remaining: null,
+        full: false,
+        max_reservations: null,
+      },
+    ];
+
+    mockGuestApi.getInvitation.mockResolvedValue(mockGroupInvitation);
+    mockGuestApi.getGifts.mockResolvedValue(list);
+
+    fixture = TestBed.createComponent(GuestGiftsPage);
+    component = fixture.componentInstance;
+    fixture.componentRef.setInput('code', 'ABCD1234JK');
+
+    await component.loadData();
+    fixture.detectChanges();
+
+    const basicsCard = fixture.nativeElement.querySelector('.basics-card');
+    expect(basicsCard).not.toBeNull();
+    expect(basicsCard?.textContent).toContain('Pañales ecológicos');
+    expect(basicsCard?.textContent).not.toContain('Lluvia de sobres');
+  });
+
+  it('la card de lluvia de sobres se ve con el filtro en "Únicos" y en la otra categoría', async () => {
+    const list: GuestGift[] = [
+      {
+        id: 'u-1',
+        name: 'Cuna',
+        description: null,
+        category: null,
+        kind: 'unique',
+        reserved_by_me: false,
+        taken: false,
+        remaining: null,
+        full: false,
+        max_reservations: null,
+      },
+      {
+        id: 'r-1',
+        name: 'Pañales',
+        description: null,
+        category: null,
+        kind: 'repeatable',
+        reserved_by_me: false,
+        taken: false,
+        remaining: 2,
+        full: false,
+        max_reservations: 3,
+      },
+      {
+        id: 'env-1',
+        name: 'Lluvia de sobres',
+        description: 'Aporte en sobre',
+        category: null,
+        kind: 'envelope',
+        reserved_by_me: false,
+        taken: false,
+        remaining: null,
+        full: false,
+        max_reservations: null,
+      },
+    ];
+
+    mockGuestApi.getInvitation.mockResolvedValue(mockIndividualInvitation);
+    mockGuestApi.getGifts.mockResolvedValue(list);
+
+    fixture = TestBed.createComponent(GuestGiftsPage);
+    component = fixture.componentInstance;
+    fixture.componentRef.setInput('code', 'WXYZ5678LM');
+
+    await component.loadData();
+    fixture.detectChanges();
+
+    expect(component.activeCategory()).toBe('repeatable');
+    expect(fixture.nativeElement.querySelector('.envelope-card')).not.toBeNull();
+
+    component.onFilterChange(new CustomEvent('ionChange', { detail: { value: 'unique' } }));
+    fixture.detectChanges();
+
+    expect(component.activeCategory()).toBe('unique');
+    expect(fixture.nativeElement.querySelector('.envelope-card')).not.toBeNull();
+  });
+
+  it('la .envelope-card está en el DOM después de .basics-card y antes de .anonymity-banner', async () => {
+    const list: GuestGift[] = [
+      {
+        id: 's-1',
+        name: 'Toallitas húmedas',
+        description: null,
+        category: null,
+        kind: 'suggestion',
+        reserved_by_me: false,
+        taken: false,
+        remaining: null,
+        full: false,
+        max_reservations: null,
+      },
+      {
+        id: 'env-1',
+        name: 'Lluvia de sobres',
+        description: 'Aporte libre',
+        category: null,
+        kind: 'envelope',
+        reserved_by_me: false,
+        taken: false,
+        remaining: null,
+        full: false,
+        max_reservations: null,
+      },
+    ];
+
+    mockGuestApi.getInvitation.mockResolvedValue(mockGroupInvitation);
+    mockGuestApi.getGifts.mockResolvedValue(list);
+
+    fixture = TestBed.createComponent(GuestGiftsPage);
+    component = fixture.componentInstance;
+    fixture.componentRef.setInput('code', 'ABCD1234JK');
+
+    await component.loadData();
+    fixture.detectChanges();
+
+    const basicsCard = fixture.nativeElement.querySelector('.basics-card');
+    const envelopeCard = fixture.nativeElement.querySelector('.envelope-card');
+    const anonymityBanner = fixture.nativeElement.querySelector('.anonymity-banner');
+
+    expect(basicsCard).not.toBeNull();
+    expect(envelopeCard).not.toBeNull();
+    expect(anonymityBanner).not.toBeNull();
+
+    const children = Array.from(fixture.nativeElement.querySelector('.gifts-body').children);
+    const basicsIndex = children.indexOf(basicsCard);
+    const envelopeIndex = children.indexOf(envelopeCard);
+    const anonymityIndex = children.indexOf(anonymityBanner);
+
+    expect(basicsIndex).toBeGreaterThan(-1);
+    expect(envelopeIndex).toBeGreaterThan(basicsIndex);
+    expect(anonymityIndex).toBeGreaterThan(envelopeIndex);
+  });
+
+  it('no hay ningún botón dentro de la .envelope-card', async () => {
+    const envelopeGift: GuestGift = {
+      id: 'env-1',
+      name: 'Lluvia de sobres',
+      description: 'Aporte voluntario',
+      category: null,
+      kind: 'envelope',
+      reserved_by_me: false,
+      taken: false,
+      remaining: null,
+      full: false,
+      max_reservations: null,
+    };
+
+    mockGuestApi.getInvitation.mockResolvedValue(mockGroupInvitation);
+    mockGuestApi.getGifts.mockResolvedValue([envelopeGift]);
+
+    fixture = TestBed.createComponent(GuestGiftsPage);
+    component = fixture.componentInstance;
+    fixture.componentRef.setInput('code', 'ABCD1234JK');
+
+    await component.loadData();
+    fixture.detectChanges();
+
+    const envelopeCard = fixture.nativeElement.querySelector('.envelope-card');
+    expect(envelopeCard).not.toBeNull();
+    expect(envelopeCard.querySelectorAll('ion-button').length).toBe(0);
+    expect(envelopeCard.querySelectorAll('button').length).toBe(0);
   });
 });

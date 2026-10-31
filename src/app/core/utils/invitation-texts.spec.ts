@@ -43,6 +43,17 @@ describe('invitation-texts utils', () => {
     });
   });
 
+  describe('giftsEnvelopeDefault', () => {
+    it('returns exact text for group and individual invitations', () => {
+      expect(guestTexts('group', 'Familia Ejemplo').giftsEnvelopeDefault).toBe(
+        'Si prefieren hacer un aporte en sobre, el día del evento habrá un lugar para dejarlo.',
+      );
+      expect(guestTexts('individual', 'Carlos').giftsEnvelopeDefault).toBe(
+        'Si prefieres hacer un aporte en sobre, el día del evento habrá un lugar para dejarlo.',
+      );
+    });
+  });
+
   describe('all fields for group and individual', () => {
     const testDate = '24 de noviembre';
 
@@ -69,6 +80,9 @@ describe('invitation-texts utils', () => {
       ]);
       expect(texts.giftsAnonymityNote).toBe(
         'Lo que elijan es anónimo: ni nosotros ni los demás invitados sabremos qué regalo eligieron. Solo les pedimos elegirlo para que los regalos no se repitan.',
+      );
+      expect(texts.giftsEnvelopeDefault).toBe(
+        'Si prefieren hacer un aporte en sobre, el día del evento habrá un lugar para dejarlo.',
       );
       expect(texts.giftReservedConfirmation).toBe(
         '¡Listo! Quedó elegido. Solo ustedes saben que lo eligieron.',
@@ -104,6 +118,9 @@ describe('invitation-texts utils', () => {
       expect(texts.giftsAnonymityNote).toBe(
         'Lo que elijas es anónimo: ni nosotros ni los demás invitados sabremos qué regalo elegiste. Solo te pedimos elegirlo para que los regalos no se repitan.',
       );
+      expect(texts.giftsEnvelopeDefault).toBe(
+        'Si prefieres hacer un aporte en sobre, el día del evento habrá un lugar para dejarlo.',
+      );
       expect(texts.giftReservedConfirmation).toBe(
         '¡Listo! Quedó elegido. Solo tú sabes que lo elegiste.',
       );
@@ -131,6 +148,7 @@ describe('invitation-texts utils', () => {
         'giftChosenBadge',
         'giftsTitle',
         'giftsAnonymityNote',
+        'giftsEnvelopeDefault',
         'giftReservedConfirmation',
         'entryCodeTitle',
         'entryCodeInstruction',

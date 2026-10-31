@@ -3,6 +3,7 @@ import { paginate } from './pagination';
 import {
   GUEST_GIFTS_PAGE_SIZE,
   categoryGuestGifts,
+  envelopeGuestGift,
   guestGiftCategory,
   isGuestGiftSoldOut,
   myGuestGifts,
@@ -36,6 +37,7 @@ describe('guest-gift-list utils', () => {
       expect(guestGiftCategory(buildGift({ kind: 'repeatable' }))).toBe('repeatable');
       expect(guestGiftCategory(buildGift({ kind: 'free' }))).toBe('repeatable');
       expect(guestGiftCategory(buildGift({ kind: 'suggestion' }))).toBeNull();
+      expect(guestGiftCategory(buildGift({ kind: 'envelope' }))).toBeNull();
     });
   });
 
@@ -86,6 +88,31 @@ describe('guest-gift-list utils', () => {
 
       expect(suggestionGuestGifts([g1, g2, g3])).toEqual([g1, g3]);
     });
+
+    it('no incluye regalos de tipo envelope', () => {
+      const g1 = buildGift({ id: '1', kind: 'suggestion', name: 'Libro' });
+      const g2 = buildGift({ id: '2', kind: 'envelope', name: 'Lluvia de sobres' });
+
+      expect(suggestionGuestGifts([g1, g2])).toEqual([g1]);
+    });
+  });
+
+  describe('envelopeGuestGift', () => {
+    it('devuelve el regalo cuando hay uno de tipo envelope', () => {
+      const g1 = buildGift({ id: '1', kind: 'unique' });
+      const env = buildGift({ id: '2', kind: 'envelope', description: 'Aporte voluntario' });
+      const g3 = buildGift({ id: '3', kind: 'suggestion' });
+
+      expect(envelopeGuestGift([g1, env, g3])).toEqual(env);
+    });
+
+    it('devuelve null cuando no hay regalo de tipo envelope', () => {
+      const g1 = buildGift({ id: '1', kind: 'unique' });
+      const g2 = buildGift({ id: '2', kind: 'repeatable' });
+
+      expect(envelopeGuestGift([g1, g2])).toBeNull();
+      expect(envelopeGuestGift([])).toBeNull();
+    });
   });
 
   describe('selectableGuestGiftCounts', () => {
@@ -100,6 +127,7 @@ describe('guest-gift-list utils', () => {
         buildGift({ id: 'f1', kind: 'free', reserved_by_me: false }),
         buildGift({ id: 'f2', kind: 'free', reserved_by_me: true }),
         buildGift({ id: 's1', kind: 'suggestion' }),
+        buildGift({ id: 'e1', kind: 'envelope' }),
       ];
 
       const counts = selectableGuestGiftCounts(gifts);

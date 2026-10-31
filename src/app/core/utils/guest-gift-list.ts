@@ -39,6 +39,11 @@ export function suggestionGuestGifts(gifts: readonly GuestGift[]): GuestGift[] {
   return gifts.filter((gift) => gift.kind === 'suggestion');
 }
 
+/** La lluvia de sobres del evento (como máximo una), o null. */
+export function envelopeGuestGift(gifts: readonly GuestGift[]): GuestGift | null {
+  return gifts.find((gift) => gift.kind === 'envelope') ?? null;
+}
+
 /** Regalos de la categoría que no eligió esta familia (disponibles y agotados), en el orden de la RPC. */
 export function categoryGuestGifts(
   gifts: readonly GuestGift[],

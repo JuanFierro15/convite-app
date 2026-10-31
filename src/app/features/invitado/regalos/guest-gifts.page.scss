@@ -233,9 +233,47 @@
   max-width: 100%;
   word-break: break-word;
 
-  ion-icon {
-    font-size: 20px;
-    color: var(--ion-color-success-shade);
+  // Viñeta propia: con la del navegador, en una lista centrada, queda lejos del texto.
+  &::before {
+    content: '•';
+    color: var(--ion-color-primary);
+    font-size: 1.25em;
+    line-height: 1;
     flex-shrink: 0;
   }
+}
+
+.envelope-card {
+  margin: 0;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  --background: rgba(var(--ion-color-secondary-rgb), 0.08);
+  background-color: rgba(var(--ion-color-secondary-rgb), 0.08);
+  border: 1px solid rgba(var(--ion-color-secondary-rgb), 0.35);
+}
+
+.envelope-card__content {
+  padding: var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: var(--space-sm);
+}
+
+.envelope-card__icon {
+  font-size: 32px;
+  color: var(--ion-color-secondary-shade);
+}
+
+.envelope-card__title {
+  margin: 0 0 var(--space-xs);
+  color: var(--ion-text-color);
+}
+
+.envelope-card__text {
+  margin: 0;
+  color: var(--ion-text-color);
+  white-space: pre-line;
+  overflow-wrap: anywhere;
 }

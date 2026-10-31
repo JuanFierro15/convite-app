@@ -16,6 +16,7 @@ export interface GuestTexts {
   giftsTitle: string;
   giftsIntro: readonly string[];
   giftsAnonymityNote: string;
+  giftsEnvelopeDefault: string;
   giftReservedConfirmation: string;
   entryCodeTitle: string;
   entryCodeInstruction: string;
@@ -81,6 +82,9 @@ export function guestTexts(kind: InvitationKind, groupName: string): GuestTexts 
     giftsAnonymityNote: isIndividual
       ? 'Lo que elijas es anónimo: ni nosotros ni los demás invitados sabremos qué regalo elegiste. Solo te pedimos elegirlo para que los regalos no se repitan.'
       : 'Lo que elijan es anónimo: ni nosotros ni los demás invitados sabremos qué regalo eligieron. Solo les pedimos elegirlo para que los regalos no se repitan.',
+    giftsEnvelopeDefault: isIndividual
+      ? 'Si prefieres hacer un aporte en sobre, el día del evento habrá un lugar para dejarlo.'
+      : 'Si prefieren hacer un aporte en sobre, el día del evento habrá un lugar para dejarlo.',
     giftReservedConfirmation: isIndividual
       ? '¡Listo! Quedó elegido. Solo tú sabes que lo elegiste.'
       : '¡Listo! Quedó elegido. Solo ustedes saben que lo eligieron.',
