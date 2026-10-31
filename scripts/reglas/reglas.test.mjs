@@ -4453,3 +4453,423 @@ test(
     }
   }
 );
+
+test(
+  '44. Reservar una lluvia de sobres falla y no deja reserva',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    let envelopeId;
+
+    try {
+      const { data: existingEnvelopes, error: checkExistingError } =
+        await ctx.adminClient
+          .from('gifts')
+          .select('id')
+          .eq('event_id', ctx.eventX.id)
+          .eq('kind', 'envelope');
+
+      assert.equal(
+        checkExistingError,
+        null,
+        'Se esperaba verificar que eventX no tuviera un envelope previo sin error'
+      );
+      assert.equal(
+        existingEnvelopes?.length,
+        0,
+        'No se esperaba encontrar un envelope previo en eventX'
+      );
+
+      const envelopeName = `PRUEBA-${ctx.run}-REGALO-44-ENVELOPE`;
+      const { data: envelopeGift, error: createError } = await ctx.adminClient
+        .from('gifts')
+        .insert({
+          event_id: ctx.eventX.id,
+          name: envelopeName,
+          kind: 'envelope',
+        })
+        .select()
+        .single();
+
+      assert.equal(
+        createError,
+        null,
+        'Se esperaba crear el regalo envelope con el administrador sin error'
+      );
+      assert.ok(
+        envelopeGift?.id,
+        'Se esperaba recibir el id del regalo envelope creado'
+      );
+      envelopeId = envelopeGift.id;
+
+      const { error: reserveError } = await ctx.anonClient.rpc('reserve_gift', {
+        p_code: ctx.invitationA.code,
+        p_gift_id: envelopeId,
+      });
+
+      assert.ok(
+        reserveError,
+        'Se esperaba un error al intentar reservar una lluvia de sobres con reserve_gift'
+      );
+      assert.equal(
+        reserveError.message,
+        'gift_not_reservable',
+        `Se esperaba el mensaje de error gift_not_reservable, pero se recibió: ${reserveError.message}`
+      );
+
+      const { error: directInsertError } = await ctx.adminClient
+        .from('gift_reservations')
+        .insert({
+          gift_id: envelopeId,
+          invitation_id: ctx.invitationA.id,
+        });
+
+      assert.ok(
+        directInsertError,
+        'Se esperaba un error al insertar directo en gift_reservations para una lluvia de sobres'
+      );
+      assert.ok(
+        directInsertError.message.includes('gift_not_reservable'),
+        `Se esperaba que el mensaje contuviera gift_not_reservable, pero se recibió: ${directInsertError.message}`
+      );
+
+      const { data: reservations, error: checkReservationsError } =
+        await ctx.adminClient
+          .from('gift_reservations')
+          .select('id')
+          .eq('gift_id', envelopeId);
+
+      assert.equal(
+        checkReservationsError,
+        null,
+        'Se esperaba consultar las reservas de la lluvia de sobres sin error'
+      );
+      assert.equal(
+        reservations?.length,
+        0,
+        'Se esperaba que no hubiera filas en gift_reservations para la lluvia de sobres'
+      );
+
+      const { data: giftsList, error: getGiftsError } = await ctx.anonClient.rpc(
+        'get_gifts',
+        { p_code: ctx.invitationA.code }
+      );
+
+      assert.equal(
+        getGiftsError,
+        null,
+        'Se esperaba consultar get_gifts sin error'
+      );
+
+      const envelopeItem = (giftsList ?? []).find((g) => g.id === envelopeId);
+      assert.ok(
+        envelopeItem,
+        'Se esperaba encontrar el regalo envelope en get_gifts'
+      );
+      assert.equal(
+        envelopeItem.kind,
+        'envelope',
+        'Se esperaba kind = envelope para el regalo'
+      );
+      assert.equal(
+        envelopeItem.reserved_by_me,
+        false,
+        'Se esperaba reserved_by_me = false para el envelope'
+      );
+      assert.equal(
+        envelopeItem.taken,
+        false,
+        'Se esperaba taken = false para el envelope'
+      );
+      assert.equal(
+        envelopeItem.full,
+        false,
+        'Se esperaba full = false para el envelope'
+      );
+      assert.equal(
+        envelopeItem.remaining,
+        null,
+        'Se esperaba remaining = null para el envelope'
+      );
+    } finally {
+      if (envelopeId) {
+        await ctx.adminClient.from('gifts').delete().eq('id', envelopeId);
+      }
+    }
+  }
+);
+
+test(
+  '45. Solo puede haber una lluvia de sobres por evento',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    let envelopeX1Id;
+    let envelopeYId;
+
+    try {
+      const { data: existingEnvelopesX, error: checkExistingXError } =
+        await ctx.adminClient
+          .from('gifts')
+          .select('id')
+          .eq('event_id', ctx.eventX.id)
+          .eq('kind', 'envelope');
+
+      assert.equal(
+        checkExistingXError,
+        null,
+        'Se esperaba verificar que eventX no tuviera un envelope previo sin error'
+      );
+      assert.equal(
+        existingEnvelopesX?.length,
+        0,
+        'No se esperaba encontrar un envelope previo en eventX'
+      );
+
+      const { data: existingEnvelopesY, error: checkExistingYError } =
+        await ctx.adminClient
+          .from('gifts')
+          .select('id')
+          .eq('event_id', ctx.eventY.id)
+          .eq('kind', 'envelope');
+
+      assert.equal(
+        checkExistingYError,
+        null,
+        'Se esperaba verificar que eventY no tuviera un envelope previo sin error'
+      );
+      assert.equal(
+        existingEnvelopesY?.length,
+        0,
+        'No se esperaba encontrar un envelope previo en eventY'
+      );
+
+      const envelopeX1Name = `PRUEBA-${ctx.run}-REGALO-45-SOBRE-X1`;
+      const { data: envelopeX1, error: createX1Error } = await ctx.ownerXClient
+        .from('gifts')
+        .insert({
+          event_id: ctx.eventX.id,
+          name: envelopeX1Name,
+          kind: 'envelope',
+        })
+        .select()
+        .single();
+
+      assert.equal(
+        createX1Error,
+        null,
+        'Se esperaba que el propietario X creara el primer envelope en eventX sin error'
+      );
+      assert.ok(
+        envelopeX1?.id,
+        'Se esperaba recibir el id del primer envelope en eventX'
+      );
+      envelopeX1Id = envelopeX1.id;
+
+      const envelopeX2Name = `PRUEBA-${ctx.run}-REGALO-45-SOBRE-X2`;
+      const { error: createX2Error } = await ctx.ownerXClient
+        .from('gifts')
+        .insert({
+          event_id: ctx.eventX.id,
+          name: envelopeX2Name,
+          kind: 'envelope',
+        });
+
+      assert.ok(
+        createX2Error,
+        'Se esperaba un error al crear un segundo envelope en el mismo evento'
+      );
+      assert.equal(
+        createX2Error.code,
+        '23505',
+        'Se esperaba el código de error 23505 (unique_violation)'
+      );
+      assert.ok(
+        createX2Error.message.includes('gifts_one_envelope_per_event'),
+        `Se esperaba la restricción gifts_one_envelope_per_event, pero se recibió: ${createX2Error.message}`
+      );
+
+      const envelopeYName = `PRUEBA-${ctx.run}-REGALO-45-SOBRE-Y`;
+      const { data: envelopeY, error: createYError } = await ctx.ownerYClient
+        .from('gifts')
+        .insert({
+          event_id: ctx.eventY.id,
+          name: envelopeYName,
+          kind: 'envelope',
+        })
+        .select()
+        .single();
+
+      assert.equal(
+        createYError,
+        null,
+        'Se esperaba que el propietario Y creara un envelope en eventY sin error'
+      );
+      assert.ok(
+        envelopeY?.id,
+        'Se esperaba recibir el id del envelope en eventY'
+      );
+      envelopeYId = envelopeY.id;
+
+      const { data: storedXEnvelopes, error: checkXError } = await ctx.adminClient
+        .from('gifts')
+        .select('id, name, kind')
+        .eq('event_id', ctx.eventX.id)
+        .in('name', [envelopeX1Name, envelopeX2Name]);
+
+      assert.equal(
+        checkXError,
+        null,
+        'Se esperaba consultar con el administrador los regalos envelope de eventX sin error'
+      );
+      assert.equal(
+        storedXEnvelopes?.length,
+        1,
+        'Se esperaba que en eventX existiera exactamente un envelope con los nombres de la prueba'
+      );
+      assert.equal(
+        storedXEnvelopes[0].name,
+        envelopeX1Name,
+        'Se esperaba que el envelope persistido fuera el primero (envelopeX1)'
+      );
+    } finally {
+      const idsToDelete = [envelopeX1Id, envelopeYId].filter(Boolean);
+      if (idsToDelete.length > 0) {
+        await ctx.adminClient.from('gifts').delete().in('id', idsToDelete);
+      }
+    }
+  }
+);
+
+test(
+  '46. Una lluvia de sobres no acepta tope',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    let validEnvelopeId;
+
+    try {
+      const { data: existingEnvelopes, error: checkExistingError } =
+        await ctx.adminClient
+          .from('gifts')
+          .select('id')
+          .eq('event_id', ctx.eventX.id)
+          .eq('kind', 'envelope');
+
+      assert.equal(
+        checkExistingError,
+        null,
+        'Se esperaba verificar que eventX no tuviera un envelope previo sin error'
+      );
+      assert.equal(
+        existingEnvelopes?.length,
+        0,
+        'No se esperaba encontrar un envelope previo en eventX'
+      );
+
+      const invalidEnvelopeName = `PRUEBA-${ctx.run}-REGALO-46-CON-TOPE`;
+      const { error: createWithLimitError } = await ctx.ownerXClient
+        .from('gifts')
+        .insert({
+          event_id: ctx.eventX.id,
+          name: invalidEnvelopeName,
+          kind: 'envelope',
+          max_reservations: 3,
+        });
+
+      assert.ok(
+        createWithLimitError,
+        'Se esperaba un error al crear un envelope con max_reservations = 3'
+      );
+      assert.equal(
+        createWithLimitError.code,
+        '23514',
+        'Se esperaba el código de error 23514 (check_violation)'
+      );
+      assert.ok(
+        createWithLimitError.message.includes('gifts_max_reservations_valid'),
+        `Se esperaba la restricción gifts_max_reservations_valid, pero se recibió: ${createWithLimitError.message}`
+      );
+
+      const { data: failedInsertRows, error: checkFailedInsertError } =
+        await ctx.adminClient
+          .from('gifts')
+          .select('id')
+          .eq('event_id', ctx.eventX.id)
+          .eq('name', invalidEnvelopeName);
+
+      assert.equal(
+        checkFailedInsertError,
+        null,
+        'Se esperaba consultar si el intento fallido de inserción dejó fila sin error'
+      );
+      assert.equal(
+        failedInsertRows?.length,
+        0,
+        'Se esperaba que el intento fallido no dejara fila en gifts'
+      );
+
+      const validEnvelopeName = `PRUEBA-${ctx.run}-REGALO-46-VALIDO`;
+      const { data: createdEnvelope, error: createValidError } =
+        await ctx.ownerXClient
+          .from('gifts')
+          .insert({
+            event_id: ctx.eventX.id,
+            name: validEnvelopeName,
+            kind: 'envelope',
+          })
+          .select()
+          .single();
+
+      assert.equal(
+        createValidError,
+        null,
+        'Se esperaba crear un envelope sin tope sin error'
+      );
+      assert.ok(
+        createdEnvelope?.id,
+        'Se esperaba recibir el id del envelope válido'
+      );
+      validEnvelopeId = createdEnvelope.id;
+
+      const { error: updateLimitError } = await ctx.ownerXClient
+        .from('gifts')
+        .update({ max_reservations: 2 })
+        .eq('id', validEnvelopeId);
+
+      assert.ok(
+        updateLimitError,
+        'Se esperaba un error al actualizar max_reservations a 2 en un envelope'
+      );
+      assert.equal(
+        updateLimitError.code,
+        '23514',
+        'Se esperaba el código de error 23514 (check_violation)'
+      );
+      assert.ok(
+        updateLimitError.message.includes('gifts_max_reservations_valid'),
+        `Se esperaba la restricción gifts_max_reservations_valid, pero se recibió: ${updateLimitError.message}`
+      );
+
+      const { data: storedEnvelope, error: checkStoredError } =
+        await ctx.adminClient
+          .from('gifts')
+          .select('id, kind, max_reservations')
+          .eq('id', validEnvelopeId)
+          .single();
+
+      assert.equal(
+        checkStoredError,
+        null,
+        'Se esperaba consultar el envelope válido con el administrador sin error'
+      );
+      assert.equal(
+        storedEnvelope?.max_reservations,
+        null,
+        'Se esperaba que max_reservations permaneciera en null tras fallar la actualización'
+      );
+    } finally {
+      if (validEnvelopeId) {
+        await ctx.adminClient.from('gifts').delete().eq('id', validEnvelopeId);
+      }
+    }
+  }
+);
+
