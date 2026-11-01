@@ -1,5 +1,5 @@
 import { DOCUMENT, Injectable, inject, signal } from '@angular/core';
-import { DEFAULT_THEME, ThemeAsset, ThemeId, findTheme, isThemeId } from './themes';
+import { DEFAULT_THEME, ThemeAsset, ThemeId, isThemeId } from './themes';
 
 export { DEFAULT_THEME, THEMES, type ThemeAsset, type ThemeId } from './themes';
 
@@ -18,9 +18,7 @@ export class ThemeService {
   }
 
   asset(themeId: string | null | undefined, file: ThemeAsset): string {
-    const resolved = this.resolveThemeId(themeId);
-    const assetTheme = findTheme(resolved)?.hasOwnAssets ? resolved : DEFAULT_THEME;
-    return `assets/themes/${assetTheme}/${file}`;
+    return `assets/themes/${this.resolveThemeId(themeId)}/${file}`;
   }
 
   private resolveThemeId(themeId: string | null | undefined): ThemeId {

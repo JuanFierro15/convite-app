@@ -13,47 +13,17 @@ describe('themes registry', () => {
     const ids = THEMES.map((theme) => theme.id);
     const labels = THEMES.map((theme) => theme.label);
 
-    expect(ids).toEqual(['baby-shower', 'honey-bee', 'bautizo']);
+    expect(ids).toEqual(['baby-shower', 'honey-bee']);
     expect(labels).toEqual([
       'Jardín de algodón',
       'Miel y flores silvestres',
-      'Bautizo',
     ]);
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it('restricts selectable themes to baby-shower and honey-bee with bautizo having no own assets', () => {
-    const selectableIds = THEMES.filter((theme) => theme.selectable).map(
-      (theme) => theme.id,
-    );
-    expect(selectableIds).toEqual(['baby-shower', 'honey-bee']);
-
-    const bautizo = THEMES.find((theme) => theme.id === 'bautizo');
-    expect(bautizo?.selectable).toBe(false);
-    expect(bautizo?.hasOwnAssets).toBe(false);
-
-    const withoutAssets = THEMES.filter((theme) => !theme.hasOwnAssets).map(
-      (theme) => theme.id,
-    );
-    expect(withoutAssets).toEqual(['bautizo']);
-  });
-
-  it('returns selectable themes for undefined, null, non-existent, or selectable ids, and appends bautizo when current', () => {
-    const testCases: (string | null | undefined)[] = [
-      undefined,
-      null,
-      'inexistente',
-      'baby-shower',
-      'honey-bee',
-    ];
-
-    for (const currentId of testCases) {
-      const options = themeOptionsFor(currentId).map((theme) => theme.id);
-      expect(options).toEqual(['baby-shower', 'honey-bee']);
-    }
-
-    const bautizoOptions = themeOptionsFor('bautizo').map((theme) => theme.id);
-    expect(bautizoOptions).toEqual(['baby-shower', 'honey-bee', 'bautizo']);
+  it('returns all themes with themeOptionsFor', () => {
+    const options = themeOptionsFor().map((theme) => theme.id);
+    expect(options).toEqual(['baby-shower', 'honey-bee']);
   });
 
   it('returns a new array each time so mutating the result does not affect subsequent calls or THEMES', () => {
@@ -61,11 +31,9 @@ describe('themes registry', () => {
     const firstCall = themeOptionsFor();
 
     firstCall.push({
-      id: 'bautizo',
-      label: 'Bautizo',
-      selectable: false,
-      hasOwnAssets: false,
-      introVideo: false,
+      id: 'honey-bee',
+      label: 'Miel y flores silvestres',
+      introVideo: true,
     });
 
     const secondCall = themeOptionsFor();
@@ -79,9 +47,8 @@ describe('themes registry', () => {
   it('validates theme ids correctly with isThemeId', () => {
     expect(isThemeId('baby-shower')).toBe(true);
     expect(isThemeId('honey-bee')).toBe(true);
-    expect(isThemeId('bautizo')).toBe(true);
 
-    expect(isThemeId('inexistente')).toBe(false);
+    expect(isThemeId('tema-inexistente')).toBe(false);
     expect(isThemeId('')).toBe(false);
     expect(isThemeId(null)).toBe(false);
     expect(isThemeId(undefined)).toBe(false);
@@ -116,7 +83,6 @@ describe('themes registry', () => {
 
   it('returns null intro video sources for themes without video or unknown themes', () => {
     expect(introVideoSources('baby-shower', 'vertical')).toBeNull();
-    expect(introVideoSources('bautizo', 'vertical')).toBeNull();
     expect(introVideoSources(null, 'vertical')).toBeNull();
     expect(introVideoSources(undefined, 'vertical')).toBeNull();
     expect(introVideoSources('desconocido', 'vertical')).toBeNull();

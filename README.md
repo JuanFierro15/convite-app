@@ -21,7 +21,7 @@ Invitados:
 - Confirmación o rechazo por persona hasta la fecha límite.
 - Lista de regalos: apartar regalos únicos, elegir opciones repetibles y liberar los propios.
 
-Cada evento tiene su tema visual (baby shower o bautizo); las pantallas son las mismas.
+Cada evento tiene su tema visual (baby shower o miel); las pantallas son las mismas.
 
 ## Stack
 

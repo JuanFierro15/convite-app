@@ -1,10 +1,8 @@
-export type ThemeId = 'baby-shower' | 'honey-bee' | 'bautizo';
+export type ThemeId = 'baby-shower' | 'honey-bee';
 
 export interface ThemeDefinition {
   id: ThemeId;
   label: string;
-  selectable: boolean;
-  hasOwnAssets: boolean;
   introVideo: boolean;
 }
 
@@ -12,24 +10,12 @@ export const THEMES: readonly ThemeDefinition[] = [
   {
     id: 'baby-shower',
     label: 'Jardín de algodón',
-    selectable: true,
-    hasOwnAssets: true,
     introVideo: false,
   },
   {
     id: 'honey-bee',
     label: 'Miel y flores silvestres',
-    selectable: true,
-    hasOwnAssets: true,
     introVideo: true,
-  },
-  // Sin imágenes propias no se ofrece al crear, pero sigue válido para los eventos que ya lo tienen.
-  {
-    id: 'bautizo',
-    label: 'Bautizo',
-    selectable: false,
-    hasOwnAssets: false,
-    introVideo: false,
   },
 ];
 
@@ -54,13 +40,8 @@ export function findTheme(id: string | null | undefined): ThemeDefinition | unde
   return THEMES.find((theme) => theme.id === id);
 }
 
-export function themeOptionsFor(currentId?: string | null): ThemeDefinition[] {
-  const options = THEMES.filter((theme) => theme.selectable);
-  const current = findTheme(currentId);
-  if (current && !current.selectable) {
-    options.push(current);
-  }
-  return options;
+export function themeOptionsFor(): ThemeDefinition[] {
+  return [...THEMES];
 }
 
 // El sufijo de versión va en el nombre del archivo porque se publica con caché de un año.

@@ -12,7 +12,7 @@ class TestHostComponent {
   readonly control = new FormControl<string>('baby-shower', {
     nonNullable: true,
   });
-  readonly options = themeOptionsFor(null);
+  readonly options = themeOptionsFor();
 }
 
 describe('ThemePickerComponent', () => {
@@ -26,7 +26,7 @@ describe('ThemePickerComponent', () => {
 
     fixture = TestBed.createComponent(ThemePickerComponent);
     component = fixture.componentInstance;
-    fixture.componentRef.setInput('options', themeOptionsFor('bautizo'));
+    fixture.componentRef.setInput('options', themeOptionsFor());
     fixture.detectChanges();
   });
 
@@ -34,7 +34,7 @@ describe('ThemePickerComponent', () => {
     const cards = fixture.nativeElement.querySelectorAll(
       '.theme-card',
     ) as NodeListOf<HTMLButtonElement>;
-    expect(cards.length).toBe(3);
+    expect(cards.length).toBe(2);
 
     const expectedData = [
       {
@@ -46,11 +46,6 @@ describe('ThemePickerComponent', () => {
         id: 'honey-bee',
         label: 'Miel y flores silvestres',
         src: 'assets/themes/honey-bee/hero-cover.webp',
-      },
-      {
-        id: 'bautizo',
-        label: 'Bautizo',
-        src: 'assets/themes/baby-shower/hero-cover.webp',
       },
     ];
 

@@ -17,13 +17,6 @@ describe('ThemeService', () => {
     expect(service.current()).toBe(DEFAULT_THEME);
   });
 
-  it('applies a valid theme to documentElement and updates current', () => {
-    service.apply('bautizo');
-
-    expect(doc.documentElement.getAttribute('data-theme')).toBe('bautizo');
-    expect(service.current()).toBe('bautizo');
-  });
-
   it('applies honey-bee theme to documentElement and updates current', () => {
     service.apply('honey-bee');
 
@@ -32,8 +25,8 @@ describe('ThemeService', () => {
   });
 
   it('falls back to DEFAULT_THEME when applying an invalid or empty themeId', () => {
-    service.apply('bautizo');
-    service.apply('inexistente');
+    service.apply('honey-bee');
+    service.apply('tema-inexistente');
 
     expect(doc.documentElement.getAttribute('data-theme')).toBe('baby-shower');
     expect(service.current()).toBe('baby-shower');
@@ -45,14 +38,20 @@ describe('ThemeService', () => {
     expect(doc.documentElement.getAttribute('data-theme')).toBe('baby-shower');
   });
 
-  it('returns the asset path for themes with own assets and falls back to baby-shower otherwise', () => {
+  it('returns the asset path for valid themes and falls back to baby-shower for an invented or missing id', () => {
     expect(service.asset('baby-shower', 'hero-cover.webp')).toBe(
       'assets/themes/baby-shower/hero-cover.webp',
     );
-    expect(service.asset('bautizo', 'countdown.webp')).toBe(
+    expect(service.asset('honey-bee', 'countdown.webp')).toBe(
+      'assets/themes/honey-bee/countdown.webp',
+    );
+    expect(service.asset('tema-inexistente', 'countdown.webp')).toBe(
       'assets/themes/baby-shower/countdown.webp',
     );
     expect(service.asset(null, 'empty-state.webp')).toBe(
+      'assets/themes/baby-shower/empty-state.webp',
+    );
+    expect(service.asset(undefined, 'empty-state.webp')).toBe(
       'assets/themes/baby-shower/empty-state.webp',
     );
   });

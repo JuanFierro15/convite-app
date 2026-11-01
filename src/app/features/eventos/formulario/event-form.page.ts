@@ -156,8 +156,7 @@ export class EventFormPage implements ViewWillEnter {
 
   readonly id = input<string>();
 
-  private readonly loadedTheme = signal<ThemeId | null>(null);
-  readonly themeOptions = computed(() => themeOptionsFor(this.loadedTheme()));
+  readonly themeOptions = computed(() => themeOptionsFor());
   readonly loading = signal<boolean>(false);
   readonly loadError = signal<string | null>(null);
   readonly submitting = signal<boolean>(false);
@@ -264,7 +263,6 @@ export class EventFormPage implements ViewWillEnter {
   }
 
   private resetForCreate(): void {
-    this.loadedTheme.set(null);
     this.loading.set(false);
     this.loadError.set(null);
     this.form.reset({
@@ -307,7 +305,6 @@ export class EventFormPage implements ViewWillEnter {
       const resolvedTheme: ThemeId = this.themeService.apply(
         currentEvent.theme_id,
       );
-      this.loadedTheme.set(resolvedTheme);
 
       this.form.reset({
         name: currentEvent.name,

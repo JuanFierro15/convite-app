@@ -24,7 +24,7 @@ describe('IllustrationComponent', () => {
 
   it('uses ThemeService.current() when themeId is not provided', () => {
     const themeService = TestBed.inject(ThemeService);
-    themeService.apply('bautizo');
+    themeService.apply('honey-bee');
 
     const fixture = TestBed.createComponent(IllustrationComponent);
     fixture.componentRef.setInput('name', 'rsvp-sent');
@@ -32,6 +32,6 @@ describe('IllustrationComponent', () => {
     fixture.detectChanges();
 
     const img: HTMLImageElement | null = fixture.nativeElement.querySelector('img.illustration');
-    expect(img?.getAttribute('src')).toBe('assets/themes/baby-shower/rsvp-sent.webp');
+    expect(img?.getAttribute('src')).toBe('assets/themes/honey-bee/rsvp-sent.webp');
   });
 });

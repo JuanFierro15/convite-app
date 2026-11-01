@@ -134,28 +134,6 @@ describe('EventFormPage', () => {
     );
   });
 
-  it('shows 3 theme cards with bautizo selected when editing an event with bautizo theme', async () => {
-    mockEventContext.event.set({ ...mockEvent, theme_id: 'bautizo' });
-    mockEventContext.role.set('owner');
-
-    fixture.componentRef.setInput('id', 'event-123');
-    component.ionViewWillEnter();
-    await vi.waitFor(() =>
-      expect(component.form.controls.theme_id.value).toBe('bautizo'),
-    );
-    fixture.detectChanges();
-
-    const cards = fixture.nativeElement.querySelectorAll(
-      '.theme-card',
-    ) as NodeListOf<HTMLButtonElement>;
-    expect(cards.length).toBe(3);
-
-    const selectedCard = fixture.nativeElement.querySelector(
-      '.theme-card--selected',
-    ) as HTMLButtonElement | null;
-    expect(selectedCard?.getAttribute('data-theme')).toBe('bautizo');
-  });
-
   it('shows 2 theme cards with honey-bee selected when editing an event with honey-bee theme', async () => {
     mockEventContext.event.set({ ...mockEvent, theme_id: 'honey-bee' });
     mockEventContext.role.set('owner');
