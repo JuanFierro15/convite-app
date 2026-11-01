@@ -287,15 +287,15 @@ describe('guest-gift-list utils', () => {
   });
 
   describe('guestGiftAvailabilityLabel', () => {
-    it('devuelve el texto exacto con 0, 1 y 19', () => {
+    it('da el aviso con 0 y -1, y null con 1 y 19', () => {
       expect(guestGiftAvailabilityLabel(0)).toBe(
         'Ya eligieron todos los regalos de la lista',
       );
       expect(guestGiftAvailabilityLabel(-1)).toBe(
         'Ya eligieron todos los regalos de la lista',
       );
-      expect(guestGiftAvailabilityLabel(1)).toBe('1 regalo todavía disponible');
-      expect(guestGiftAvailabilityLabel(19)).toBe('19 regalos todavía disponibles');
+      expect(guestGiftAvailabilityLabel(1)).toBeNull();
+      expect(guestGiftAvailabilityLabel(19)).toBeNull();
     });
   });
 

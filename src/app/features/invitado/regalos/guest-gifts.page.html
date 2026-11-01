@@ -152,8 +152,8 @@
               <div #giftListStart class="gift-list-anchor"></div>
               <div>
                 <h2 id="list-title" class="gift-list-section__title">La lista de regalos</h2>
-                @if (inv.gifts_open) {
-                  <p class="gift-list-section__count">{{ availabilityLabel() }}</p>
+                @if (inv.gifts_open && availabilityLabel(); as label) {
+                  <p class="gift-list-section__count">{{ label }}</p>
                 }
               </div>
 
@@ -165,10 +165,10 @@
                   aria-label="Filtrar regalos"
                 >
                   <ion-segment-button value="unique">
-                    <ion-label>Únicos ({{ counts().unique }})</ion-label>
+                    <ion-label>Únicos</ion-label>
                   </ion-segment-button>
                   <ion-segment-button value="repeatable">
-                    <ion-label>Repetibles ({{ counts().repeatable }})</ion-label>
+                    <ion-label>Repetibles</ion-label>
                   </ion-segment-button>
                 </ion-segment>
               }

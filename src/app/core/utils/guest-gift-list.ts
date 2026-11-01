@@ -204,13 +204,10 @@ export function guestGiftsLayout(gifts: readonly GuestGift[]): GuestGiftsLayout 
   };
 }
 
-/** Línea de conteo bajo "La lista de regalos". */
-export function guestGiftAvailabilityLabel(available: number): string {
-  if (available > 1) {
-    return `${available} regalos todavía disponibles`;
+/** Aviso que se muestra bajo "La lista de regalos" cuando ya no queda nada por elegir. */
+export function guestGiftAvailabilityLabel(available: number): string | null {
+  if (available <= 0) {
+    return 'Ya eligieron todos los regalos de la lista';
   }
-  if (available === 1) {
-    return '1 regalo todavía disponible';
-  }
-  return 'Ya eligieron todos los regalos de la lista';
+  return null;
 }

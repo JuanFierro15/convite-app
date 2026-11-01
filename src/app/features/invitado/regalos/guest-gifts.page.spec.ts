@@ -319,27 +319,23 @@ describe('GuestGiftsPage', () => {
     });
   });
 
-  describe('conteo de disponibilidad', () => {
-    it('muestra "19 regalos todavía disponibles"', async () => {
+  describe('aviso de disponibilidad', () => {
+    it('con regalos disponibles no muestra el párrafo de disponibilidad', async () => {
       const gifts19 = Array.from({ length: 19 }, (_, i) =>
         buildUniqueGift({ id: `g-${i}`, taken: false }),
       );
       const { fixture } = await createPage(gifts19, mockGroupInvitation);
 
-      expect(fixture.nativeElement.querySelector('.gift-list-section__count')?.textContent?.trim()).toBe(
-        '19 regalos todavía disponibles',
-      );
+      expect(fixture.nativeElement.querySelector('.gift-list-section__count')).toBeNull();
     });
 
-    it('muestra "1 regalo todavía disponible"', async () => {
+    it('con un regalo disponible tampoco muestra el párrafo de disponibilidad', async () => {
       const { fixture } = await createPage([buildUniqueGift({ taken: false })], mockGroupInvitation);
 
-      expect(fixture.nativeElement.querySelector('.gift-list-section__count')?.textContent?.trim()).toBe(
-        '1 regalo todavía disponible',
-      );
+      expect(fixture.nativeElement.querySelector('.gift-list-section__count')).toBeNull();
     });
 
-    it('muestra "Ya eligieron todos los regalos de la lista" con 0 disponibles', async () => {
+    it('muestra "Ya eligieron todos los regalos de la lista" con todos elegidos', async () => {
       const { fixture } = await createPage([buildUniqueGift({ taken: true })], mockGroupInvitation);
 
       expect(fixture.nativeElement.querySelector('.gift-list-section__count')?.textContent?.trim()).toBe(
@@ -347,9 +343,9 @@ describe('GuestGiftsPage', () => {
       );
     });
 
-    it('con gifts_open false oculta el conteo y muestra .closed-banner', async () => {
+    it('con la ventana cerrada no aparece y muestra .closed-banner', async () => {
       const invClosed = { ...mockGroupInvitation, gifts_open: false };
-      const { fixture } = await createPage([buildUniqueGift()], invClosed);
+      const { fixture } = await createPage([buildUniqueGift({ taken: true })], invClosed);
 
       expect(fixture.nativeElement.querySelector('.gift-list-section__count')).toBeNull();
       expect(fixture.nativeElement.querySelector('.closed-banner')).not.toBeNull();
@@ -791,6 +787,33 @@ describe('GuestGiftsPage', () => {
     expect(component.page()).toBe(1);
     expect(component.visible().length).toBe(2);
     expect(component.visible().map((g) => g.id)).toEqual(['u-1', 'u-2']);
+  });
+
+  it('los segmentos dicen exactamente "Únicos" y "Repetibles", sin paréntesis ni números', async () => {
+    const list: GuestGift[] = [
+      buildUniqueGift({ id: 'u-1', name: 'Coche' }),
+      {
+        id: 'r-1',
+        name: 'Pañales',
+        description: null,
+        category: null,
+        kind: 'repeatable',
+        reserved_by_me: false,
+        taken: false,
+        remaining: 2,
+        full: false,
+        max_reservations: 3,
+      },
+    ];
+
+    const { fixture } = await createPage(list, mockIndividualInvitation);
+
+    const buttons = Array.from(
+      fixture.nativeElement.querySelectorAll('ion-segment-button'),
+    ) as HTMLElement[];
+    const buttonTexts = buttons.map((b) => b.textContent?.trim());
+
+    expect(buttonTexts).toEqual(['Únicos', 'Repetibles']);
   });
 
   it('con 8 repetibles disponibles hay 2 páginas; "Siguiente" muestra 2 cards y "Página 2 de 2"', async () => {
