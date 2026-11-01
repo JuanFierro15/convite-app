@@ -23,7 +23,11 @@
     <ion-list class="guests-list" lines="full">
       @for (guest of inv.guests; track guest.id) {
         <ion-item class="guest-item">
-          <div class="guest-item__content">
+          <div
+            class="guest-item__content"
+            [class.guest-item__content--toggle]="guest.arrivedAt === null"
+            (click)="onRowContentClick(guest, $event)"
+          >
             <div class="guest-item__main">
               <span class="guest-name text-name">{{ guest.full_name }}</span>
               <app-status-badge [status]="guest.rsvp" [label]="rsvpLabel(guest.rsvp)" />
@@ -52,7 +56,7 @@
               slot="end"
               [checked]="isGuestSelected(guest.id)"
               (ionChange)="onToggleGuest(guest, $event)"
-              aria-label="Registrar llegada"
+              [attr.aria-label]="'Registrar llegada de ' + guest.full_name"
             ></ion-checkbox>
           }
         </ion-item>

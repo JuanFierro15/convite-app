@@ -54,6 +54,10 @@
     gap: var(--space-xs);
     width: 100%;
     padding-block: var(--space-xs);
+
+    &--toggle {
+      cursor: pointer;
+    }
   }
 
   &__main {

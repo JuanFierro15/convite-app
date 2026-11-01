@@ -549,4 +549,215 @@ describe('ArrivalGroupComponent', () => {
     await newComp.onRegister();
     expect(mockSession.register).toHaveBeenCalledWith('inv-declined', [declinedGuest.id]);
   });
+
+  it('unselects a preselected accepted guest when clicking row content, and selects again on second click', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const items = fixture.nativeElement.querySelectorAll('.guest-item');
+    const guest1Item = items[0] as HTMLElement;
+    const contentEl = guest1Item.querySelector('.guest-item__content') as HTMLElement;
+    const checkboxEl = guest1Item.querySelector('ion-checkbox') as any;
+
+    expect(component.isGuestSelected('guest-1')).toBe(true);
+    expect(checkboxEl.checked).toBe(true);
+
+    contentEl.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(component.isGuestSelected('guest-1')).toBe(false);
+    expect(checkboxEl.checked).toBe(false);
+
+    contentEl.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(component.isGuestSelected('guest-1')).toBe(true);
+    expect(checkboxEl.checked).toBe(true);
+  });
+
+  it('prompts confirmation when clicking row content of an unconfirmed guest: selects with confirm, stays unselected with cancel', async () => {
+    const alertMockConfirm = {
+      present: vi.fn().mockResolvedValue(undefined),
+      onDidDismiss: vi.fn().mockResolvedValue({ role: 'confirm' }),
+    };
+    mockAlertCtrl.create.mockResolvedValue(alertMockConfirm);
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const items = fixture.nativeElement.querySelectorAll('.guest-item');
+    const guest4Item = items[3] as HTMLElement;
+    const contentEl = guest4Item.querySelector('.guest-item__content') as HTMLElement;
+    const checkboxEl = guest4Item.querySelector('ion-checkbox') as any;
+
+    contentEl.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(mockAlertCtrl.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'No respondió la invitación. ¿Registrar su llegada de todas formas?',
+        buttons: expect.arrayContaining([
+          expect.objectContaining({ text: 'Cancelar', role: 'cancel' }),
+          expect.objectContaining({ text: 'Registrar', role: 'confirm' }),
+        ]),
+      }),
+    );
+    expect(component.isGuestSelected('guest-4')).toBe(true);
+    expect(checkboxEl.checked).toBe(true);
+
+    component.selectedGuestIds.set(['guest-1']);
+    checkboxEl.checked = false;
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const alertMockCancel = {
+      present: vi.fn().mockResolvedValue(undefined),
+      onDidDismiss: vi.fn().mockResolvedValue({ role: 'cancel' }),
+    };
+    mockAlertCtrl.create.mockResolvedValue(alertMockCancel);
+
+    contentEl.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(component.isGuestSelected('guest-4')).toBe(false);
+    expect(checkboxEl.checked).toBe(false);
+  });
+
+  it('toggles selection exactly once when checkbox emits ionChange and does not trigger row click', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const items = fixture.nativeElement.querySelectorAll('.guest-item');
+    const guest1Item = items[0] as HTMLElement;
+    const checkboxEl = guest1Item.querySelector('ion-checkbox') as HTMLElement;
+
+    const rowSpy = vi.spyOn(component, 'onRowContentClick');
+
+    checkboxEl.dispatchEvent(new CustomEvent('ionChange', { detail: { checked: false }, bubbles: true }));
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(rowSpy).not.toHaveBeenCalled();
+    expect(component.isGuestSelected('guest-1')).toBe(false);
+
+    checkboxEl.dispatchEvent(new CustomEvent('ionChange', { detail: { checked: true }, bubbles: true }));
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(rowSpy).not.toHaveBeenCalled();
+    expect(component.isGuestSelected('guest-1')).toBe(true);
+  });
+
+  it('does not trigger row content click when click event is dispatched on ion-item itself', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const items = fixture.nativeElement.querySelectorAll('.guest-item');
+    const guest1Item = items[0] as HTMLElement;
+
+    const rowSpy = vi.spyOn(component, 'onRowContentClick');
+    const toggleSpy = vi.spyOn(component, 'toggleGuest');
+
+    const clickEvent = new MouseEvent('click', { bubbles: true });
+    Object.defineProperty(clickEvent, 'target', { value: guest1Item });
+    guest1Item.dispatchEvent(clickEvent);
+
+    expect(rowSpy).not.toHaveBeenCalled();
+    expect(toggleSpy).not.toHaveBeenCalled();
+    expect(component.isGuestSelected('guest-1')).toBe(true);
+  });
+
+  it('does not toggle selection when clicking undo button', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const items = fixture.nativeElement.querySelectorAll('.guest-item');
+    const guest2Item = items[1] as HTMLElement;
+    const undoButton = guest2Item.querySelector('.undo-button') as HTMLElement;
+
+    const toggleSpy = vi.spyOn(component, 'toggleGuest');
+    const onUndoSpy = vi.spyOn(component, 'onUndo').mockImplementation(async () => {});
+
+    undoButton.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(onUndoSpy).toHaveBeenCalled();
+    expect(toggleSpy).not.toHaveBeenCalled();
+    expect(component.isGuestSelected('guest-2')).toBe(false);
+  });
+
+  it('does not toggle selection when clicking row content of an already arrived guest', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const items = fixture.nativeElement.querySelectorAll('.guest-item');
+    const guest2Item = items[1] as HTMLElement;
+    const contentEl = guest2Item.querySelector('.guest-item__content') as HTMLElement;
+
+    const toggleSpy = vi.spyOn(component, 'toggleGuest');
+
+    contentEl.click();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(toggleSpy).not.toHaveBeenCalled();
+    expect(component.isGuestSelected('guest-2')).toBe(false);
+    expect(mockAlertCtrl.create).not.toHaveBeenCalled();
+  });
+
+  it('sets accessible aria-label on checkboxes for pending guests', async () => {
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const items = fixture.nativeElement.querySelectorAll('.guest-item');
+    const guest1Checkbox = items[0].querySelector('ion-checkbox') as HTMLElement;
+    const guest4Checkbox = items[3].querySelector('ion-checkbox') as HTMLElement;
+
+    expect(guest1Checkbox.getAttribute('aria-label')).toBe('Registrar llegada de Persona Aceptada Pendiente');
+    expect(guest4Checkbox.getAttribute('aria-label')).toBe('Registrar llegada de Persona No Confirmada');
+  });
+
+  it('ignores touches on the same row while confirmation alert is already open', async () => {
+    let resolveDismiss!: (value: { role: string }) => void;
+    const dismissPromise = new Promise<{ role: string }>((resolve) => {
+      resolveDismiss = resolve;
+    });
+
+    const alertMock = {
+      present: vi.fn().mockResolvedValue(undefined),
+      onDidDismiss: vi.fn().mockReturnValue(dismissPromise),
+    };
+    mockAlertCtrl.create.mockResolvedValue(alertMock);
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const items = fixture.nativeElement.querySelectorAll('.guest-item');
+    const guest4Item = items[3] as HTMLElement;
+    const contentEl = guest4Item.querySelector('.guest-item__content') as HTMLElement;
+
+    const firstClick = component.onRowContentClick(sampleGuests[3], {
+      target: contentEl,
+      currentTarget: contentEl,
+    } as unknown as Event);
+
+    await component.onRowContentClick(sampleGuests[3], {
+      target: contentEl,
+      currentTarget: contentEl,
+    } as unknown as Event);
+
+    expect(mockAlertCtrl.create).toHaveBeenCalledTimes(1);
+
+    resolveDismiss({ role: 'confirm' });
+    await firstClick;
+
+    expect(component.isGuestSelected('guest-4')).toBe(true);
+  });
 });

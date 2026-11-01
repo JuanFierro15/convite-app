@@ -101,6 +101,7 @@ export class ArrivalGroupComponent implements OnInit {
 
   readonly selectedGuestIds = signal<string[]>([]);
   private selectionInitialized = false;
+  private confirmingGuestId: string | null = null;
 
   readonly saving = signal<boolean>(false);
 
@@ -154,16 +155,55 @@ export class ArrivalGroupComponent implements OnInit {
     await this.modalCtrl.dismiss();
   }
 
+  async onRowContentClick(guest: ArrivalGuestView, event: Event): Promise<void> {
+    if (guest.arrivedAt !== null) {
+      return;
+    }
+
+    const targetEl = event.target as Element | null;
+    if (targetEl?.closest?.('.undo-button')) {
+      return;
+    }
+
+    const currentTarget = event.currentTarget as HTMLElement | null;
+    const itemEl = currentTarget?.closest?.('ion-item');
+    const checkboxEl = itemEl?.querySelector('ion-checkbox') as HTMLIonCheckboxElement | null;
+
+    await this.toggleGuest(guest, !this.isGuestSelected(guest.id), checkboxEl);
+  }
+
   async onToggleGuest(
     guest: ArrivalGuestView,
     event: CustomEvent<{ checked: boolean }>,
   ): Promise<void> {
-    const isChecked = event.detail.checked;
+    await this.toggleGuest(
+      guest,
+      event.detail.checked,
+      event.target as HTMLIonCheckboxElement | null,
+    );
+  }
+
+  async toggleGuest(
+    guest: ArrivalGuestView,
+    nextChecked: boolean,
+    checkboxEl?: HTMLIonCheckboxElement | null,
+  ): Promise<void> {
+    if (guest.arrivedAt !== null) {
+      return;
+    }
+
+    if (this.confirmingGuestId === guest.id) {
+      return;
+    }
+
     const isCurrentlySelected = this.selectedGuestIds().includes(guest.id);
 
-    if (!isChecked) {
+    if (!nextChecked) {
       if (isCurrentlySelected) {
         this.selectedGuestIds.update((ids) => ids.filter((id) => id !== guest.id));
+      }
+      if (checkboxEl) {
+        checkboxEl.checked = false;
       }
       return;
     }
@@ -172,41 +212,51 @@ export class ArrivalGroupComponent implements OnInit {
       if (!isCurrentlySelected) {
         this.selectedGuestIds.update((ids) => [...ids, guest.id]);
       }
+      if (checkboxEl) {
+        checkboxEl.checked = true;
+      }
       return;
     }
 
-    const message =
-      normalizeRsvp(guest.rsvp) === 'declined'
-        ? 'Dijo que no asistiría. ¿Registrar su llegada de todas formas?'
-        : 'No respondió la invitación. ¿Registrar su llegada de todas formas?';
+    this.confirmingGuestId = guest.id;
+    try {
+      const message =
+        normalizeRsvp(guest.rsvp) === 'declined'
+          ? 'Dijo que no asistiría. ¿Registrar su llegada de todas formas?'
+          : 'No respondió la invitación. ¿Registrar su llegada de todas formas?';
 
-    const checkboxEl = event.target as HTMLIonCheckboxElement | null;
-    const alert = await this.alertCtrl.create({
-      message,
-      buttons: [
-        {
-          text: 'Cancelar',
-          role: 'cancel',
-        },
-        {
-          text: 'Registrar',
-          role: 'confirm',
-        },
-      ],
-    });
+      const alert = await this.alertCtrl.create({
+        message,
+        buttons: [
+          {
+            text: 'Cancelar',
+            role: 'cancel',
+          },
+          {
+            text: 'Registrar',
+            role: 'confirm',
+          },
+        ],
+      });
 
-    await alert.present();
-    const { role } = await alert.onDidDismiss();
+      await alert.present();
+      const { role } = await alert.onDidDismiss();
 
-    if (role === 'confirm') {
-      if (!this.selectedGuestIds().includes(guest.id)) {
-        this.selectedGuestIds.update((ids) => [...ids, guest.id]);
+      if (role === 'confirm') {
+        if (!this.selectedGuestIds().includes(guest.id)) {
+          this.selectedGuestIds.update((ids) => [...ids, guest.id]);
+        }
+        if (checkboxEl) {
+          checkboxEl.checked = true;
+        }
+      } else {
+        if (checkboxEl) {
+          checkboxEl.checked = false;
+        }
+        this.selectedGuestIds.update((ids) => ids.filter((id) => id !== guest.id));
       }
-    } else {
-      if (checkboxEl) {
-        checkboxEl.checked = false;
-      }
-      this.selectedGuestIds.update((ids) => ids.filter((id) => id !== guest.id));
+    } finally {
+      this.confirmingGuestId = null;
     }
   }
 
