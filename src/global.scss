@@ -81,6 +81,29 @@ ion-button {
   min-height: 44px;
 }
 
+/* El gris por defecto de Ionic (texto al 60 %) y el primario sobre el fondo claro quedan bajo 4,5:1. */
+ion-segment-button {
+  --color: var(--ion-color-medium-shade);
+  --color-checked: var(--ion-color-primary-shade);
+}
+
+/* La franja de conexión publica su alto; así cada barra superior y cada hoja bajan lo que ella ocupa. */
+html.connection-banner-active {
+  --ion-safe-area-top: var(--convite-banner-height, env(safe-area-inset-top, 0px));
+}
+
+/* Avisos que no son fallas (por ejemplo, otra familia eligió primero): tono informativo, no rojo. */
+ion-toast.convite-toast-info {
+  --background: var(--ion-color-secondary-shade);
+  --color: var(--ion-color-secondary-contrast);
+  --button-color: var(--ion-color-secondary-contrast);
+}
+
+ion-toast::part(button) {
+  text-transform: none;
+  letter-spacing: normal;
+}
+
 /* Escala tipográfica aumentada para invitados (incluye personas mayores) */
 .guest-accessibility-view {
   h1,
@@ -109,6 +132,8 @@ ion-button {
     min-height: 54px;
     font-size: 17px;
     font-weight: 600;
+    text-transform: none;
+    letter-spacing: normal;
   }
 }
 
