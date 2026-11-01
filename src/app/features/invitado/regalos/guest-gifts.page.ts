@@ -2,7 +2,9 @@ import {
   ChangeDetectionStrategy,
   Component,
   ElementRef,
+  Injector,
   OnInit,
+  afterNextRender,
   computed,
   inject,
   input,
@@ -52,6 +54,7 @@ import {
   guestErrorMessage,
   guestGiftAvailabilityLabel,
   guestGiftsLayout,
+  guestLoadErrorCode,
   guestTexts,
   isGuestGiftSoldOut,
   myGuestGifts,
@@ -94,6 +97,7 @@ export class GuestGiftsPage implements OnInit, ViewWillEnter {
   private readonly themeService = inject(ThemeService);
   private readonly alertController = inject(AlertController);
   private readonly toastController = inject(ToastController);
+  private readonly injector = inject(Injector);
 
   readonly code = input.required<string>();
 
@@ -103,10 +107,15 @@ export class GuestGiftsPage implements OnInit, ViewWillEnter {
   readonly basicsTitle = viewChild<ElementRef<HTMLElement>>('basicsTitle');
   readonly envelopeCard = viewChild<ElementRef<HTMLElement>>('envelopeCard');
   readonly envelopeTitle = viewChild<ElementRef<HTMLElement>>('envelopeTitle');
+  readonly reservedConfirmation =
+    viewChild<unknown, ElementRef<HTMLElement>>('reservedConfirmation', {
+      read: ElementRef,
+    });
 
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
   readonly errorCode = signal<string | null>(null);
+  readonly defaultErrorMessage = guestErrorMessage('invalid_code');
   readonly invitation = signal<GuestInvitation | null>(null);
   readonly gifts = signal<GuestGift[]>([]);
   readonly processingGiftId = signal<string | null>(null);
@@ -231,18 +240,34 @@ export class GuestGiftsPage implements OnInit, ViewWillEnter {
       this.refreshOrder();
       this.page.set(this.paged().page);
     } catch (err) {
-      const code = err instanceof GuestApiError ? err.code : 'load_failed';
-      const message =
-        err instanceof Error && err.message
-          ? err.message
-          : guestErrorMessage('load_failed');
+      const rawCode = err instanceof GuestApiError ? err.code : 'load_failed';
+      const code = guestLoadErrorCode(rawCode);
       if (code === 'invalid_code' || !this.invitation()) {
         this.invitation.set(null);
         this.gifts.set([]);
         this.errorCode.set(code);
-        this.error.set(message);
+        this.error.set(guestErrorMessage(code));
       } else {
-        await this.showErrorToast(message);
+        const kind = this.invitation()?.invitation.kind;
+        const toast = await this.toastController.create({
+          message: guestErrorMessage(code, kind),
+          duration: 8000,
+          color: 'danger',
+          position: 'bottom',
+          buttons: [
+            {
+              text: 'Reintentar',
+              handler: () => {
+                void this.loadData(false);
+              },
+            },
+            {
+              text: 'Cerrar',
+              role: 'cancel',
+            },
+          ],
+        });
+        await toast.present();
       }
     } finally {
       this.loading.set(false);
@@ -324,15 +349,15 @@ export class GuestGiftsPage implements OnInit, ViewWillEnter {
     }
 
     const alert = await this.alertController.create({
-      header: 'Liberar regalo',
-      message: `¿Liberar ${gift.name}? Alguien más podrá elegirlo.`,
+      header: this.texts().releaseGiftTitle,
+      message: this.texts().releaseGiftConfirm(gift.name),
       buttons: [
         {
           text: 'Cancelar',
           role: 'cancel',
         },
         {
-          text: 'Liberar',
+          text: this.texts().releaseGiftConfirmButton,
           role: 'confirm',
           handler: () => {
             void this.executeRelease(gift.id);
@@ -355,6 +380,15 @@ export class GuestGiftsPage implements OnInit, ViewWillEnter {
       this.gifts.set(updated);
       this.page.set(this.paged().page);
       this.showReservedConfirmation.set(true);
+      afterNextRender(
+        () => {
+          const card = this.reservedConfirmation()?.nativeElement;
+          if (card) {
+            this.scrollToElement(card, card);
+          }
+        },
+        { injector: this.injector },
+      );
     } catch (err) {
       await this.handleActionError(err);
     } finally {
@@ -372,6 +406,7 @@ export class GuestGiftsPage implements OnInit, ViewWillEnter {
       const updated = await this.guestApi.releaseGift(this.code(), giftId);
       this.gifts.set(updated);
       this.page.set(this.paged().page);
+      this.showReservedConfirmation.set(false);
     } catch (err) {
       await this.handleActionError(err);
     } finally {
@@ -450,19 +485,13 @@ export class GuestGiftsPage implements OnInit, ViewWillEnter {
   }
 
   private async handleActionError(err: unknown): Promise<void> {
-    const apiErr =
-      err instanceof GuestApiError
-        ? err
-        : new GuestApiError(
-            'unknown_error',
-            err instanceof Error && err.message ? err.message : undefined,
-          );
-    if (apiErr.code === 'gifts_closed') {
+    const code = err instanceof GuestApiError ? err.code : 'unknown_error';
+    if (code === 'gifts_closed') {
       this.invitation.update((current) =>
         current ? { ...current, gifts_open: false } : null,
       );
     }
-    await this.showErrorToast(apiErr.message);
+    await this.showNotice(code);
 
     try {
       const refreshed = await this.guestApi.getGifts(this.code());
@@ -473,12 +502,20 @@ export class GuestGiftsPage implements OnInit, ViewWillEnter {
     }
   }
 
-  private async showErrorToast(message: string): Promise<void> {
+  private async showNotice(code: string): Promise<void> {
+    const isInfo =
+      code === 'already_reserved' ||
+      code === 'gift_full' ||
+      code === 'gift_not_reservable' ||
+      code === 'gifts_closed' ||
+      code === 'not_reserved_by_you';
+
     const toast = await this.toastController.create({
-      message,
-      duration: 4000,
-      color: 'danger',
+      message: guestErrorMessage(code, this.invitation()?.invitation.kind),
+      duration: 8000,
       position: 'bottom',
+      ...(isInfo ? { cssClass: 'convite-toast-info' } : { color: 'danger' }),
+      buttons: [{ text: 'Cerrar', role: 'cancel' }],
     });
     await toast.present();
   }

@@ -81,7 +81,13 @@
           }
 
           @if (showReservedConfirmation()) {
-            <ion-card class="reserved-confirmation-card" role="status" aria-live="polite">
+            <ion-card
+              #reservedConfirmation
+              class="reserved-confirmation-card"
+              role="status"
+              aria-live="polite"
+              tabindex="-1"
+            >
               <ion-icon name="checkmark-circle" aria-hidden="true"></ion-icon>
               <p class="reserved-confirmation-card__text">
                 {{ texts().giftReservedConfirmation }}
@@ -111,13 +117,14 @@
                           fill="outline"
                           color="primary"
                           expand="block"
+                          [attr.aria-label]="texts().releaseGiftAriaLabel(gift.name)"
                           [disabled]="!inv.gifts_open || processingGiftId() !== null"
                           (click)="onConfirmRelease(gift)"
                         >
                           @if (processingGiftId() === gift.id) {
                             <ion-spinner slot="start" name="crescent"></ion-spinner>
                           }
-                          Liberar
+                          {{ texts().releaseGiftButton }}
                         </ion-button>
                       } @else if (isSoldOut(gift)) {
                         <div class="taken-badge badge-soft-medium">
@@ -131,6 +138,7 @@
                         <ion-button
                           color="primary"
                           expand="block"
+                          [attr.aria-label]="texts().chooseGiftAriaLabel(gift.name)"
                           [disabled]="!inv.gifts_open || processingGiftId() !== null"
                           (click)="onConfirmReserve(gift)"
                         >
@@ -191,13 +199,14 @@
                             fill="outline"
                             color="primary"
                             expand="block"
+                            [attr.aria-label]="texts().releaseGiftAriaLabel(gift.name)"
                             [disabled]="!inv.gifts_open || processingGiftId() !== null"
                             (click)="onConfirmRelease(gift)"
                           >
                             @if (processingGiftId() === gift.id) {
                               <ion-spinner slot="start" name="crescent"></ion-spinner>
                             }
-                            Liberar
+                            {{ texts().releaseGiftButton }}
                           </ion-button>
                         } @else if (isSoldOut(gift)) {
                           <div class="taken-badge badge-soft-medium">
@@ -211,6 +220,7 @@
                           <ion-button
                             color="primary"
                             expand="block"
+                            [attr.aria-label]="texts().chooseGiftAriaLabel(gift.name)"
                             [disabled]="!inv.gifts_open || processingGiftId() !== null"
                             (click)="onConfirmReserve(gift)"
                           >
@@ -337,7 +347,7 @@
     } @else {
       <div class="empty-wrapper">
         <app-empty-state
-          [message]="error() ?? 'No encontramos esta invitación. Revisa el enlace que te enviaron.'"
+          [message]="error() ?? defaultErrorMessage"
           [actionLabel]="canRetry() ? 'Reintentar' : undefined"
           (action)="retryLoad()"
         />

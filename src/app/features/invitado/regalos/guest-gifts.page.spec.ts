@@ -501,7 +501,7 @@ describe('GuestGiftsPage', () => {
     });
   });
 
-  describe('confirmación tras reservar', () => {
+  describe('confirmación tras reservar (R-01 y R-06)', () => {
     it('tiene role="status", aria-live="polite" y no tiene app-illustration dentro', async () => {
       const { fixture, component } = await createPage(mockGifts, mockGroupInvitation);
       mockGuestApi.reserveGift.mockResolvedValue(mockGifts);
@@ -515,6 +515,125 @@ describe('GuestGiftsPage', () => {
       expect(card.getAttribute('aria-live')).toBe('polite');
       expect(card.querySelector('app-illustration')).toBeNull();
       expect(card.querySelector('ion-icon[name="checkmark-circle"]')).not.toBeNull();
+    });
+
+    it('R-01: tras reservar, se llama scrollToPoint con la posición de la confirmación menos 16 y duración 300, y enfoca la confirmación', async () => {
+      const { fixture, component } = await createPage(mockGifts, mockGroupInvitation);
+
+      let rafCallback: FrameRequestCallback | null = null;
+      vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb: FrameRequestCallback) => {
+        rafCallback = cb;
+        return 0;
+      });
+
+      const ionContent = component.content()!;
+      const mockScrollEl = {
+        scrollTop: 50,
+        getBoundingClientRect: () => ({ top: 0, bottom: 800, left: 0, right: 400 }),
+      };
+      vi.spyOn(ionContent, 'getScrollElement').mockResolvedValue(mockScrollEl as unknown as HTMLElement);
+      const scrollToPointSpy = vi.spyOn(ionContent, 'scrollToPoint').mockResolvedValue(undefined);
+
+      mockGuestApi.reserveGift.mockResolvedValue(mockGifts);
+
+      await component.executeReserve('gift-1');
+      fixture.detectChanges();
+
+      const card = fixture.nativeElement.querySelector('.reserved-confirmation-card') as HTMLElement;
+      expect(card).not.toBeNull();
+      expect(card.getAttribute('tabindex')).toBe('-1');
+
+      vi.spyOn(card, 'getBoundingClientRect').mockReturnValue({
+        top: 200,
+        bottom: 250,
+        left: 0,
+        right: 400,
+        width: 400,
+        height: 50,
+        x: 0,
+        y: 200,
+        toJSON: () => {},
+      });
+      const focusSpy = vi.spyOn(card, 'focus');
+
+      expect(rafCallback).not.toBeNull();
+      rafCallback!(0);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(scrollToPointSpy).toHaveBeenCalledWith(0, 200 - 0 + 50 - 16, 300);
+      expect(focusSpy).toHaveBeenCalledWith({ preventScroll: true });
+      expect(document.activeElement).toBe(card);
+    });
+
+    it('R-01: con matchMedia prefers-reduced-motion reduce llama con duración 0', async () => {
+      const { fixture, component } = await createPage(mockGifts, mockGroupInvitation);
+
+      let rafCallback: FrameRequestCallback | null = null;
+      vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb: FrameRequestCallback) => {
+        rafCallback = cb;
+        return 0;
+      });
+
+      vi.spyOn(window, 'matchMedia').mockImplementation((query: string) => ({
+        matches: query.includes('prefers-reduced-motion: reduce'),
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      } as unknown as MediaQueryList));
+
+      const ionContent = component.content()!;
+      const mockScrollEl = {
+        scrollTop: 0,
+        getBoundingClientRect: () => ({ top: 0, bottom: 800, left: 0, right: 400 }),
+      };
+      vi.spyOn(ionContent, 'getScrollElement').mockResolvedValue(mockScrollEl as unknown as HTMLElement);
+      const scrollToPointSpy = vi.spyOn(ionContent, 'scrollToPoint').mockResolvedValue(undefined);
+
+      mockGuestApi.reserveGift.mockResolvedValue(mockGifts);
+
+      await component.executeReserve('gift-1');
+      fixture.detectChanges();
+
+      const card = fixture.nativeElement.querySelector('.reserved-confirmation-card') as HTMLElement;
+      vi.spyOn(card, 'getBoundingClientRect').mockReturnValue({
+        top: 100,
+        bottom: 150,
+        left: 0,
+        right: 400,
+        width: 400,
+        height: 50,
+        x: 0,
+        y: 100,
+        toJSON: () => {},
+      });
+
+      expect(rafCallback).not.toBeNull();
+      rafCallback!(0);
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(scrollToPointSpy).toHaveBeenCalledWith(0, 100 - 16, 0);
+    });
+
+    it('R-06: elegir y luego dejar libre en la misma visita oculta la confirmación', async () => {
+      const { fixture, component } = await createPage(mockGifts, mockGroupInvitation);
+      mockGuestApi.reserveGift.mockResolvedValue(mockGifts);
+      mockGuestApi.releaseGift.mockResolvedValue(
+        mockGifts.map((g) => ({ ...g, reserved_by_me: false })),
+      );
+
+      await component.executeReserve('gift-1');
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('.reserved-confirmation-card')).not.toBeNull();
+      expect(component.showReservedConfirmation()).toBe(true);
+
+      await component.executeRelease('gift-1');
+      fixture.detectChanges();
+      expect(fixture.nativeElement.querySelector('.reserved-confirmation-card')).toBeNull();
+      expect(component.showReservedConfirmation()).toBe(false);
     });
   });
 
@@ -636,21 +755,261 @@ describe('GuestGiftsPage', () => {
     expect(badgeEl?.textContent?.trim()).toBe('Tu elección');
   });
 
-  it('prompts confirmation with "Alguien más podrá elegirlo" when releasing', async () => {
-    const { component } = await createPage(mockGifts, mockGroupInvitation);
+  describe('accesibilidad de botones de regalo (R-02)', () => {
+    it('asigna aria-label "Elegir este regalo: {nombre}" y "Ya no lo llevamos: {nombre}" en grupo', async () => {
+      const chosenGift: GuestGift = {
+        ...buildUniqueGift({ id: 'u-1', name: 'Coche' }),
+        reserved_by_me: true,
+      };
+      const availableGift = buildUniqueGift({ id: 'u-2', name: 'Cuna' });
 
-    const alertCreateSpy = vi.spyOn(alertController, 'create').mockResolvedValue({
-      present: vi.fn().mockResolvedValue(undefined),
-    } as unknown as HTMLIonAlertElement);
+      const { fixture } = await createPage([chosenGift, availableGift], mockGroupInvitation);
 
-    await component.onConfirmRelease(mockGifts[0]);
+      const releaseButtons = Array.from(
+        fixture.nativeElement.querySelectorAll('ion-button[color="primary"][fill="outline"]'),
+      ) as HTMLElement[];
+      expect(releaseButtons.length).toBeGreaterThan(0);
+      for (const btn of releaseButtons) {
+        expect(btn.getAttribute('aria-label')).toBe('Ya no lo llevamos: Coche');
+      }
 
-    expect(alertCreateSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        header: 'Liberar regalo',
-        message: '¿Liberar Coche para bebé? Alguien más podrá elegirlo.',
-      }),
-    );
+      const reserveButtons = Array.from(
+        fixture.nativeElement.querySelectorAll('ion-button[color="primary"]:not([fill="outline"])'),
+      ) as HTMLElement[];
+      const cunaButton = reserveButtons.find((b) => b.getAttribute('aria-label')?.includes('Cuna'));
+      expect(cunaButton).toBeDefined();
+      expect(cunaButton?.getAttribute('aria-label')).toBe('Elegir este regalo: Cuna');
+    });
+
+    it('asigna aria-label "Ya no lo llevo: {nombre}" en individual', async () => {
+      const chosenGift: GuestGift = {
+        ...buildUniqueGift({ id: 'u-1', name: 'Coche' }),
+        reserved_by_me: true,
+      };
+
+      const { fixture } = await createPage([chosenGift], mockIndividualInvitation);
+
+      const releaseButton = fixture.nativeElement.querySelector(
+        'ion-button[color="primary"][fill="outline"]',
+      ) as HTMLElement;
+      expect(releaseButton).not.toBeNull();
+      expect(releaseButton.getAttribute('aria-label')).toBe('Ya no lo llevo: Coche');
+    });
+  });
+
+  describe('avisos y errores (R-05)', () => {
+    it('already_reserved muestra toast informativo (sin danger) de 8000 ms con botón Cerrar y texto plural para grupo', async () => {
+      const { component } = await createPage([buildUniqueGift()], mockGroupInvitation);
+      mockGuestApi.reserveGift.mockRejectedValue(new GuestApiError('already_reserved'));
+
+      await component.executeReserve('u-1');
+
+      expect(mockToastController.create).toHaveBeenCalledWith({
+        message: 'Alguien acaba de elegir este regalo. Elijan otro de la lista.',
+        duration: 8000,
+        position: 'bottom',
+        cssClass: 'convite-toast-info',
+        buttons: [{ text: 'Cerrar', role: 'cancel' }],
+      });
+    });
+
+    it('gift_full muestra toast informativo de 8000 ms con botón Cerrar', async () => {
+      const { component } = await createPage([buildUniqueGift()], mockGroupInvitation);
+      mockGuestApi.reserveGift.mockRejectedValue(new GuestApiError('gift_full'));
+
+      await component.executeReserve('u-1');
+
+      expect(mockToastController.create).toHaveBeenCalledWith({
+        message: 'Este regalo ya completó sus cupos. Elijan otro de la lista.',
+        duration: 8000,
+        position: 'bottom',
+        cssClass: 'convite-toast-info',
+        buttons: [{ text: 'Cerrar', role: 'cancel' }],
+      });
+    });
+
+    it('gift_not_reservable muestra toast informativo de 8000 ms con botón Cerrar', async () => {
+      const { component } = await createPage([buildUniqueGift()], mockGroupInvitation);
+      mockGuestApi.reserveGift.mockRejectedValue(new GuestApiError('gift_not_reservable'));
+
+      await component.executeReserve('u-1');
+
+      expect(mockToastController.create).toHaveBeenCalledWith({
+        message: 'Esta opción es solo una idea: no hace falta reservarla.',
+        duration: 8000,
+        position: 'bottom',
+        cssClass: 'convite-toast-info',
+        buttons: [{ text: 'Cerrar', role: 'cancel' }],
+      });
+    });
+
+    it('network_error muestra toast de falla (danger) de 8000 ms con botón Cerrar', async () => {
+      const { component } = await createPage([buildUniqueGift()], mockGroupInvitation);
+      mockGuestApi.reserveGift.mockRejectedValue(new GuestApiError('network_error'));
+
+      await component.executeReserve('u-1');
+
+      expect(mockToastController.create).toHaveBeenCalledWith({
+        message: 'No pudimos conectarnos. Revisen su conexión e inténtenlo de nuevo.',
+        duration: 8000,
+        position: 'bottom',
+        color: 'danger',
+        buttons: [{ text: 'Cerrar', role: 'cancel' }],
+      });
+    });
+
+    it('error desconocido que no es GuestApiError muestra mensaje por defecto en rojo', async () => {
+      const { component } = await createPage([buildUniqueGift()], mockGroupInvitation);
+      mockGuestApi.reserveGift.mockRejectedValue(new Error('Unexpected network crash'));
+
+      await component.executeReserve('u-1');
+
+      expect(mockToastController.create).toHaveBeenCalledWith({
+        message: 'No pudimos guardar el cambio. Inténtenlo de nuevo.',
+        duration: 8000,
+        position: 'bottom',
+        color: 'danger',
+        buttons: [{ text: 'Cerrar', role: 'cancel' }],
+      });
+    });
+  });
+
+  describe('textos cotidianos al dejar libre (R-07)', () => {
+    it('muestra "Ya no lo llevamos" para grupo y abre alerta con títulos y botones cotidianos', async () => {
+      const chosenGift = { ...buildUniqueGift({ id: 'u-1', name: 'Coche para bebé' }), reserved_by_me: true };
+      const { fixture, component } = await createPage([chosenGift], mockGroupInvitation);
+
+      const releaseBtn = fixture.nativeElement.querySelector('.gift-card ion-button') as HTMLElement;
+      expect(releaseBtn.textContent?.trim()).toBe('Ya no lo llevamos');
+
+      const alertCreateSpy = vi.spyOn(alertController, 'create').mockResolvedValue({
+        present: vi.fn().mockResolvedValue(undefined),
+      } as unknown as HTMLIonAlertElement);
+
+      await component.onConfirmRelease(chosenGift);
+
+      expect(alertCreateSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          header: 'Dejar este regalo',
+          message: '¿Ya no llevarán Coche para bebé? Quedará libre para que alguien más lo elija.',
+          buttons: [
+            { text: 'Cancelar', role: 'cancel' },
+            {
+              text: 'Sí, dejarlo libre',
+              role: 'confirm',
+              handler: expect.any(Function),
+            },
+          ],
+        }),
+      );
+    });
+
+    it('muestra "Ya no lo llevo" para individual y redacta alerta en singular', async () => {
+      const chosenGift = { ...buildUniqueGift({ id: 'u-1', name: 'Coche para bebé' }), reserved_by_me: true };
+      const { fixture, component } = await createPage([chosenGift], mockIndividualInvitation);
+
+      const releaseBtn = fixture.nativeElement.querySelector('.gift-card ion-button') as HTMLElement;
+      expect(releaseBtn.textContent?.trim()).toBe('Ya no lo llevo');
+
+      const alertCreateSpy = vi.spyOn(alertController, 'create').mockResolvedValue({
+        present: vi.fn().mockResolvedValue(undefined),
+      } as unknown as HTMLIonAlertElement);
+
+      await component.onConfirmRelease(chosenGift);
+
+      expect(alertCreateSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          header: 'Dejar este regalo',
+          message: '¿Ya no llevarás Coche para bebé? Quedará libre para que alguien más lo elija.',
+          buttons: [
+            { text: 'Cancelar', role: 'cancel' },
+            {
+              text: 'Sí, dejarlo libre',
+              role: 'confirm',
+              handler: expect.any(Function),
+            },
+          ],
+        }),
+      );
+    });
+  });
+
+  describe('errores de carga inicial y recarga', () => {
+    it('si getInvitation devuelve null, se muestra invalid_code sin botón Reintentar', async () => {
+      mockGuestApi.getInvitation.mockResolvedValue(null);
+      mockGuestApi.getGifts.mockResolvedValue([]);
+
+      const fixture = TestBed.createComponent(GuestGiftsPage);
+      const component = fixture.componentInstance;
+      fixture.componentRef.setInput('code', 'INVCODE999');
+      fixture.detectChanges();
+      await component.loadData();
+      fixture.detectChanges();
+
+      expect(component.errorCode()).toBe('invalid_code');
+      expect(component.error()).toBe(
+        'No encontramos esta invitación. Revisa que el enlace esté completo.',
+      );
+      expect(component.canRetry()).toBe(false);
+
+      const emptyState = fixture.nativeElement.querySelector('app-empty-state');
+      expect(emptyState).not.toBeNull();
+      expect(emptyState.textContent).toContain(
+        'No encontramos esta invitación. Revisa que el enlace esté completo.',
+      );
+      expect(emptyState.querySelector('ion-button')).toBeNull();
+    });
+
+    it('si getInvitation falla con código inesperado, reduce a load_failed con botón Reintentar', async () => {
+      mockGuestApi.getInvitation.mockRejectedValue(new GuestApiError('server_unreachable'));
+      mockGuestApi.getGifts.mockResolvedValue([]);
+
+      const fixture = TestBed.createComponent(GuestGiftsPage);
+      const component = fixture.componentInstance;
+      fixture.componentRef.setInput('code', 'INVCODE999');
+      fixture.detectChanges();
+      await component.loadData();
+      fixture.detectChanges();
+
+      expect(component.errorCode()).toBe('load_failed');
+      expect(component.error()).toBe(
+        'No pudimos cargar la invitación. Toca "Reintentar".',
+      );
+      expect(component.canRetry()).toBe(true);
+
+      const emptyState = fixture.nativeElement.querySelector('app-empty-state');
+      expect(emptyState).not.toBeNull();
+      expect(emptyState.textContent).toContain(
+        'No pudimos cargar la invitación. Toca "Reintentar".',
+      );
+    });
+
+    it('si recarga falla con invitación cargada, muestra toast de 8000 ms con Reintentar y Cerrar', async () => {
+      const { component } = await createPage(mockGifts, mockGroupInvitation);
+
+      mockGuestApi.getGifts.mockRejectedValue(new GuestApiError('network_error'));
+
+      await component.loadData(true);
+
+      expect(mockToastController.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'No pudimos conectarnos. Revisen su conexión e inténtenlo de nuevo.',
+          duration: 8000,
+          color: 'danger',
+          position: 'bottom',
+          buttons: [
+            {
+              text: 'Reintentar',
+              handler: expect.any(Function),
+            },
+            {
+              text: 'Cerrar',
+              role: 'cancel',
+            },
+          ],
+        }),
+      );
+    });
   });
 
   it('prompts confirmation with reserveGiftConfirm when reserving', async () => {
@@ -671,7 +1030,7 @@ describe('GuestGiftsPage', () => {
     );
   });
 
-  it('card agotada sin botón y con "Ya lo eligieron"; card elegida con "Tu elección" y "Liberar"; "Quedan 2 de 3" en un repetible', async () => {
+  it('card agotada sin botón y con "Ya lo eligieron"; card elegida con "Tu elección" y "Ya no lo llevo"; "Quedan 2 de 3" en un repetible', async () => {
     const soldOutGift = buildUniqueGift({
       id: 'gift-sold',
       name: 'Mochila pañalera',
@@ -710,7 +1069,7 @@ describe('GuestGiftsPage', () => {
     const chosenEl = fixture.nativeElement.querySelector('.gift-section--mine .gift-card');
     expect(chosenEl?.textContent).toContain('Tu elección');
     const releaseBtn = chosenEl?.querySelector('ion-button');
-    expect(releaseBtn?.textContent).toContain('Liberar');
+    expect(releaseBtn?.textContent).toContain('Ya no lo llevo');
 
     const repEl = fixture.nativeElement.querySelector('.gift-card__remaining');
     expect(repEl?.textContent?.trim()).toBe('Quedan 2 de 3');
@@ -745,8 +1104,10 @@ describe('GuestGiftsPage', () => {
 
     expect(mockToastController.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        message: 'Este regalo ya completó sus cupos. Elige otro de la lista.',
-        color: 'danger',
+        message: 'Este regalo ya completó sus cupos. Elijan otro de la lista.',
+        duration: 8000,
+        cssClass: 'convite-toast-info',
+        buttons: [{ text: 'Cerrar', role: 'cancel' }],
       }),
     );
     expect(mockGuestApi.getGifts).toHaveBeenCalledWith('ABCD1234JK');
