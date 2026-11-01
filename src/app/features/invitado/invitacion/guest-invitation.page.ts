@@ -28,6 +28,7 @@ import {
 import { addIcons } from 'ionicons';
 import {
   alarmOutline,
+  alertCircleOutline,
   calendarOutline,
   checkmarkOutline,
   closeOutline,
@@ -51,6 +52,7 @@ import {
   formatTime,
   guestErrorMessage,
   guestInvitationUrl,
+  guestLoadErrorCode,
   guestTexts,
   normalizeInvitationCode,
   qrImageDataUrl,
@@ -62,6 +64,11 @@ import {
   INTRO_ENVIRONMENT,
   shouldOfferIntro,
 } from '../intro/intro-environment';
+
+export interface ConfirmationState {
+  kind: 'missing' | 'thanks' | 'closed';
+  text: string;
+}
 
 @Component({
   selector: 'app-guest-invitation',
@@ -119,7 +126,13 @@ export class GuestInvitationPage implements OnInit, ViewWillEnter {
   readonly qrCodeDataUrl = signal<string | null>(null);
   readonly savingGuestId = signal<string | null>(null);
   readonly savingRsvp = signal<'accepted' | 'declined' | null>(null);
-  readonly hasRespondedInVisit = signal(false);
+  readonly rsvpErrors = signal<Record<string, string>>({});
+
+  readonly defaultErrorMessage = guestErrorMessage('invalid_code');
+
+  readonly emptyStateMessage = computed(
+    () => this.error() ?? this.defaultErrorMessage,
+  );
 
   readonly canRetry = computed(
     () => this.error() !== null && this.errorCode() !== 'invalid_code',
@@ -187,12 +200,44 @@ export class GuestInvitationPage implements OnInit, ViewWillEnter {
       .replace(/\s+de\s+\d{4}$/i, '');
   });
 
-  readonly showRsvpConfirmation = computed(() => {
+  readonly confirmationState = computed<ConfirmationState | null>(() => {
     const inv = this.invitation();
     if (!inv) {
-      return false;
+      return null;
     }
-    return this.hasRespondedInVisit() || inv.guests.some((guest) => guest.rsvp !== 'pending');
+    const guests = inv.guests;
+    const total = guests.length;
+    const answeredCount = guests.filter((g) => g.rsvp !== 'pending').length;
+
+    if (inv.can_respond) {
+      if (answeredCount === 0) {
+        return null;
+      }
+      if (answeredCount === total) {
+        return {
+          kind: 'thanks',
+          text: this.texts().rsvpThanks(this.formattedDeadline()),
+        };
+      }
+      if (inv.invitation.kind === 'group') {
+        const pendingNames = guests
+          .filter((g) => g.rsvp === 'pending')
+          .map((g) => g.full_name);
+        return {
+          kind: 'missing',
+          text: this.texts().rsvpMissing(pendingNames, this.formattedDeadline()),
+        };
+      }
+      return null;
+    } else {
+      if (answeredCount > 0) {
+        return {
+          kind: 'closed',
+          text: this.texts().rsvpThanksClosed,
+        };
+      }
+      return null;
+    }
   });
 
   constructor() {
@@ -207,6 +252,7 @@ export class GuestInvitationPage implements OnInit, ViewWillEnter {
       'restaurant-outline': restaurantOutline,
       'gift-outline': giftOutline,
       'qr-code-outline': qrCodeOutline,
+      'alert-circle-outline': alertCircleOutline,
     });
 
     effect(() => {
@@ -291,18 +337,17 @@ export class GuestInvitationPage implements OnInit, ViewWillEnter {
       this.invitation.set(data);
       await this.generateQr(data.invitation.code);
     } catch (err) {
-      const code = err instanceof GuestApiError ? err.code : 'load_failed';
-      const message =
-        err instanceof Error && err.message
-          ? err.message
-          : guestErrorMessage('load_failed');
-      if (code === 'invalid_code' || !this.invitation()) {
+      const rawCode = err instanceof GuestApiError ? err.code : 'load_failed';
+      const code = guestLoadErrorCode(rawCode);
+      const inv = this.invitation();
+      if (code === 'invalid_code' || !inv) {
         this.invitation.set(null);
         this.qrCodeDataUrl.set(null);
         this.errorCode.set(code);
-        this.error.set(message);
+        this.error.set(guestErrorMessage(code));
       } else {
-        await this.showErrorToast(message);
+        const message = guestErrorMessage(code, inv.invitation.kind);
+        await this.showReloadErrorToast(message);
       }
     } finally {
       this.loading.set(false);
@@ -313,6 +358,16 @@ export class GuestInvitationPage implements OnInit, ViewWillEnter {
     window.open(mapUrl, '_blank');
   }
 
+  rsvpBadgeClass(rsvp: string): string {
+    if (rsvp === 'accepted') {
+      return 'badge-soft-success';
+    }
+    if (rsvp === 'declined') {
+      return 'badge-soft-medium';
+    }
+    return 'badge-soft-warning';
+  }
+
   async onSelectRsvp(
     guest: GuestInvitationPerson,
     value: 'accepted' | 'declined',
@@ -321,6 +376,7 @@ export class GuestInvitationPage implements OnInit, ViewWillEnter {
     if (!inv || !inv.can_respond || this.savingGuestId() !== null) {
       return;
     }
+    this.clearRsvpError(guest.id);
     this.savingGuestId.set(guest.id);
     this.savingRsvp.set(value);
     try {
@@ -328,25 +384,35 @@ export class GuestInvitationPage implements OnInit, ViewWillEnter {
       this.themeService.apply(updated.event.theme_id);
       this.invitation.set(updated);
       await this.generateQr(updated.invitation.code);
-      this.hasRespondedInVisit.set(true);
+      this.clearRsvpError(guest.id);
     } catch (err) {
-      const apiErr =
-        err instanceof GuestApiError
-          ? err
-          : new GuestApiError(
-              'unknown_error',
-              err instanceof Error && err.message ? err.message : undefined,
-            );
-      if (apiErr.code === 'deadline_passed') {
+      const code = err instanceof GuestApiError ? err.code : 'unknown_error';
+      if (code === 'deadline_passed') {
         this.invitation.update((current) =>
           current ? { ...current, can_respond: false } : null,
         );
+      } else {
+        const text = guestErrorMessage(code, inv.invitation.kind);
+        this.rsvpErrors.update((current) => ({
+          ...current,
+          [guest.id]: text,
+        }));
       }
-      await this.showErrorToast(apiErr.message);
     } finally {
       this.savingGuestId.set(null);
       this.savingRsvp.set(null);
     }
+  }
+
+  private clearRsvpError(guestId: string): void {
+    this.rsvpErrors.update((current) => {
+      if (!current[guestId]) {
+        return current;
+      }
+      const next = { ...current };
+      delete next[guestId];
+      return next;
+    });
   }
 
   private async generateQr(invitationCode?: string): Promise<void> {
@@ -364,12 +430,24 @@ export class GuestInvitationPage implements OnInit, ViewWillEnter {
     }
   }
 
-  private async showErrorToast(message: string): Promise<void> {
+  private async showReloadErrorToast(message: string): Promise<void> {
     const toast = await this.toastController.create({
       message,
-      duration: 4000,
+      duration: 8000,
       color: 'danger',
       position: 'bottom',
+      buttons: [
+        {
+          text: 'Reintentar',
+          handler: () => {
+            void this.loadInvitation(false);
+          },
+        },
+        {
+          text: 'Cerrar',
+          role: 'cancel',
+        },
+      ],
     });
     await toast.present();
   }

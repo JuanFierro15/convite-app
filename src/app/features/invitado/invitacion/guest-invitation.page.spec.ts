@@ -1,11 +1,14 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { By } from '@angular/platform-browser';
 import { provideRouter } from '@angular/router';
+import { ToastController } from '@ionic/angular';
 import QRCode from 'qrcode';
 import {
+  GuestApiError,
   GuestApiService,
   GuestInvitation,
   formatInvitationCode,
+  guestErrorMessage,
 } from '../../../core';
 import { GuestIntroComponent } from '../intro/guest-intro.component';
 import {
@@ -23,12 +26,12 @@ vi.mock('qrcode', () => ({
 const mockGroupInvitation: GuestInvitation = {
   invitation: {
     id: 'inv-group-1',
-    group_name: 'Familia Gómez',
+    group_name: 'Familia Ejemplo',
     code: 'ABCD1234JK',
     kind: 'group',
   },
   event: {
-    name: 'Baby Shower de Martina',
+    name: 'Baby Shower Ejemplo',
     theme_id: 'baby-shower',
     starts_at: '2026-11-29T15:00:00-05:00',
     venue_name: 'Club Campestre',
@@ -39,8 +42,8 @@ const mockGroupInvitation: GuestInvitation = {
     rsvp_deadline: '2026-11-15T23:59:59-05:00',
   },
   guests: [
-    { id: 'g-1', full_name: 'Carlos Gómez', rsvp: 'pending' },
-    { id: 'g-2', full_name: 'Laura Peña', rsvp: 'pending' },
+    { id: 'g-1', full_name: 'Ana Ejemplo', rsvp: 'pending' },
+    { id: 'g-2', full_name: 'Luis Ejemplo', rsvp: 'pending' },
   ],
   can_respond: true,
   gifts_open: true,
@@ -49,12 +52,12 @@ const mockGroupInvitation: GuestInvitation = {
 const mockIndividualInvitation: GuestInvitation = {
   invitation: {
     id: 'inv-ind-1',
-    group_name: 'Laura Peña',
+    group_name: 'Persona Ejemplo',
     code: 'WXYZ5678LM',
     kind: 'individual',
   },
   event: {
-    name: 'Baby Shower de Martina',
+    name: 'Baby Shower Ejemplo',
     theme_id: 'baby-shower',
     starts_at: '2026-11-29T15:00:00-05:00',
     venue_name: 'Club Campestre',
@@ -65,7 +68,7 @@ const mockIndividualInvitation: GuestInvitation = {
     rsvp_deadline: '2026-11-15T23:59:59-05:00',
   },
   guests: [
-    { id: 'g-2', full_name: 'Laura Peña', rsvp: 'pending' },
+    { id: 'g-1', full_name: 'Persona Ejemplo', rsvp: 'pending' },
   ],
   can_respond: true,
   gifts_open: true,
@@ -100,6 +103,12 @@ describe('GuestInvitationPage', () => {
     getInvitation: ReturnType<typeof vi.fn>;
     setRsvp: ReturnType<typeof vi.fn>;
   };
+  let mockToast: {
+    present: ReturnType<typeof vi.fn>;
+  };
+  let mockToastController: {
+    create: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(async () => {
     vi.spyOn(HTMLMediaElement.prototype, 'play').mockResolvedValue(undefined);
@@ -111,11 +120,19 @@ describe('GuestInvitationPage', () => {
       setRsvp: vi.fn(),
     };
 
+    mockToast = {
+      present: vi.fn().mockResolvedValue(undefined),
+    };
+    mockToastController = {
+      create: vi.fn().mockResolvedValue(mockToast),
+    };
+
     await TestBed.configureTestingModule({
       imports: [GuestInvitationPage],
       providers: [
         provideRouter([]),
         { provide: GuestApiService, useValue: mockGuestApi },
+        { provide: ToastController, useValue: mockToastController },
         { provide: INTRO_ENVIRONMENT, useValue: fakeEnv({ hasSeen: () => true }) },
       ],
     }).compileComponents();
@@ -139,7 +156,7 @@ describe('GuestInvitationPage', () => {
 
     // Título de bienvenida
     const titleEl = fixture.nativeElement.querySelector('.welcome-card__title');
-    expect(titleEl?.textContent?.trim()).toBe('La familia Gómez está invitada');
+    expect(titleEl?.textContent?.trim()).toBe('La familia Ejemplo está invitada');
 
     // Plazo en plural
     const deadlineEl = fixture.nativeElement.querySelector('.deadline-banner span');
@@ -176,11 +193,13 @@ describe('GuestInvitationPage', () => {
     expect(codeEl?.textContent?.trim()).toBe(formatInvitationCode('ABCD1234JK'));
 
     const instructionEl = entryCard.querySelector('.entry-code-card__instruction');
-    expect(instructionEl?.textContent?.trim()).toBe('Muestra este código en la entrada');
+    expect(instructionEl?.textContent?.trim()).toBe(
+      'Muestren este código en la entrada. Sirve para todo el grupo.',
+    );
 
     const tipEl = entryCard.querySelector('.entry-code-card__tip');
     expect(tipEl?.textContent?.trim()).toBe(
-      'Tómale una captura de pantalla para tenerlo a mano, aunque no haya señal.',
+      'Tómenle una captura de pantalla para tenerlo a mano, aunque no haya señal.',
     );
   });
 
@@ -197,7 +216,7 @@ describe('GuestInvitationPage', () => {
 
     // Título de bienvenida en singular
     const titleEl = fixture.nativeElement.querySelector('.welcome-card__title');
-    expect(titleEl?.textContent?.trim()).toBe('Laura Peña, te invitamos');
+    expect(titleEl?.textContent?.trim()).toBe('Persona Ejemplo, te invitamos');
 
     // Plazo en singular
     const deadlineEl = fixture.nativeElement.querySelector('.deadline-banner span');
@@ -246,7 +265,7 @@ describe('GuestInvitationPage', () => {
 
     const closedBanner = fixture.nativeElement.querySelector('.deadline-banner--closed span');
     expect(closedBanner?.textContent?.trim()).toBe(
-      'El plazo para responder ya terminó. Si necesitas cambiar tu respuesta, escríbenos.',
+      'El plazo para responder ya terminó. Si necesitas cambiar tu respuesta, escríbenos al WhatsApp donde te llegó la invitación.',
     );
   });
 
@@ -254,8 +273,8 @@ describe('GuestInvitationPage', () => {
     const answeredGroup = {
       ...mockGroupInvitation,
       guests: [
-        { id: 'g-1', full_name: 'Carlos Gómez', rsvp: 'accepted' as const },
-        { id: 'g-2', full_name: 'Laura Peña', rsvp: 'accepted' as const },
+        { id: 'g-1', full_name: 'Ana Ejemplo', rsvp: 'accepted' as const },
+        { id: 'g-2', full_name: 'Luis Ejemplo', rsvp: 'accepted' as const },
       ],
     };
     mockGuestApi.getInvitation.mockResolvedValue(answeredGroup);
@@ -314,6 +333,477 @@ describe('GuestInvitationPage', () => {
     expect(introParagraphs[0]?.textContent?.trim()).toBe(
       'Tu compañía es el mejor regalo, así que no sientas ningún compromiso. Si te hace ilusión llevar algo, preparamos una lista con algunas ideas.',
     );
+  });
+
+  describe('card de confirmación (punto 1 y 2)', () => {
+    it('1.1 grupo sin respuestas: no muestra confirmation-card', async () => {
+      mockGuestApi.getInvitation.mockResolvedValue(mockGroupInvitation);
+      fixture = TestBed.createComponent(GuestInvitationPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('code', 'ABCD1234JK');
+
+      await component.loadInvitation();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('.confirmation-card')).toBeNull();
+    });
+
+    it('1.2 grupo con una persona pendiente: muestra missing sin ilustración y menciona a Ana Ejemplo', async () => {
+      const invWithOnePending: GuestInvitation = {
+        ...mockGroupInvitation,
+        guests: [
+          { id: 'g-1', full_name: 'Ana Ejemplo', rsvp: 'pending' },
+          { id: 'g-2', full_name: 'Luis Ejemplo', rsvp: 'accepted' },
+        ],
+      };
+      mockGuestApi.getInvitation.mockResolvedValue(invWithOnePending);
+      fixture = TestBed.createComponent(GuestInvitationPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('code', 'ABCD1234JK');
+
+      await component.loadInvitation();
+      fixture.detectChanges();
+
+      const card = fixture.nativeElement.querySelector('.confirmation-card');
+      expect(card).not.toBeNull();
+      expect(card.classList.contains('confirmation-card--missing')).toBe(true);
+      expect(card.querySelector('app-illustration')).toBeNull();
+      const text = card.querySelector('.confirmation-card__text')?.textContent?.trim();
+      expect(text).toContain('Falta que responda: Ana Ejemplo.');
+    });
+
+    it('1.3 grupo con dos personas pendientes: muestra missing sin ilustración y menciona a Ana Ejemplo y Luis Ejemplo', async () => {
+      const invWithTwoPending: GuestInvitation = {
+        ...mockGroupInvitation,
+        guests: [
+          { id: 'g-0', full_name: 'Persona Ejemplo', rsvp: 'accepted' },
+          { id: 'g-1', full_name: 'Ana Ejemplo', rsvp: 'pending' },
+          { id: 'g-2', full_name: 'Luis Ejemplo', rsvp: 'pending' },
+        ],
+      };
+      mockGuestApi.getInvitation.mockResolvedValue(invWithTwoPending);
+      fixture = TestBed.createComponent(GuestInvitationPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('code', 'ABCD1234JK');
+
+      await component.loadInvitation();
+      fixture.detectChanges();
+
+      const card = fixture.nativeElement.querySelector('.confirmation-card');
+      expect(card).not.toBeNull();
+      expect(card.classList.contains('confirmation-card--missing')).toBe(true);
+      expect(card.querySelector('app-illustration')).toBeNull();
+      const text = card.querySelector('.confirmation-card__text')?.textContent?.trim();
+      expect(text).toContain('Falta que respondan: Ana Ejemplo y Luis Ejemplo.');
+    });
+
+    it('1.4 grupo completo: muestra thanks con ilustración', async () => {
+      const fullGroup: GuestInvitation = {
+        ...mockGroupInvitation,
+        guests: [
+          { id: 'g-1', full_name: 'Ana Ejemplo', rsvp: 'accepted' },
+          { id: 'g-2', full_name: 'Luis Ejemplo', rsvp: 'declined' },
+        ],
+      };
+      mockGuestApi.getInvitation.mockResolvedValue(fullGroup);
+      fixture = TestBed.createComponent(GuestInvitationPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('code', 'ABCD1234JK');
+
+      await component.loadInvitation();
+      fixture.detectChanges();
+
+      const card = fixture.nativeElement.querySelector('.confirmation-card');
+      expect(card).not.toBeNull();
+      expect(card.classList.contains('confirmation-card--missing')).toBe(false);
+      expect(card.querySelector('app-illustration')).not.toBeNull();
+      const text = card.querySelector('.confirmation-card__text')?.textContent?.trim();
+      expect(text).toContain('¡Gracias! Recibimos su respuesta. Pueden cambiarla hasta el');
+    });
+
+    it('1.5 plazo cerrado con respuestas: muestra closed con ilustración', async () => {
+      const closedWithAnswers: GuestInvitation = {
+        ...mockGroupInvitation,
+        can_respond: false,
+        guests: [
+          { id: 'g-1', full_name: 'Ana Ejemplo', rsvp: 'accepted' },
+          { id: 'g-2', full_name: 'Luis Ejemplo', rsvp: 'pending' },
+        ],
+      };
+      mockGuestApi.getInvitation.mockResolvedValue(closedWithAnswers);
+      fixture = TestBed.createComponent(GuestInvitationPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('code', 'ABCD1234JK');
+
+      await component.loadInvitation();
+      fixture.detectChanges();
+
+      const card = fixture.nativeElement.querySelector('.confirmation-card');
+      expect(card).not.toBeNull();
+      expect(card.classList.contains('confirmation-card--missing')).toBe(false);
+      expect(card.querySelector('app-illustration')).not.toBeNull();
+      expect(card.querySelector('.confirmation-card__text')?.textContent?.trim()).toBe(
+        '¡Gracias! Recibimos su respuesta.',
+      );
+    });
+
+    it('1.6 plazo cerrado sin respuestas: no muestra confirmation-card', async () => {
+      const closedNoAnswers: GuestInvitation = {
+        ...mockGroupInvitation,
+        can_respond: false,
+        guests: [
+          { id: 'g-1', full_name: 'Ana Ejemplo', rsvp: 'pending' },
+          { id: 'g-2', full_name: 'Luis Ejemplo', rsvp: 'pending' },
+        ],
+      };
+      mockGuestApi.getInvitation.mockResolvedValue(closedNoAnswers);
+      fixture = TestBed.createComponent(GuestInvitationPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('code', 'ABCD1234JK');
+
+      await component.loadInvitation();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('.confirmation-card')).toBeNull();
+    });
+
+    it('1.7 individual respondida: muestra thanks con texto en singular e ilustración', async () => {
+      const indAnswered: GuestInvitation = {
+        ...mockIndividualInvitation,
+        guests: [
+          { id: 'g-1', full_name: 'Persona Ejemplo', rsvp: 'accepted' },
+        ],
+      };
+      mockGuestApi.getInvitation.mockResolvedValue(indAnswered);
+      fixture = TestBed.createComponent(GuestInvitationPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('code', 'WXYZ5678LM');
+
+      await component.loadInvitation();
+      fixture.detectChanges();
+
+      const card = fixture.nativeElement.querySelector('.confirmation-card');
+      expect(card).not.toBeNull();
+      expect(card.classList.contains('confirmation-card--missing')).toBe(false);
+      expect(card.querySelector('app-illustration')).not.toBeNull();
+      const text = card.querySelector('.confirmation-card__text')?.textContent?.trim();
+      expect(text).toContain('¡Gracias! Recibimos tu respuesta. Puedes cambiarla hasta el');
+    });
+
+    it('1.8 individual cerrada respondida: muestra closed con texto en singular e ilustración', async () => {
+      const indClosedAnswered: GuestInvitation = {
+        ...mockIndividualInvitation,
+        can_respond: false,
+        guests: [
+          { id: 'g-1', full_name: 'Persona Ejemplo', rsvp: 'accepted' },
+        ],
+      };
+      mockGuestApi.getInvitation.mockResolvedValue(indClosedAnswered);
+      fixture = TestBed.createComponent(GuestInvitationPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('code', 'WXYZ5678LM');
+
+      await component.loadInvitation();
+      fixture.detectChanges();
+
+      const card = fixture.nativeElement.querySelector('.confirmation-card');
+      expect(card).not.toBeNull();
+      expect(card.classList.contains('confirmation-card--missing')).toBe(false);
+      expect(card.querySelector('app-illustration')).not.toBeNull();
+      expect(card.querySelector('.confirmation-card__text')?.textContent?.trim()).toBe(
+        '¡Gracias! Recibimos tu respuesta.',
+      );
+    });
+
+    it('2. al responder la última persona pendiente de un grupo, la card pasa de missing a thanks', async () => {
+      const initialInv: GuestInvitation = {
+        ...mockGroupInvitation,
+        guests: [
+          { id: 'g-1', full_name: 'Ana Ejemplo', rsvp: 'accepted' },
+          { id: 'g-2', full_name: 'Luis Ejemplo', rsvp: 'pending' },
+        ],
+      };
+      mockGuestApi.getInvitation.mockResolvedValue(initialInv);
+      fixture = TestBed.createComponent(GuestInvitationPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('code', 'ABCD1234JK');
+
+      await component.loadInvitation();
+      fixture.detectChanges();
+
+      let card = fixture.nativeElement.querySelector('.confirmation-card');
+      expect(card.classList.contains('confirmation-card--missing')).toBe(true);
+      expect(card.querySelector('app-illustration')).toBeNull();
+
+      const updatedInv: GuestInvitation = {
+        ...initialInv,
+        guests: [
+          { id: 'g-1', full_name: 'Ana Ejemplo', rsvp: 'accepted' },
+          { id: 'g-2', full_name: 'Luis Ejemplo', rsvp: 'accepted' },
+        ],
+      };
+      mockGuestApi.setRsvp.mockResolvedValue(updatedInv);
+
+      await component.onSelectRsvp(initialInv.guests[1], 'accepted');
+      fixture.detectChanges();
+
+      card = fixture.nativeElement.querySelector('.confirmation-card');
+      expect(card.classList.contains('confirmation-card--missing')).toBe(false);
+      expect(card.querySelector('app-illustration')).not.toBeNull();
+      expect(card.querySelector('.confirmation-card__text')?.textContent).toContain(
+        '¡Gracias! Recibimos su respuesta. Pueden cambiarla hasta el',
+      );
+    });
+  });
+
+  describe('plazo cerrado: respuesta como dato (punto 3)', () => {
+    it('3. no muestra botones rsvp y muestra insignias de respuesta para cada persona', async () => {
+      const closedInv: GuestInvitation = {
+        ...mockGroupInvitation,
+        can_respond: false,
+        guests: [
+          { id: 'g-1', full_name: 'Ana Ejemplo', rsvp: 'accepted' },
+          { id: 'g-2', full_name: 'Luis Ejemplo', rsvp: 'declined' },
+          { id: 'g-3', full_name: 'Persona Ejemplo', rsvp: 'pending' },
+        ],
+      };
+      mockGuestApi.getInvitation.mockResolvedValue(closedInv);
+      fixture = TestBed.createComponent(GuestInvitationPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('code', 'ABCD1234JK');
+
+      await component.loadInvitation();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelectorAll('.rsvp-button').length).toBe(0);
+
+      const answers = fixture.nativeElement.querySelectorAll('.guest-card__answer');
+      expect(answers.length).toBe(3);
+
+      expect(answers[0].textContent.trim()).toBe('Asistirá');
+      expect(answers[0].classList.contains('badge-soft-success')).toBe(true);
+
+      expect(answers[1].textContent.trim()).toBe('No asistirá');
+      expect(answers[1].classList.contains('badge-soft-medium')).toBe(true);
+
+      expect(answers[2].textContent.trim()).toBe('Sin respuesta');
+      expect(answers[2].classList.contains('badge-soft-warning')).toBe(true);
+    });
+  });
+
+  describe('asociación de accesibilidad (punto 4)', () => {
+    it('4. asocia acciones con aria-labelledby apuntando al id del nombre', async () => {
+      mockGuestApi.getInvitation.mockResolvedValue(mockGroupInvitation);
+      fixture = TestBed.createComponent(GuestInvitationPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('code', 'ABCD1234JK');
+
+      await component.loadInvitation();
+      fixture.detectChanges();
+
+      const cards = fixture.nativeElement.querySelectorAll('.guest-card');
+      expect(cards.length).toBe(2);
+
+      mockGroupInvitation.guests.forEach((guest, index) => {
+        const card = cards[index];
+        const nameEl = card.querySelector('.guest-card__name');
+        const actionsEl = card.querySelector('.guest-card__actions');
+
+        expect(nameEl?.id).toBe(`guest-name-${guest.id}`);
+        expect(actionsEl?.getAttribute('role')).toBe('group');
+        expect(actionsEl?.getAttribute('aria-labelledby')).toBe(`guest-name-${guest.id}`);
+      });
+    });
+  });
+
+  describe('errores al guardar dentro de la card (puntos 5 y 6)', () => {
+    it('5.1 muestra error inline role="alert" en grupo al fallar setRsvp con network_error y no crea toast', async () => {
+      mockGuestApi.getInvitation.mockResolvedValue(mockGroupInvitation);
+      fixture = TestBed.createComponent(GuestInvitationPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('code', 'ABCD1234JK');
+
+      await component.loadInvitation();
+      fixture.detectChanges();
+
+      mockGuestApi.setRsvp.mockRejectedValueOnce(new GuestApiError('network_error'));
+      await component.onSelectRsvp(mockGroupInvitation.guests[0], 'accepted');
+      fixture.detectChanges();
+
+      const errorEl = fixture.nativeElement.querySelector('.guest-card .guest-card__error');
+      expect(errorEl).not.toBeNull();
+      expect(errorEl?.getAttribute('role')).toBe('alert');
+      expect(errorEl?.textContent?.trim()).toBe(
+        'No pudimos conectarnos. Revisen su conexión e inténtenlo de nuevo.',
+      );
+      expect(mockToastController.create).not.toHaveBeenCalled();
+
+      // Al reintentar con éxito, el error desaparece
+      const updatedInv = {
+        ...mockGroupInvitation,
+        guests: [
+          { ...mockGroupInvitation.guests[0], rsvp: 'accepted' as const },
+          mockGroupInvitation.guests[1],
+        ],
+      };
+      mockGuestApi.setRsvp.mockResolvedValueOnce(updatedInv);
+      await component.onSelectRsvp(mockGroupInvitation.guests[0], 'accepted');
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('.guest-card__error')).toBeNull();
+    });
+
+    it('5.2 muestra error inline con variante individual en invitación individual', async () => {
+      mockGuestApi.getInvitation.mockResolvedValue(mockIndividualInvitation);
+      fixture = TestBed.createComponent(GuestInvitationPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('code', 'WXYZ5678LM');
+
+      fixture.detectChanges();
+      await component.loadInvitation();
+      fixture.detectChanges();
+
+      mockGuestApi.setRsvp.mockRejectedValueOnce(new GuestApiError('network_error'));
+      await component.onSelectRsvp(mockIndividualInvitation.guests[0], 'accepted');
+      fixture.detectChanges();
+
+      const errorEl = fixture.nativeElement.querySelector('.guest-card .guest-card__error');
+      expect(errorEl?.textContent?.trim()).toBe(
+        guestErrorMessage('network_error', 'individual'),
+      );
+    });
+
+    it('5.3 muestra mensaje por defecto en error que no es GuestApiError', async () => {
+      mockGuestApi.getInvitation.mockResolvedValue(mockGroupInvitation);
+      fixture = TestBed.createComponent(GuestInvitationPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('code', 'ABCD1234JK');
+
+      fixture.detectChanges();
+      await component.loadInvitation();
+      fixture.detectChanges();
+
+      mockGuestApi.setRsvp.mockRejectedValueOnce(new Error('Unknown crash'));
+      await component.onSelectRsvp(mockGroupInvitation.guests[0], 'accepted');
+      fixture.detectChanges();
+
+      const errorEl = fixture.nativeElement.querySelector('.guest-card .guest-card__error');
+      expect(errorEl?.textContent?.trim()).toBe(
+        'No pudimos guardar el cambio. Inténtenlo de nuevo.',
+      );
+    });
+
+    it('6. con deadline_passed pone can_respond en falso, no muestra error en card y muestra banda de plazo cerrado', async () => {
+      mockGuestApi.getInvitation.mockResolvedValue(mockGroupInvitation);
+      fixture = TestBed.createComponent(GuestInvitationPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('code', 'ABCD1234JK');
+
+      fixture.detectChanges();
+      await component.loadInvitation();
+      fixture.detectChanges();
+
+      mockGuestApi.setRsvp.mockRejectedValueOnce(new GuestApiError('deadline_passed'));
+      await component.onSelectRsvp(mockGroupInvitation.guests[0], 'accepted');
+      fixture.detectChanges();
+
+      expect(component.invitation()?.can_respond).toBe(false);
+      expect(fixture.nativeElement.querySelector('.guest-card__error')).toBeNull();
+
+      const closedBanner = fixture.nativeElement.querySelector('.deadline-banner--closed span');
+      expect(closedBanner?.textContent?.trim()).toBe(
+        'El plazo para responder ya terminó. Si necesitan cambiar su respuesta, escríbannos al WhatsApp donde les llegó la invitación.',
+      );
+    });
+  });
+
+  describe('mensajes de carga y recarga (puntos 7 y 8)', () => {
+    it('7.1 RPC devuelve null: mensaje invalid_code sin botón Reintentar', async () => {
+      mockGuestApi.getInvitation.mockResolvedValue(null);
+      fixture = TestBed.createComponent(GuestInvitationPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('code', 'INVALID123');
+
+      fixture.detectChanges();
+      await component.loadInvitation();
+      fixture.detectChanges();
+
+      const emptyEl = fixture.nativeElement.querySelector('app-empty-state');
+      expect(emptyEl).not.toBeNull();
+      expect(emptyEl?.textContent).toContain(
+        'No encontramos esta invitación. Revisa que el enlace esté completo.',
+      );
+      expect(component.canRetry()).toBe(false);
+      expect(fixture.nativeElement.querySelector('app-empty-state ion-button')).toBeNull();
+    });
+
+    it('7.2 error de red en carga inicial: mensaje individual con botón Reintentar', async () => {
+      mockGuestApi.getInvitation.mockRejectedValue(new GuestApiError('network_error'));
+      fixture = TestBed.createComponent(GuestInvitationPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('code', 'NETERR1234');
+
+      fixture.detectChanges();
+      await component.loadInvitation();
+      fixture.detectChanges();
+
+      const emptyEl = fixture.nativeElement.querySelector('app-empty-state');
+      expect(emptyEl).not.toBeNull();
+      expect(emptyEl?.textContent).toContain(guestErrorMessage('network_error', 'individual'));
+      expect(component.canRetry()).toBe(true);
+      expect(fixture.nativeElement.querySelector('app-empty-state ion-button')).not.toBeNull();
+    });
+
+    it('7.3 código inesperado en carga inicial: mensaje load_failed con botón Reintentar', async () => {
+      mockGuestApi.getInvitation.mockRejectedValue(new GuestApiError('invalid_value'));
+      fixture = TestBed.createComponent(GuestInvitationPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('code', 'ERR1234567');
+
+      fixture.detectChanges();
+      await component.loadInvitation();
+      fixture.detectChanges();
+
+      const emptyEl = fixture.nativeElement.querySelector('app-empty-state');
+      expect(emptyEl).not.toBeNull();
+      expect(emptyEl?.textContent).toContain(guestErrorMessage('load_failed'));
+      expect(component.canRetry()).toBe(true);
+      expect(fixture.nativeElement.querySelector('app-empty-state ion-button')).not.toBeNull();
+    });
+
+    it('8. recarga fallida con invitación cargada: muestra toast de 8000 ms con Reintentar y Cerrar', async () => {
+      mockGuestApi.getInvitation.mockResolvedValue(mockGroupInvitation);
+      fixture = TestBed.createComponent(GuestInvitationPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('code', 'ABCD1234JK');
+
+      fixture.detectChanges();
+      await component.loadInvitation();
+      fixture.detectChanges();
+
+      mockGuestApi.getInvitation.mockRejectedValue(new GuestApiError('network_error'));
+      await component.loadInvitation(true);
+
+      expect(mockToastController.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'No pudimos conectarnos. Revisen su conexión e inténtenlo de nuevo.',
+          duration: 8000,
+          color: 'danger',
+          position: 'bottom',
+          buttons: expect.arrayContaining([
+            expect.objectContaining({ text: 'Reintentar', handler: expect.any(Function) }),
+            expect.objectContaining({ text: 'Cerrar', role: 'cancel' }),
+          ]),
+        }),
+      );
+      expect(mockToast.present).toHaveBeenCalled();
+
+      const toastArgs = mockToastController.create.mock.calls[0][0];
+      const retryBtn = toastArgs.buttons.find((btn: { text: string }) => btn.text === 'Reintentar');
+      const loadSpy = vi.spyOn(component, 'loadInvitation');
+      retryBtn.handler();
+      expect(loadSpy).toHaveBeenCalledWith(false);
+    });
   });
 
   describe('video de bienvenida (intro layer)', () => {

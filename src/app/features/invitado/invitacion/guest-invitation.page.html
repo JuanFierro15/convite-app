@@ -119,59 +119,89 @@
             @for (guest of inv.guests; track guest.id) {
               <ion-card class="guest-card">
                 <ion-card-content class="guest-card__content">
-                  <p class="text-name guest-card__name">{{ guest.full_name }}</p>
-                  <div class="guest-card__actions">
-                    <ion-button
-                      class="rsvp-button"
-                      color="success"
-                      [fill]="guest.rsvp === 'accepted' ? 'solid' : 'outline'"
-                      expand="block"
-                      [disabled]="!inv.can_respond || savingGuestId() !== null"
-                      [attr.aria-pressed]="guest.rsvp === 'accepted'"
-                      (click)="onSelectRsvp(guest, 'accepted')"
-                    >
-                      @if (savingGuestId() === guest.id && savingRsvp() === 'accepted') {
-                        <ion-spinner slot="start" name="crescent"></ion-spinner>
-                      } @else {
-                        <ion-icon slot="start" name="checkmark-outline" aria-hidden="true"></ion-icon>
-                      }
-                      Acepto
-                    </ion-button>
+                  <p class="text-name guest-card__name" [id]="'guest-name-' + guest.id">
+                    {{ guest.full_name }}
+                  </p>
 
-                    <ion-button
-                      class="rsvp-button"
-                      color="danger"
-                      [fill]="guest.rsvp === 'declined' ? 'solid' : 'outline'"
-                      expand="block"
-                      [disabled]="!inv.can_respond || savingGuestId() !== null"
-                      [attr.aria-pressed]="guest.rsvp === 'declined'"
-                      (click)="onSelectRsvp(guest, 'declined')"
+                  @if (inv.can_respond) {
+                    <div
+                      class="guest-card__actions"
+                      role="group"
+                      [attr.aria-labelledby]="'guest-name-' + guest.id"
                     >
-                      @if (savingGuestId() === guest.id && savingRsvp() === 'declined') {
-                        <ion-spinner slot="start" name="crescent"></ion-spinner>
-                      } @else {
-                        <ion-icon slot="start" name="close-outline" aria-hidden="true"></ion-icon>
-                      }
-                      No acepto
-                    </ion-button>
-                  </div>
+                      <ion-button
+                        class="rsvp-button"
+                        color="success"
+                        [fill]="guest.rsvp === 'accepted' ? 'solid' : 'outline'"
+                        expand="block"
+                        [disabled]="savingGuestId() !== null"
+                        [attr.aria-pressed]="guest.rsvp === 'accepted'"
+                        (click)="onSelectRsvp(guest, 'accepted')"
+                      >
+                        @if (savingGuestId() === guest.id && savingRsvp() === 'accepted') {
+                          <ion-spinner slot="start" name="crescent"></ion-spinner>
+                        } @else {
+                          <ion-icon slot="start" name="checkmark-outline" aria-hidden="true"></ion-icon>
+                        }
+                        Acepto
+                      </ion-button>
+
+                      <ion-button
+                        class="rsvp-button"
+                        color="danger"
+                        [fill]="guest.rsvp === 'declined' ? 'solid' : 'outline'"
+                        expand="block"
+                        [disabled]="savingGuestId() !== null"
+                        [attr.aria-pressed]="guest.rsvp === 'declined'"
+                        (click)="onSelectRsvp(guest, 'declined')"
+                      >
+                        @if (savingGuestId() === guest.id && savingRsvp() === 'declined') {
+                          <ion-spinner slot="start" name="crescent"></ion-spinner>
+                        } @else {
+                          <ion-icon slot="start" name="close-outline" aria-hidden="true"></ion-icon>
+                        }
+                        No acepto
+                      </ion-button>
+                    </div>
+                  } @else {
+                    <span
+                      class="guest-card__answer text-label"
+                      [class]="rsvpBadgeClass(guest.rsvp)"
+                    >
+                      {{ texts().rsvpAnswerLabel(guest.rsvp) }}
+                    </span>
+                  }
+
+                  @if (rsvpErrors()[guest.id]; as error) {
+                    <p class="guest-card__error text-body" role="alert">
+                      <ion-icon name="alert-circle-outline" aria-hidden="true"></ion-icon>
+                      <span>{{ error }}</span>
+                    </p>
+                  }
                 </ion-card-content>
               </ion-card>
             }
           </div>
 
-          @if (showRsvpConfirmation()) {
-            <ion-card class="confirmation-card" role="status" aria-live="polite">
+          @if (confirmationState(); as conf) {
+            <ion-card
+              class="confirmation-card"
+              [class.confirmation-card--missing]="conf.kind === 'missing'"
+              role="status"
+              aria-live="polite"
+            >
               <ion-card-content class="confirmation-card__content">
-                <div class="confirmation-card__illustration">
-                  <app-illustration
-                    name="rsvp-sent"
-                    alt="Respuesta recibida"
-                    [themeId]="inv.event.theme_id"
-                  />
-                </div>
+                @if (conf.kind !== 'missing') {
+                  <div class="confirmation-card__illustration">
+                    <app-illustration
+                      name="rsvp-sent"
+                      alt="Respuesta recibida"
+                      [themeId]="inv.event.theme_id"
+                    />
+                  </div>
+                }
                 <p class="text-body confirmation-card__text">
-                  {{ texts().rsvpThanks(formattedDeadline()) }}
+                  {{ conf.text }}
                 </p>
               </ion-card-content>
             </ion-card>
@@ -246,7 +276,7 @@
     } @else {
       <div class="empty-wrapper">
         <app-empty-state
-          [message]="error() ?? 'No encontramos esta invitación. Revisa el enlace que te enviaron.'"
+          [message]="emptyStateMessage()"
           [actionLabel]="canRetry() ? 'Reintentar' : undefined"
           (action)="retryLoad()"
         />

@@ -186,15 +186,40 @@
   color: var(--ion-text-color);
 }
 
+.guest-card__answer {
+  align-self: flex-start;
+}
+
 .guest-card__actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-sm);
 }
 
+.guest-card__error {
+  display: flex;
+  gap: var(--space-xs);
+  align-items: flex-start;
+  margin: var(--space-sm) 0 0;
+  padding: var(--space-sm) var(--space-md);
+  border-radius: var(--radius-sm);
+  background: rgba(var(--ion-color-danger-rgb), 0.14);
+  border-left: 3px solid var(--ion-color-danger);
+  color: var(--ion-text-color);
+
+  ion-icon {
+    color: var(--ion-color-danger-shade);
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+}
+
+// Con el relleno md (~18 px por lado), "No acepto" se parte en dos líneas a 360 px.
 .rsvp-button {
   margin: 0;
   min-height: 54px;
+  --padding-start: 12px;
+  --padding-end: 12px;
 }
 
 .rsvp-button[fill="outline"] {
