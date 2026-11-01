@@ -1,4 +1,16 @@
-import { ChangeDetectionStrategy, Component, computed, inject } from '@angular/core';
+import { DOCUMENT } from '@angular/common';
+import {
+  afterNextRender,
+  ChangeDetectionStrategy,
+  Component,
+  computed,
+  DestroyRef,
+  effect,
+  ElementRef,
+  inject,
+  Injector,
+  viewChild,
+} from '@angular/core';
 import { ConnectionStatusService } from '../../../core';
 
 @Component({
@@ -9,6 +21,7 @@ import { ConnectionStatusService } from '../../../core';
   // el texto, algunos lectores de pantalla no anunciarían el aviso.
   template: `
     <div
+      #banner
       class="connection-banner text-label"
       [class.connection-banner--visible]="visible()"
       role="status"
@@ -46,6 +59,11 @@ import { ConnectionStatusService } from '../../../core';
 })
 export class ConnectionBannerComponent {
   private readonly connectionStatus = inject(ConnectionStatusService);
+  private readonly document = inject(DOCUMENT);
+  private readonly destroyRef = inject(DestroyRef);
+  private readonly injector = inject(Injector);
+
+  readonly banner = viewChild.required<ElementRef<HTMLElement>>('banner');
 
   readonly visible = computed<boolean>(
     () => this.connectionStatus.retrying() || this.connectionStatus.slow(),
@@ -54,4 +72,65 @@ export class ConnectionBannerComponent {
   readonly message = computed<string>(() =>
     this.visible() ? 'La conexión está lenta, reintentando...' : '',
   );
+
+  private resizeObserver: ResizeObserver | null = null;
+  private isDestroyed = false;
+
+  constructor() {
+    effect(() => {
+      const isVisible = this.visible();
+      if (isVisible) {
+        this.document.documentElement.classList.add('connection-banner-active');
+        afterNextRender(
+          () => {
+            if (!this.isDestroyed && this.visible()) {
+              this.updateBannerHeight();
+              this.startObserving();
+            }
+          },
+          { injector: this.injector },
+        );
+      } else {
+        this.stopObserving();
+        this.document.documentElement.classList.remove('connection-banner-active');
+        this.document.documentElement.style.removeProperty('--convite-banner-height');
+      }
+    });
+
+    this.destroyRef.onDestroy(() => {
+      this.isDestroyed = true;
+      this.stopObserving();
+      this.document.documentElement.classList.remove('connection-banner-active');
+      this.document.documentElement.style.removeProperty('--convite-banner-height');
+    });
+  }
+
+  private updateBannerHeight(): void {
+    if (!this.visible()) {
+      return;
+    }
+    const element = this.banner().nativeElement;
+    const height = Math.ceil(element.getBoundingClientRect().height);
+    this.document.documentElement.style.setProperty(
+      '--convite-banner-height',
+      `${height}px`,
+    );
+  }
+
+  private startObserving(): void {
+    if (this.resizeObserver || typeof ResizeObserver === 'undefined') {
+      return;
+    }
+    this.resizeObserver = new ResizeObserver(() => {
+      this.updateBannerHeight();
+    });
+    this.resizeObserver.observe(this.banner().nativeElement);
+  }
+
+  private stopObserving(): void {
+    if (this.resizeObserver) {
+      this.resizeObserver.disconnect();
+      this.resizeObserver = null;
+    }
+  }
 }
