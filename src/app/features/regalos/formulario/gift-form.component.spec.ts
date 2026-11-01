@@ -375,7 +375,7 @@ describe('GiftFormComponent', () => {
     // Ayuda debajo aparece
     const helps = fixture.debugElement.queryAll(By.css('.field-help'));
     const envelopeHelp = helps.find((h) =>
-      h.nativeElement.textContent.includes('Si lo dejas vacío, verán: «Si prefieren hacer un aporte en sobre'),
+      h.nativeElement.textContent.includes('Si lo dejas vacío, los invitados solo verán el título y la ilustración.'),
     );
     expect(envelopeHelp).toBeTruthy();
   });
