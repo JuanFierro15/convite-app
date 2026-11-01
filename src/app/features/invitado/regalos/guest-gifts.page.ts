@@ -140,6 +140,24 @@ export class GuestGiftsPage implements OnInit, ViewWillEnter {
     return guestTexts(kind, groupName);
   });
 
+  readonly headerIntro = computed(() => {
+    const inv = this.invitation();
+    if (!inv) {
+      return '';
+    }
+    if (!inv.gifts_open) {
+      return this.texts().giftsPageIntroClosed;
+    }
+    if (this.layout().hasList && this.availableCount() === 0) {
+      return this.layout().showShortcuts
+        ? this.texts().giftsPageIntroSoldOut
+        : this.texts().giftsPageIntroSoldOutNoExtras;
+    }
+    return this.layout().hasList
+      ? this.texts().giftsPageIntro
+      : this.texts().giftsPageIntroNoList;
+  });
+
   readonly layout = computed(() => guestGiftsLayout(this.gifts()));
 
   readonly filterState = computed(() =>

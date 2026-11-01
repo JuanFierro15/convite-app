@@ -24,6 +24,17 @@
         @if (layout().isEmpty) {
           <app-empty-state message="Todavía no hay regalos en la lista." />
         } @else {
+          @if (!inv.gifts_open) {
+            <div class="closed-banner" role="status">
+              <ion-icon
+                class="closed-banner__icon"
+                name="lock-closed-outline"
+                aria-hidden="true"
+              ></ion-icon>
+              <span>La lista de regalos ya está cerrada.</span>
+            </div>
+          }
+
           <section class="gifts-header" aria-labelledby="gifts-title">
             <app-illustration
               class="gifts-header__image"
@@ -33,9 +44,7 @@
               [themeId]="inv.event.theme_id"
             />
             <h1 id="gifts-title" class="gifts-header__title">{{ texts().giftsTitle }}</h1>
-            <p class="gifts-header__intro">
-              {{ layout().hasList ? texts().giftsPageIntro : texts().giftsPageIntroNoList }}
-            </p>
+            <p class="gifts-header__intro">{{ headerIntro() }}</p>
             @if (layout().hasList) {
               <div class="gifts-header__note" role="note">
                 <ion-icon name="eye-off-outline" aria-hidden="true"></ion-icon>
@@ -68,17 +77,6 @@
               </div>
             }
           </section>
-
-          @if (!inv.gifts_open) {
-            <div class="closed-banner" role="status">
-              <ion-icon
-                class="closed-banner__icon"
-                name="lock-closed-outline"
-                aria-hidden="true"
-              ></ion-icon>
-              <span>La lista de regalos ya está cerrada.</span>
-            </div>
-          }
 
           @if (showReservedConfirmation()) {
             <ion-card
@@ -113,19 +111,21 @@
                           <ion-icon name="checkmark-circle" aria-hidden="true"></ion-icon>
                           <span>{{ texts().giftChosenBadge }}</span>
                         </div>
-                        <ion-button
-                          fill="outline"
-                          color="primary"
-                          expand="block"
-                          [attr.aria-label]="texts().releaseGiftAriaLabel(gift.name)"
-                          [disabled]="!inv.gifts_open || processingGiftId() !== null"
-                          (click)="onConfirmRelease(gift)"
-                        >
-                          @if (processingGiftId() === gift.id) {
-                            <ion-spinner slot="start" name="crescent"></ion-spinner>
-                          }
-                          {{ texts().releaseGiftButton }}
-                        </ion-button>
+                        @if (inv.gifts_open) {
+                          <ion-button
+                            fill="outline"
+                            color="primary"
+                            expand="block"
+                            [attr.aria-label]="texts().releaseGiftAriaLabel(gift.name)"
+                            [disabled]="processingGiftId() !== null"
+                            (click)="onConfirmRelease(gift)"
+                          >
+                            @if (processingGiftId() === gift.id) {
+                              <ion-spinner slot="start" name="crescent"></ion-spinner>
+                            }
+                            {{ texts().releaseGiftButton }}
+                          </ion-button>
+                        }
                       } @else if (isSoldOut(gift)) {
                         <div class="taken-badge badge-soft-medium">
                           <ion-icon name="lock-closed-outline" aria-hidden="true"></ion-icon>
@@ -135,18 +135,20 @@
                         @if (remainingLabel(gift); as rem) {
                           <p class="text-label gift-card__remaining">{{ rem }}</p>
                         }
-                        <ion-button
-                          color="primary"
-                          expand="block"
-                          [attr.aria-label]="texts().chooseGiftAriaLabel(gift.name)"
-                          [disabled]="!inv.gifts_open || processingGiftId() !== null"
-                          (click)="onConfirmReserve(gift)"
-                        >
-                          @if (processingGiftId() === gift.id) {
-                            <ion-spinner slot="start" name="crescent"></ion-spinner>
-                          }
-                          Elegir este regalo
-                        </ion-button>
+                        @if (inv.gifts_open) {
+                          <ion-button
+                            color="primary"
+                            expand="block"
+                            [attr.aria-label]="texts().chooseGiftAriaLabel(gift.name)"
+                            [disabled]="processingGiftId() !== null"
+                            (click)="onConfirmReserve(gift)"
+                          >
+                            @if (processingGiftId() === gift.id) {
+                              <ion-spinner slot="start" name="crescent"></ion-spinner>
+                            }
+                            Elegir este regalo
+                          </ion-button>
+                        }
                       }
                     </ion-card-content>
                   </ion-card>
@@ -195,19 +197,21 @@
                             <ion-icon name="checkmark-circle" aria-hidden="true"></ion-icon>
                             <span>{{ texts().giftChosenBadge }}</span>
                           </div>
-                          <ion-button
-                            fill="outline"
-                            color="primary"
-                            expand="block"
-                            [attr.aria-label]="texts().releaseGiftAriaLabel(gift.name)"
-                            [disabled]="!inv.gifts_open || processingGiftId() !== null"
-                            (click)="onConfirmRelease(gift)"
-                          >
-                            @if (processingGiftId() === gift.id) {
-                              <ion-spinner slot="start" name="crescent"></ion-spinner>
-                            }
-                            {{ texts().releaseGiftButton }}
-                          </ion-button>
+                          @if (inv.gifts_open) {
+                            <ion-button
+                              fill="outline"
+                              color="primary"
+                              expand="block"
+                              [attr.aria-label]="texts().releaseGiftAriaLabel(gift.name)"
+                              [disabled]="processingGiftId() !== null"
+                              (click)="onConfirmRelease(gift)"
+                            >
+                              @if (processingGiftId() === gift.id) {
+                                <ion-spinner slot="start" name="crescent"></ion-spinner>
+                              }
+                              {{ texts().releaseGiftButton }}
+                            </ion-button>
+                          }
                         } @else if (isSoldOut(gift)) {
                           <div class="taken-badge badge-soft-medium">
                             <ion-icon name="lock-closed-outline" aria-hidden="true"></ion-icon>
@@ -217,18 +221,20 @@
                           @if (remainingLabel(gift); as rem) {
                             <p class="text-label gift-card__remaining">{{ rem }}</p>
                           }
-                          <ion-button
-                            color="primary"
-                            expand="block"
-                            [attr.aria-label]="texts().chooseGiftAriaLabel(gift.name)"
-                            [disabled]="!inv.gifts_open || processingGiftId() !== null"
-                            (click)="onConfirmReserve(gift)"
-                          >
-                            @if (processingGiftId() === gift.id) {
-                              <ion-spinner slot="start" name="crescent"></ion-spinner>
-                            }
-                            Elegir este regalo
-                          </ion-button>
+                          @if (inv.gifts_open) {
+                            <ion-button
+                              color="primary"
+                              expand="block"
+                              [attr.aria-label]="texts().chooseGiftAriaLabel(gift.name)"
+                              [disabled]="processingGiftId() !== null"
+                              (click)="onConfirmReserve(gift)"
+                            >
+                              @if (processingGiftId() === gift.id) {
+                                <ion-spinner slot="start" name="crescent"></ion-spinner>
+                              }
+                              Elegir este regalo
+                            </ion-button>
+                          }
                         }
                       </ion-card-content>
                     </ion-card>

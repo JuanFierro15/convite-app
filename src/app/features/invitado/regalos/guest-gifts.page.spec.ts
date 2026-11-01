@@ -343,12 +343,124 @@ describe('GuestGiftsPage', () => {
       );
     });
 
-    it('con la ventana cerrada no aparece y muestra .closed-banner', async () => {
+    it('con la ventana cerrada no aparece el aviso de disponibilidad y muestra .closed-banner antes de .gifts-header', async () => {
       const invClosed = { ...mockGroupInvitation, gifts_open: false };
       const { fixture } = await createPage([buildUniqueGift({ taken: true })], invClosed);
 
       expect(fixture.nativeElement.querySelector('.gift-list-section__count')).toBeNull();
-      expect(fixture.nativeElement.querySelector('.closed-banner')).not.toBeNull();
+      const banner = fixture.nativeElement.querySelector('.closed-banner');
+      const header = fixture.nativeElement.querySelector('.gifts-header');
+      expect(banner).not.toBeNull();
+      expect(header).not.toBeNull();
+      const bodyChildren = Array.from(fixture.nativeElement.querySelector('.gifts-body').children);
+      expect(bodyChildren.indexOf(banner)).toBeLessThan(bodyChildren.indexOf(header));
+    });
+  });
+
+  describe('ventana de regalos cerrada o agotada (R-04)', () => {
+    it('con gifts_open: false, .closed-banner aparece antes de .gifts-header en el DOM', async () => {
+      const invClosed = { ...mockGroupInvitation, gifts_open: false };
+      const { fixture } = await createPage([buildUniqueGift()], invClosed);
+
+      const bodyChildren = Array.from(fixture.nativeElement.querySelector('.gifts-body').children);
+      const backLink = fixture.nativeElement.querySelector('.back-link');
+      const banner = fixture.nativeElement.querySelector('.closed-banner');
+      const header = fixture.nativeElement.querySelector('.gifts-header');
+
+      expect(banner).not.toBeNull();
+      expect(header).not.toBeNull();
+      expect(bodyChildren.indexOf(backLink)).toBeLessThan(bodyChildren.indexOf(banner));
+      expect(bodyChildren.indexOf(banner)).toBeLessThan(bodyChildren.indexOf(header));
+    });
+
+    it('con gifts_open: false, muestra texto de cierre en grupo e individual', async () => {
+      const groupClosed = { ...mockGroupInvitation, gifts_open: false };
+      const { fixture: groupFixture } = await createPage([buildUniqueGift()], groupClosed);
+      expect(groupFixture.nativeElement.querySelector('.gifts-header__intro')?.textContent?.trim()).toBe(
+        'La lista de regalos ya cerró. Gracias por su cariño: su compañía es el mejor regalo.',
+      );
+
+      const indClosed = { ...mockIndividualInvitation, gifts_open: false };
+      const { fixture: indFixture } = await createPage([buildUniqueGift()], indClosed);
+      expect(indFixture.nativeElement.querySelector('.gifts-header__intro')?.textContent?.trim()).toBe(
+        'La lista de regalos ya cerró. Gracias por tu cariño: tu compañía es el mejor regalo.',
+      );
+    });
+
+    it('con gifts_open: false, no hay botones de elegir ni de "Ya no lo llevo", pero las insignias siguen', async () => {
+      const chosenGift: GuestGift = {
+        ...buildUniqueGift({ id: 'u-1', name: 'Coche' }),
+        reserved_by_me: true,
+      };
+      const availableGift: GuestGift = buildUniqueGift({ id: 'u-2', name: 'Cuna' });
+
+      const indClosed = { ...mockIndividualInvitation, gifts_open: false };
+      const { fixture } = await createPage([chosenGift, availableGift], indClosed);
+
+      expect(fixture.nativeElement.querySelectorAll('.gift-card ion-button').length).toBe(0);
+      expect(fixture.nativeElement.querySelector('#section-mine')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('.chosen-badge')?.textContent?.trim()).toBe('Tu elección');
+
+      const cards = fixture.nativeElement.querySelectorAll('.gift-card');
+      expect(cards.length).toBeGreaterThan(0);
+    });
+
+    it('con gifts_open: false, la nota de anonimato y los atajos siguen visibles si hay lista y extras', async () => {
+      const invClosed = { ...mockGroupInvitation, gifts_open: false };
+      const list = [buildUniqueGift(), buildSuggestionGift(), buildEnvelopeGift()];
+      const { fixture } = await createPage(list, invClosed);
+
+      expect(fixture.nativeElement.querySelector('.gifts-header__note')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('.shortcuts')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('.shortcut--basics')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('.shortcut--envelope')).not.toBeNull();
+    });
+
+    it('abierta y sin regalos disponibles con extras: intro de agotado con extras para grupo e individual', async () => {
+      const soldOutList = [
+        buildUniqueGift({ taken: true }),
+        buildSuggestionGift(),
+      ];
+
+      const { fixture: groupFixture } = await createPage(soldOutList, mockGroupInvitation);
+      expect(groupFixture.nativeElement.querySelector('.gifts-header__intro')?.textContent?.trim()).toBe(
+        'Ya eligieron todos los regalos de la lista. Si les hace ilusión llevar algo, al final encontrarán algunas ideas.',
+      );
+
+      const { fixture: indFixture } = await createPage(soldOutList, mockIndividualInvitation);
+      expect(indFixture.nativeElement.querySelector('.gifts-header__intro')?.textContent?.trim()).toBe(
+        'Ya eligieron todos los regalos de la lista. Si te hace ilusión llevar algo, al final encontrarás algunas ideas.',
+      );
+    });
+
+    it('abierta y sin regalos disponibles sin extras: intro de agotado sin extras para grupo e individual', async () => {
+      const soldOutList = [buildUniqueGift({ taken: true })];
+
+      const { fixture: groupFixture } = await createPage(soldOutList, mockGroupInvitation);
+      expect(groupFixture.nativeElement.querySelector('.gifts-header__intro')?.textContent?.trim()).toBe(
+        'Ya eligieron todos los regalos de la lista. Gracias por su cariño: su compañía es el mejor regalo.',
+      );
+
+      const { fixture: indFixture } = await createPage(soldOutList, mockIndividualInvitation);
+      expect(indFixture.nativeElement.querySelector('.gifts-header__intro')?.textContent?.trim()).toBe(
+        'Ya eligieron todos los regalos de la lista. Gracias por tu cariño: tu compañía es el mejor regalo.',
+      );
+    });
+
+    it('abierta con regalos disponibles: intro estándar y los botones de elegir siguen presentes', async () => {
+      const availableList = [buildUniqueGift({ taken: false })];
+
+      const { fixture: groupFixture } = await createPage(availableList, mockGroupInvitation);
+      expect(groupFixture.nativeElement.querySelector('.gifts-header__intro')?.textContent?.trim()).toBe(
+        'Su compañía es el mejor regalo. Si les hace ilusión llevar algo, elijan de la lista para que los regalos no se repitan.',
+      );
+      expect(groupFixture.nativeElement.querySelectorAll('.gift-card ion-button').length).toBe(1);
+
+      const { fixture: indFixture } = await createPage(availableList, mockIndividualInvitation);
+      expect(indFixture.nativeElement.querySelector('.gifts-header__intro')?.textContent?.trim()).toBe(
+        'Tu compañía es el mejor regalo. Si te hace ilusión llevar algo, elige de la lista para que los regalos no se repitan.',
+      );
+      expect(indFixture.nativeElement.querySelectorAll('.gift-card ion-button').length).toBe(1);
     });
   });
 

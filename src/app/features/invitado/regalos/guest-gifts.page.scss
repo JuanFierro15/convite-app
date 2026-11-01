@@ -66,10 +66,13 @@
   transform: translateX(-50%) rotate(-3deg);
 }
 
-:host ::ng-deep .gifts-header__image img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
+:host ::ng-deep {
+  .gifts-header__image img,
+  .envelope-card app-illustration img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
 }
 
 .gifts-header__title {
@@ -79,6 +82,7 @@
   line-height: 1.15;
   margin: 0;
   color: var(--ion-text-color);
+  text-wrap: balance;
 }
 
 .gifts-header__intro {
@@ -86,6 +90,7 @@
   line-height: 1.5;
   color: var(--ion-text-color);
   margin: 0;
+  text-wrap: pretty;
 }
 
 .gifts-header__note {
@@ -96,7 +101,7 @@
   background: var(--ion-background-color);
   border-radius: 16px;
   padding: 12px 14px;
-  font-size: 14px;
+  font-size: 15px;
   line-height: 1.45;
   color: var(--ion-text-color);
 
@@ -105,12 +110,17 @@
     color: var(--ion-color-primary);
     flex-shrink: 0;
   }
+
+  span {
+    text-wrap: pretty;
+  }
 }
 
 .gifts-header__more {
-  font-size: 14px;
+  font-size: 15px;
   color: var(--ion-color-medium-shade);
   margin: 4px 0 0;
+  text-wrap: pretty;
 }
 
 .shortcuts {
@@ -124,17 +134,17 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  min-height: 44px;
+  min-height: 48px;
   padding: 0 14px;
   border: 0;
   border-radius: 999px;
   font-family: inherit;
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
   cursor: pointer;
 
   ion-icon {
-    font-size: 16px;
+    font-size: 18px;
   }
 }
 
@@ -197,6 +207,7 @@
   margin: 0;
   font-weight: 600;
   color: var(--ion-text-color);
+  text-wrap: pretty;
 }
 
 .gift-section {
@@ -227,12 +238,14 @@
   line-height: 1.2;
   margin: 0;
   color: var(--ion-text-color);
+  text-wrap: balance;
 }
 
 .gift-list-section__count {
   font-size: 15px;
   color: var(--ion-color-medium-shade);
   margin: 4px 0 0;
+  text-wrap: pretty;
 }
 
 .gift-filter-segment {
@@ -249,7 +262,6 @@
     --color: var(--ion-color-medium-shade);
     --color-checked: var(--ion-text-color);
     min-height: 44px;
-    text-transform: none;
     font-weight: 600;
     font-size: 15px;
     isolation: isolate;
@@ -303,6 +315,7 @@
 .gift-card__description {
   margin: 0;
   color: var(--ion-color-medium);
+  text-wrap: pretty;
 }
 
 .gift-card__remaining {
@@ -314,11 +327,10 @@
 .taken-badge {
   align-self: flex-start;
   font-size: 0.9375rem;
-}
 
-.chosen-badge ion-icon,
-.taken-badge ion-icon {
-  font-size: 18px;
+  ion-icon {
+    font-size: 18px;
+  }
 }
 
 // Ionic md pone los botones en mayúsculas; en la vista del invitado se leen mejor en minúsculas.
@@ -389,16 +401,19 @@ ion-segment-button {
   align-self: center;
 }
 
+.basics-card__title,
+.envelope-card__title {
+  &:focus:not(:focus-visible) {
+    outline: none;
+  }
+}
+
 .basics-card__title {
   font-family: var(--font-heading);
   font-size: 21px;
   line-height: 1.25;
   font-weight: 600;
   color: var(--ion-text-color);
-
-  &:focus:not(:focus-visible) {
-    outline: none;
-  }
 }
 
 .basics-card__list {
@@ -436,12 +451,6 @@ ion-segment-button {
   gap: 10px;
   text-align: center;
   box-shadow: none;
-}
-
-:host ::ng-deep .envelope-card app-illustration img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
 }
 
 .envelope-card__rain-1 {
@@ -490,10 +499,6 @@ ion-segment-button {
   font-size: 28px;
   font-weight: 600;
   color: var(--ion-text-color);
-
-  &:focus:not(:focus-visible) {
-    outline: none;
-  }
 }
 
 .envelope-card__text {
@@ -505,4 +510,23 @@ ion-segment-button {
   margin: 0;
   white-space: pre-line;
   overflow-wrap: anywhere;
+  text-wrap: pretty;
+}
+
+@media (max-width: 380px) {
+  .gifts-body {
+    gap: var(--space-md);
+  }
+
+  .gifts-header {
+    margin-top: 14px;
+    padding: 88px 16px 20px;
+    gap: 8px;
+  }
+
+  .gifts-header__image {
+    top: -14px;
+    width: 128px;
+    height: 96px;
+  }
 }
