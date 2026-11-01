@@ -34,9 +34,10 @@ export class InvitationActionsService {
   async shareWhatsApp(
     invitation: Pick<InvitationRow, 'id' | 'group_name' | 'phone' | 'code' | 'kind'>,
     event: Pick<EventRow, 'name' | 'starts_at' | 'rsvp_deadline'>,
-    options: { notifyMarkFailure?: boolean } = {},
+    options: { notifyMarkFailure?: boolean; toastAnchor?: string } = {},
   ): Promise<{ opened: boolean; marked: boolean }> {
     const notifyMarkFailure = options.notifyMarkFailure ?? true;
+    const toastAnchor = options.toastAnchor;
     const message = this.whatsAppMessage(invitation, event);
 
     const markSentLocal = async (): Promise<boolean> => {
@@ -45,6 +46,7 @@ export class InvitationActionsService {
         await this.showToast(
           'Se abrió WhatsApp, pero no pudimos marcar la invitación como enviada.',
           'warning',
+          toastAnchor,
         );
       }
       return marked;
@@ -87,9 +89,9 @@ export class InvitationActionsService {
 
     try {
       await navigator.clipboard.writeText(message);
-      await this.showToast('Copiamos el mensaje para que lo compartas.', 'primary');
+      await this.showToast('Copiamos el mensaje para que lo compartas.', 'primary', toastAnchor);
     } catch (err) {
-      await this.showError(err);
+      await this.showError(err, toastAnchor);
     }
     return { opened: false, marked: false };
   }
@@ -138,23 +140,25 @@ export class InvitationActionsService {
     }
   }
 
-  async showError(err: unknown): Promise<void> {
+  async showError(err: unknown, positionAnchor?: string): Promise<void> {
     const message =
       err instanceof Error && err.message
         ? err.message
         : 'No pudimos completar la acción. Inténtalo de nuevo.';
-    await this.showToast(message, 'danger');
+    await this.showToast(message, 'danger', positionAnchor);
   }
 
   async showToast(
     message: string,
     color: 'primary' | 'success' | 'warning' | 'danger' = 'primary',
+    positionAnchor?: string,
   ): Promise<void> {
     const toast = await this.toastController.create({
       message,
       duration: 3000,
       color,
       position: 'bottom',
+      ...(positionAnchor ? { positionAnchor } : {}),
     });
     await toast.present();
   }

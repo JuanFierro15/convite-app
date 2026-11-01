@@ -87,7 +87,7 @@
 </ion-content>
 
 @if (!loading() && !error() && current()) {
-  <ion-footer class="ion-no-border">
+  <ion-footer id="invitation-send-footer" class="ion-no-border">
     <ion-toolbar class="send-footer">
       <div class="send-footer__actions">
         <ion-button expand="block" color="success" (click)="sendCurrent()" [disabled]="sending()">

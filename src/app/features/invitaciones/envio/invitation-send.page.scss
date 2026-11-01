@@ -47,6 +47,20 @@
   }
 }
 
+@media (max-width: 380px) {
+  .last-opened {
+    flex-wrap: wrap;
+
+    .last-opened__text {
+      flex: 1 1 calc(100% - 1.25rem - var(--space-sm));
+    }
+
+    ion-button {
+      margin-inline-start: auto;
+    }
+  }
+}
+
 .mark-failed {
   display: flex;
   align-items: center;
@@ -86,6 +100,15 @@
     flex-direction: column;
     gap: var(--space-xs);
     padding: var(--space-md);
+
+    // Las reglas .card-content-md h2 de Ionic pisan la escala global dentro de las cards.
+    .next-name {
+      font-family: var(--ion-font-family);
+      font-size: 1rem;
+      font-weight: 600;
+      line-height: 1.4;
+      color: var(--ion-text-color);
+    }
   }
 
   ion-button {

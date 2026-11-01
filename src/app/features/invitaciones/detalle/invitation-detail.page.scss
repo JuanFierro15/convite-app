@@ -25,6 +25,25 @@
   padding: var(--space-md);
 }
 
+// Las reglas .card-content-md h1/p de Ionic pisan la escala global dentro de las cards.
+ion-card-content {
+  .group-title {
+    font-family: var(--font-heading);
+    font-size: 1.5rem;
+    font-weight: 700;
+    line-height: 1.25;
+    color: var(--ion-text-color);
+  }
+
+  .guest-name {
+    font-family: var(--ion-font-family);
+    font-size: 1rem;
+    font-weight: 600;
+    line-height: 1.4;
+    color: var(--ion-text-color);
+  }
+}
+
 .info-header-row {
   display: flex;
   align-items: center;

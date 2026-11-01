@@ -66,6 +66,14 @@
   ion-reorder {
     margin-inline-end: var(--space-xs);
   }
+
+  .guest-remove-button {
+    min-width: 44px;
+    min-height: 44px;
+    margin-inline-start: var(--space-sm);
+    --padding-start: 0;
+    --padding-end: 0;
+  }
 }
 
 .guest-error {

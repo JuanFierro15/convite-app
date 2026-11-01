@@ -205,6 +205,78 @@ describe('InvitationActionsService', () => {
     openSpy.mockRestore();
   });
 
+  it('passes toastAnchor to warning toast when notifyMarkFailure is true and mark fails', async () => {
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+    mockInvitationsRepo.markWhatsAppSent.mockRejectedValue(new Error('Network error'));
+
+    await service.shareWhatsApp(
+      {
+        id: 'inv-err-anchor',
+        kind: 'individual',
+        group_name: 'Prueba Con Ancla',
+        phone: '+573001234567',
+        code: 'ABC1234',
+      },
+      {
+        name: 'Celebración Familiar',
+        starts_at: '2026-11-29T15:00:00-05:00',
+        rsvp_deadline: '2026-11-24T23:59:59-05:00',
+      },
+      { toastAnchor: 'invitation-send-footer' },
+    );
+
+    expect(mockToastController.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Se abrió WhatsApp, pero no pudimos marcar la invitación como enviada.',
+        color: 'warning',
+        positionAnchor: 'invitation-send-footer',
+      }),
+    );
+    openSpy.mockRestore();
+  });
+
+  describe('showToast y showError', () => {
+    it('creates toast with positionAnchor when positionAnchor is provided to showToast', async () => {
+      await service.showToast('Mensaje de prueba', 'primary', 'invitation-send-footer');
+
+      expect(mockToastController.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'Mensaje de prueba',
+          color: 'primary',
+          position: 'bottom',
+          positionAnchor: 'invitation-send-footer',
+        }),
+      );
+    });
+
+    it('creates toast without positionAnchor when positionAnchor is omitted', async () => {
+      await service.showToast('Mensaje sin ancla', 'primary');
+
+      const callArgs = mockToastController.create.mock.calls.at(-1)?.[0];
+      expect(callArgs).toBeDefined();
+      expect(callArgs).not.toHaveProperty('positionAnchor');
+      expect(callArgs).toEqual({
+        message: 'Mensaje sin ancla',
+        duration: 3000,
+        color: 'primary',
+        position: 'bottom',
+      });
+    });
+
+    it('passes positionAnchor from showError to showToast', async () => {
+      await service.showError(new Error('Error con ancla'), 'invitation-send-footer');
+
+      expect(mockToastController.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          message: 'Error con ancla',
+          color: 'danger',
+          position: 'bottom',
+          positionAnchor: 'invitation-send-footer',
+        }),
+      );
+    });
+  });
+
   describe('markSent', () => {
     it('returns true when markWhatsAppSent succeeds', async () => {
       mockInvitationsRepo.markWhatsAppSent.mockResolvedValue(undefined);

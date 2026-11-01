@@ -262,6 +262,43 @@ describe('InvitationSendPage', () => {
     expect(mockInvitationActions.shareWhatsApp).toHaveBeenCalledTimes(1);
   });
 
+  it('calls shareWhatsApp with toastAnchor: invitation-send-footer and footer has that id', async () => {
+    component.invitations.set([invitationA]);
+    component.loading.set(false);
+    fixture.detectChanges();
+
+    const footer = fixture.nativeElement.querySelector('ion-footer#invitation-send-footer');
+    expect(footer).not.toBeNull();
+
+    await component.sendCurrent();
+
+    expect(mockInvitationActions.shareWhatsApp).toHaveBeenCalledWith(
+      invitationA,
+      expect.anything(),
+      { notifyMarkFailure: false, toastAnchor: 'invitation-send-footer' },
+    );
+  });
+
+  it('calls showError with toastAnchor: invitation-send-footer when undoLast fails', async () => {
+    component.invitations.set([invitationA]);
+    component.loading.set(false);
+    fixture.detectChanges();
+
+    mockInvitationActions.shareWhatsApp.mockResolvedValue({ opened: true, marked: true });
+    await component.sendCurrent();
+    fixture.detectChanges();
+
+    const undoErr = new Error('No se pudo deshacer');
+    mockInvitationsRepo.clearWhatsAppSent.mockRejectedValue(undoErr);
+
+    await component.undoLast();
+
+    expect(mockInvitationActions.showError).toHaveBeenCalledWith(
+      undoErr,
+      'invitation-send-footer',
+    );
+  });
+
   it('shows empty state when no invitations have phone', () => {
     component.invitations.set([invitationD]);
     component.loading.set(false);
@@ -333,7 +370,7 @@ describe('InvitationSendPage', () => {
       expect(mockInvitationActions.shareWhatsApp).toHaveBeenCalledWith(
         invitationA,
         expect.anything(),
-        { notifyMarkFailure: false },
+        { notifyMarkFailure: false, toastAnchor: 'invitation-send-footer' },
       );
     });
 

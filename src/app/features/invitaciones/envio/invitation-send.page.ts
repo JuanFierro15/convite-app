@@ -171,12 +171,14 @@ export class InvitationSendPage implements ViewWillEnter {
           new Error(
             this.eventContext.error() ?? 'No pudimos cargar la información. Inténtalo de nuevo.',
           ),
+          'invitation-send-footer',
         );
         return;
       }
 
       const result = await this.invitationActions.shareWhatsApp(invitation, event, {
         notifyMarkFailure: false,
+        toastAnchor: 'invitation-send-footer',
       });
       if (result.opened && result.marked) {
         const now = new Date().toISOString();
@@ -247,7 +249,7 @@ export class InvitationSendPage implements ViewWillEnter {
       );
       this.lastOpened.set(null);
     } catch (err) {
-      await this.invitationActions.showError(err);
+      await this.invitationActions.showError(err, 'invitation-send-footer');
     } finally {
       this.undoing.set(false);
     }
