@@ -128,10 +128,17 @@ export class ArrivalsPage implements ViewWillEnter, ViewWillLeave {
     return isListStale(downloadedAt, this.now());
   });
 
-  // Los mensajes de error ya traen punto final; el texto de la franja agrega el suyo.
+  // Los mensajes genéricos piden reintentar, y eso choca con "se vuelve a intentar sola":
+  // solo se muestra el detalle de los errores específicos, como la sesión vencida.
   readonly syncErrorText = computed<string | null>(() => {
     const message = this.session.syncError()?.trim();
-    return message ? message.replace(/[.\s]+$/, '') : null;
+    if (!message) {
+      return null;
+    }
+    if (/int[eé]nt(alo|enlo) de nuevo/i.test(message)) {
+      return 'No pudimos sincronizar. Se vuelve a intentar sola.';
+    }
+    return `No pudimos sincronizar: ${message.replace(/[.\s]+$/, '')}. Se vuelve a intentar sola.`;
   });
 
   readonly queueLineText = computed<string>(() => {

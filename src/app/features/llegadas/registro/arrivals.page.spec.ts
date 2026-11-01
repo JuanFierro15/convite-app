@@ -357,6 +357,24 @@ describe('ArrivalsPage', () => {
     expect(retryBtn?.disabled).toBe(true);
   });
 
+  it('omits the detail of generic sync errors that ask to retry', async () => {
+    mockSession.snapshot.set(sampleSnapshot);
+    mockSession.pendingCount.set(1);
+    mockSession.syncError.set('No pudimos guardar el cambio. Inténtalo de nuevo.');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const text = fixture.nativeElement.querySelector('.sync-error p').textContent.trim();
+    expect(text).toBe('No pudimos sincronizar. Se vuelve a intentar sola.');
+
+    mockSession.syncError.set('No pudimos conectarnos. Revisa tu conexión e inténtalo de nuevo.');
+    fixture.detectChanges();
+    await fixture.whenStable();
+    expect(fixture.nativeElement.querySelector('.sync-error p').textContent.trim()).toBe(
+      'No pudimos sincronizar. Se vuelve a intentar sola.',
+    );
+  });
+
   // 7. Resumen de búsqueda: los tres tonos, concordancia "1 de 3 llegó" y textos individuales
   it('calculates arrived summary correctly with tones, singular agreement, and individual texts', () => {
     // All arrived - group

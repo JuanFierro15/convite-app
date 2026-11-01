@@ -71,7 +71,7 @@
 
           @if (syncErrorText(); as syncErr) {
             <div class="sync-error">
-              <p class="text-label">No pudimos sincronizar: {{ syncErr }}. Se vuelve a intentar sola.</p>
+              <p class="text-label">{{ syncErr }}</p>
               <ion-button
                 class="sync-retry"
                 size="small"
