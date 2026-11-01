@@ -191,6 +191,8 @@ describe('GuestInvitationPage', () => {
 
     const codeEl = entryCard.querySelector('.entry-code-card__code');
     expect(codeEl?.textContent?.trim()).toBe(formatInvitationCode('ABCD1234JK'));
+    expect(codeEl?.hasAttribute('aria-label')).toBe(false);
+    expect(fixture.nativeElement.querySelector('.gifts-card__closed')).toBeNull();
 
     const instructionEl = entryCard.querySelector('.entry-code-card__instruction');
     expect(instructionEl?.textContent?.trim()).toBe(
@@ -247,6 +249,8 @@ describe('GuestInvitationPage', () => {
     // Pero el código en texto se mantiene
     const codeEl = entryCard.querySelector('.entry-code-card__code');
     expect(codeEl?.textContent?.trim()).toBe(formatInvitationCode('ABCD1234JK'));
+    expect(codeEl?.hasAttribute('aria-label')).toBe(false);
+    expect(fixture.nativeElement.querySelector('.gifts-card__closed')).toBeNull();
   });
 
   it('adapts closed deadline message to kind', async () => {
@@ -718,6 +722,28 @@ describe('GuestInvitationPage', () => {
   });
 
   describe('mensajes de carga y recarga (puntos 7 y 8)', () => {
+    it('muestra el texto de carga y spinner sin aria-label mientras se carga la invitación', () => {
+      mockGuestApi.getInvitation.mockReturnValue(new Promise(() => {}));
+      fixture = TestBed.createComponent(GuestInvitationPage);
+      fixture.componentRef.setInput('code', 'ABCD1234JK');
+
+      fixture.detectChanges();
+
+      const loadingContainer = fixture.nativeElement.querySelector('.loading-state');
+      expect(loadingContainer).not.toBeNull();
+      expect(loadingContainer.getAttribute('role')).toBe('status');
+      expect(loadingContainer.getAttribute('aria-live')).toBe('polite');
+
+      const textEl = loadingContainer.querySelector('.loading-state__text');
+      expect(textEl?.textContent?.trim()).toBe('Cargando la invitación…');
+
+      const spinner = loadingContainer.querySelector('ion-spinner');
+      expect(spinner).not.toBeNull();
+      expect(spinner.getAttribute('color')).toBe('medium');
+      expect(spinner.getAttribute('aria-hidden')).toBe('true');
+      expect(spinner.hasAttribute('aria-label')).toBe(false);
+    });
+
     it('7.1 RPC devuelve null: mensaje invalid_code sin botón Reintentar', async () => {
       mockGuestApi.getInvitation.mockResolvedValue(null);
       fixture = TestBed.createComponent(GuestInvitationPage);
@@ -728,13 +754,15 @@ describe('GuestInvitationPage', () => {
       await component.loadInvitation();
       fixture.detectChanges();
 
-      const emptyEl = fixture.nativeElement.querySelector('app-empty-state');
-      expect(emptyEl).not.toBeNull();
-      expect(emptyEl?.textContent).toContain(
-        'No encontramos esta invitación. Revisa que el enlace esté completo.',
+      const errorEl = fixture.nativeElement.querySelector('.load-error');
+      expect(errorEl).not.toBeNull();
+      const titleEl = errorEl.querySelector('h1.load-error__title');
+      expect(titleEl?.textContent?.trim()).toBe('No encontramos esta invitación');
+      expect(errorEl.querySelector('.load-error__message')?.textContent?.trim()).toBe(
+        'Revisa que el enlace esté completo.',
       );
       expect(component.canRetry()).toBe(false);
-      expect(fixture.nativeElement.querySelector('app-empty-state ion-button')).toBeNull();
+      expect(fixture.nativeElement.querySelector('.load-error ion-button')).toBeNull();
     });
 
     it('7.2 error de red en carga inicial: mensaje individual con botón Reintentar', async () => {
@@ -747,11 +775,19 @@ describe('GuestInvitationPage', () => {
       await component.loadInvitation();
       fixture.detectChanges();
 
-      const emptyEl = fixture.nativeElement.querySelector('app-empty-state');
-      expect(emptyEl).not.toBeNull();
-      expect(emptyEl?.textContent).toContain(guestErrorMessage('network_error', 'individual'));
+      const errorEl = fixture.nativeElement.querySelector('.load-error');
+      expect(errorEl).not.toBeNull();
+      const titleEl = errorEl.querySelector('h1.load-error__title');
+      expect(titleEl?.textContent?.trim()).toBe('No pudimos cargar la invitación');
+      expect(errorEl?.textContent).toContain(guestErrorMessage('network_error', 'individual'));
       expect(component.canRetry()).toBe(true);
-      expect(fixture.nativeElement.querySelector('app-empty-state ion-button')).not.toBeNull();
+      const retryBtn = fixture.nativeElement.querySelector(
+        '.load-error ion-button',
+      ) as HTMLButtonElement | null;
+      expect(retryBtn).not.toBeNull();
+      const retrySpy = vi.spyOn(component, 'retryLoad');
+      retryBtn?.click();
+      expect(retrySpy).toHaveBeenCalled();
     });
 
     it('7.3 código inesperado en carga inicial: mensaje load_failed con botón Reintentar', async () => {
@@ -764,11 +800,46 @@ describe('GuestInvitationPage', () => {
       await component.loadInvitation();
       fixture.detectChanges();
 
-      const emptyEl = fixture.nativeElement.querySelector('app-empty-state');
-      expect(emptyEl).not.toBeNull();
-      expect(emptyEl?.textContent).toContain(guestErrorMessage('load_failed'));
+      const errorEl = fixture.nativeElement.querySelector('.load-error');
+      expect(errorEl).not.toBeNull();
+      const titleEl = errorEl.querySelector('h1.load-error__title');
+      expect(titleEl?.textContent?.trim()).toBe('No pudimos cargar la invitación');
+      expect(errorEl.querySelector('.load-error__message')?.textContent?.trim()).toBe('Toca "Reintentar".');
       expect(component.canRetry()).toBe(true);
-      expect(fixture.nativeElement.querySelector('app-empty-state ion-button')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('.load-error ion-button')).not.toBeNull();
+    });
+
+    it('muestra aviso de lista cerrada con gifts_open false y lo oculta con true', async () => {
+      // Con gifts_open: true
+      mockGuestApi.getInvitation.mockResolvedValue(mockGroupInvitation);
+      fixture = TestBed.createComponent(GuestInvitationPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('code', 'ABCD1234JK');
+      fixture.detectChanges();
+      await component.loadInvitation();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('.gifts-card__closed')).toBeNull();
+
+      // Con gifts_open: false
+      const closedGifts = {
+        ...mockGroupInvitation,
+        gifts_open: false,
+      };
+      mockGuestApi.getInvitation.mockResolvedValue(closedGifts);
+      const fixtureClosed = TestBed.createComponent(GuestInvitationPage);
+      const compClosed = fixtureClosed.componentInstance;
+      fixtureClosed.componentRef.setInput('code', 'CLOSED123');
+      fixtureClosed.detectChanges();
+      await compClosed.loadInvitation();
+      fixtureClosed.detectChanges();
+
+      const closedEl = fixtureClosed.nativeElement.querySelector('.gifts-card__closed');
+      expect(closedEl).not.toBeNull();
+      expect(closedEl?.textContent?.trim()).toContain('La lista de regalos ya cerró.');
+      const lockIcon = closedEl.querySelector('ion-icon[name="lock-closed-outline"]');
+      expect(lockIcon).not.toBeNull();
+      expect(lockIcon.getAttribute('aria-hidden')).toBe('true');
     });
 
     it('8. recarga fallida con invitación cargada: muestra toast de 8000 ms con Reintentar y Cerrar', async () => {

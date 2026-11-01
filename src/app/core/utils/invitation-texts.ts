@@ -2,6 +2,10 @@ import { joinSpanishNames } from './text';
 
 export type InvitationKind = 'group' | 'individual';
 
+export const GUEST_LOADING_TEXT = 'Cargando la invitación…';
+export const GUEST_INVALID_TITLE = 'No encontramos esta invitación';
+export const GUEST_LOAD_ERROR_TITLE = 'No pudimos cargar la invitación';
+
 export function toInvitationKind(value: unknown): InvitationKind {
   return value === 'individual' ? 'individual' : 'group';
 }
@@ -28,6 +32,10 @@ export interface GuestTexts {
   giftsIntro: readonly string[];
   giftsPageIntro: string;
   giftsPageIntroNoList: string;
+  giftsPageIntroClosed: string;
+  giftsPageIntroSoldOut: string;
+  giftsPageIntroSoldOutNoExtras: string;
+  giftsCardClosed: string;
   giftsAnonymityNote: string;
   giftsMoreBelow: string;
   giftsBasicsTitle: string;
@@ -135,6 +143,16 @@ export function guestTexts(kind: InvitationKind, groupName: string): GuestTexts 
     giftsPageIntroNoList: isIndividual
       ? 'Tu compañía es el mejor regalo. Si te hace ilusión llevar algo, aquí tienes algunas ideas.'
       : 'Su compañía es el mejor regalo. Si les hace ilusión llevar algo, aquí tienen algunas ideas.',
+    giftsPageIntroClosed: isIndividual
+      ? 'La lista de regalos ya cerró. Gracias por tu cariño: tu compañía es el mejor regalo.'
+      : 'La lista de regalos ya cerró. Gracias por su cariño: su compañía es el mejor regalo.',
+    giftsPageIntroSoldOut: isIndividual
+      ? 'Ya eligieron todos los regalos de la lista. Si te hace ilusión llevar algo, al final encontrarás algunas ideas.'
+      : 'Ya eligieron todos los regalos de la lista. Si les hace ilusión llevar algo, al final encontrarán algunas ideas.',
+    giftsPageIntroSoldOutNoExtras: isIndividual
+      ? 'Ya eligieron todos los regalos de la lista. Gracias por tu cariño: tu compañía es el mejor regalo.'
+      : 'Ya eligieron todos los regalos de la lista. Gracias por su cariño: su compañía es el mejor regalo.',
+    giftsCardClosed: 'La lista de regalos ya cerró.',
     giftsAnonymityNote: isIndividual
       ? 'Es anónimo: ni nosotros ni los demás invitados sabremos qué elegiste.'
       : 'Es anónimo: ni nosotros ni los demás invitados sabremos qué eligieron.',

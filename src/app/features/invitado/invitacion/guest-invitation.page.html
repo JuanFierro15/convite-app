@@ -10,7 +10,8 @@
   >
     @if (loading()) {
       <div class="loading-state" role="status" aria-live="polite">
-        <ion-spinner name="crescent" color="primary" aria-label="Cargando invitación"></ion-spinner>
+        <ion-spinner name="crescent" color="medium" aria-hidden="true"></ion-spinner>
+        <p class="loading-state__text">{{ loadingText }}</p>
       </div>
     } @else if (invitation(); as inv) {
       <div class="hero-wrapper">
@@ -224,7 +225,7 @@
               </div>
             }
 
-            <p class="entry-code-card__code" aria-label="Código de invitación">
+            <p class="entry-code-card__code">
               {{ formattedInvitationCode() }}
             </p>
 
@@ -249,6 +250,12 @@
                 <p class="text-body gifts-intro__text">{{ paragraph }}</p>
               }
             </div>
+            @if (!inv.gifts_open) {
+              <p class="text-body gifts-card__closed">
+                <ion-icon name="lock-closed-outline" color="medium" aria-hidden="true"></ion-icon>
+                <span>{{ texts().giftsCardClosed }}</span>
+              </p>
+            }
             <ion-button
               color="primary"
               expand="block"
@@ -274,12 +281,25 @@
         }
       </div>
     } @else {
-      <div class="empty-wrapper">
-        <app-empty-state
-          [message]="emptyStateMessage()"
-          [actionLabel]="canRetry() ? 'Reintentar' : undefined"
-          (action)="retryLoad()"
-        />
+      <div class="load-error">
+        <ion-icon
+          class="load-error__icon"
+          name="mail-unread-outline"
+          color="medium"
+          aria-hidden="true"
+        ></ion-icon>
+        <h1 class="text-section load-error__title">{{ loadErrorTitle() }}</h1>
+        <p class="text-body load-error__message">{{ loadErrorDetail() }}</p>
+        @if (canRetry()) {
+          <ion-button
+            class="load-error__button"
+            fill="outline"
+            color="medium"
+            (click)="retryLoad()"
+          >
+            Reintentar
+          </ion-button>
+        }
       </div>
     }
   </div>

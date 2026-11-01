@@ -1,6 +1,20 @@
-import { guestTexts, toInvitationKind } from './invitation-texts';
+import {
+  GUEST_INVALID_TITLE,
+  GUEST_LOAD_ERROR_TITLE,
+  GUEST_LOADING_TEXT,
+  guestTexts,
+  toInvitationKind,
+} from './invitation-texts';
 
 describe('invitation-texts utils', () => {
+  describe('constantes neutras de carga y error', () => {
+    it('exporta los textos neutros de carga y títulos de error', () => {
+      expect(GUEST_LOADING_TEXT).toBe('Cargando la invitación…');
+      expect(GUEST_INVALID_TITLE).toBe('No encontramos esta invitación');
+      expect(GUEST_LOAD_ERROR_TITLE).toBe('No pudimos cargar la invitación');
+    });
+  });
+
   describe('toInvitationKind', () => {
     it('resolves individual only when value is exactly individual', () => {
       expect(toInvitationKind('individual')).toBe('individual');
@@ -79,6 +93,30 @@ describe('invitation-texts utils', () => {
         'Básicos que nunca sobran, tráelos si quieres',
       );
 
+      expect(groupTexts.giftsPageIntroClosed).toBe(
+        'La lista de regalos ya cerró. Gracias por su cariño: su compañía es el mejor regalo.',
+      );
+      expect(indTexts.giftsPageIntroClosed).toBe(
+        'La lista de regalos ya cerró. Gracias por tu cariño: tu compañía es el mejor regalo.',
+      );
+
+      expect(groupTexts.giftsPageIntroSoldOut).toBe(
+        'Ya eligieron todos los regalos de la lista. Si les hace ilusión llevar algo, al final encontrarán algunas ideas.',
+      );
+      expect(indTexts.giftsPageIntroSoldOut).toBe(
+        'Ya eligieron todos los regalos de la lista. Si te hace ilusión llevar algo, al final encontrarás algunas ideas.',
+      );
+
+      expect(groupTexts.giftsPageIntroSoldOutNoExtras).toBe(
+        'Ya eligieron todos los regalos de la lista. Gracias por su cariño: su compañía es el mejor regalo.',
+      );
+      expect(indTexts.giftsPageIntroSoldOutNoExtras).toBe(
+        'Ya eligieron todos los regalos de la lista. Gracias por tu cariño: tu compañía es el mejor regalo.',
+      );
+
+      expect(groupTexts.giftsCardClosed).toBe('La lista de regalos ya cerró.');
+      expect(indTexts.giftsCardClosed).toBe('La lista de regalos ya cerró.');
+
       const legacyEnvelopeKey = ['gifts', 'Envelope', 'Default'].join('');
       expect(legacyEnvelopeKey in groupTexts).toBe(false);
       expect(legacyEnvelopeKey in indTexts).toBe(false);
@@ -142,6 +180,16 @@ describe('invitation-texts utils', () => {
       expect(texts.giftsPageIntroNoList).toBe(
         'Su compañía es el mejor regalo. Si les hace ilusión llevar algo, aquí tienen algunas ideas.',
       );
+      expect(texts.giftsPageIntroClosed).toBe(
+        'La lista de regalos ya cerró. Gracias por su cariño: su compañía es el mejor regalo.',
+      );
+      expect(texts.giftsPageIntroSoldOut).toBe(
+        'Ya eligieron todos los regalos de la lista. Si les hace ilusión llevar algo, al final encontrarán algunas ideas.',
+      );
+      expect(texts.giftsPageIntroSoldOutNoExtras).toBe(
+        'Ya eligieron todos los regalos de la lista. Gracias por su cariño: su compañía es el mejor regalo.',
+      );
+      expect(texts.giftsCardClosed).toBe('La lista de regalos ya cerró.');
       expect(texts.giftsAnonymityNote).toBe(
         'Es anónimo: ni nosotros ni los demás invitados sabremos qué eligieron.',
       );
@@ -203,6 +251,16 @@ describe('invitation-texts utils', () => {
       expect(texts.giftsPageIntroNoList).toBe(
         'Tu compañía es el mejor regalo. Si te hace ilusión llevar algo, aquí tienes algunas ideas.',
       );
+      expect(texts.giftsPageIntroClosed).toBe(
+        'La lista de regalos ya cerró. Gracias por tu cariño: tu compañía es el mejor regalo.',
+      );
+      expect(texts.giftsPageIntroSoldOut).toBe(
+        'Ya eligieron todos los regalos de la lista. Si te hace ilusión llevar algo, al final encontrarás algunas ideas.',
+      );
+      expect(texts.giftsPageIntroSoldOutNoExtras).toBe(
+        'Ya eligieron todos los regalos de la lista. Gracias por tu cariño: tu compañía es el mejor regalo.',
+      );
+      expect(texts.giftsCardClosed).toBe('La lista de regalos ya cerró.');
       expect(texts.giftsAnonymityNote).toBe(
         'Es anónimo: ni nosotros ni los demás invitados sabremos qué elegiste.',
       );
@@ -242,6 +300,10 @@ describe('invitation-texts utils', () => {
         'giftsTitle',
         'giftsPageIntro',
         'giftsPageIntroNoList',
+        'giftsPageIntroClosed',
+        'giftsPageIntroSoldOut',
+        'giftsPageIntroSoldOutNoExtras',
+        'giftsCardClosed',
         'giftsAnonymityNote',
         'giftsMoreBelow',
         'giftsBasicsTitle',

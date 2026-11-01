@@ -34,12 +34,17 @@ import {
   closeOutline,
   giftOutline,
   locationOutline,
+  lockClosedOutline,
+  mailUnreadOutline,
   mapOutline,
   qrCodeOutline,
   restaurantOutline,
   timeOutline,
 } from 'ionicons/icons';
 import {
+  GUEST_INVALID_TITLE,
+  GUEST_LOAD_ERROR_TITLE,
+  GUEST_LOADING_TEXT,
   GuestApiError,
   GuestApiService,
   GuestInvitation,
@@ -58,7 +63,7 @@ import {
   qrImageDataUrl,
   toBogotaDateInput,
 } from '../../../core';
-import { EmptyStateComponent, IllustrationComponent } from '../../../shared';
+import { IllustrationComponent } from '../../../shared';
 import { GuestIntroComponent } from '../intro/guest-intro.component';
 import {
   INTRO_ENVIRONMENT,
@@ -85,7 +90,6 @@ export interface ConfirmationState {
     IonCardContent,
     IonButton,
     IonIcon,
-    EmptyStateComponent,
     IllustrationComponent,
     GuestIntroComponent,
   ],
@@ -129,6 +133,7 @@ export class GuestInvitationPage implements OnInit, ViewWillEnter {
   readonly rsvpErrors = signal<Record<string, string>>({});
 
   readonly defaultErrorMessage = guestErrorMessage('invalid_code');
+  readonly loadingText = GUEST_LOADING_TEXT;
 
   readonly emptyStateMessage = computed(
     () => this.error() ?? this.defaultErrorMessage,
@@ -137,6 +142,19 @@ export class GuestInvitationPage implements OnInit, ViewWillEnter {
   readonly canRetry = computed(
     () => this.error() !== null && this.errorCode() !== 'invalid_code',
   );
+
+  readonly loadErrorTitle = computed(() =>
+    this.errorCode() === 'invalid_code' || (!this.error() && !this.errorCode())
+      ? GUEST_INVALID_TITLE
+      : GUEST_LOAD_ERROR_TITLE,
+  );
+
+  // Los mensajes de carga empiezan con la misma frase del título; debajo solo va lo que agrega.
+  readonly loadErrorDetail = computed(() => {
+    const message = this.emptyStateMessage();
+    const prefix = `${this.loadErrorTitle()}. `;
+    return message.startsWith(prefix) ? message.slice(prefix.length) : message;
+  });
 
   private fetching = false;
   private fetchPromise: Promise<void> | null = null;
@@ -253,6 +271,8 @@ export class GuestInvitationPage implements OnInit, ViewWillEnter {
       'gift-outline': giftOutline,
       'qr-code-outline': qrCodeOutline,
       'alert-circle-outline': alertCircleOutline,
+      'mail-unread-outline': mailUnreadOutline,
+      'lock-closed-outline': lockClosedOutline,
     });
 
     effect(() => {

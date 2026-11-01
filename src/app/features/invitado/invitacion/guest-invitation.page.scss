@@ -2,22 +2,64 @@
   display: block;
 }
 
+h1,
+h2 {
+  margin: 0;
+  color: var(--ion-text-color);
+  text-wrap: balance;
+}
+
+p {
+  text-wrap: pretty;
+}
+
 .guest-container {
   max-width: 560px;
   margin: 0 auto;
   padding-bottom: var(--space-xl);
 }
 
-.loading-state {
+.loading-state,
+.load-error {
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
-  min-height: 60vh;
-  padding: var(--space-xl);
+  text-align: center;
+  padding: var(--space-xl) var(--space-md);
+  gap: var(--space-md);
 }
 
-.empty-wrapper {
-  padding: var(--space-xl) var(--space-md);
+.loading-state {
+  min-height: 60vh;
+}
+
+.loading-state__text,
+.load-error__message {
+  margin: 0;
+  color: var(--ion-color-medium-shade);
+}
+
+.load-error {
+  min-height: 50vh;
+}
+
+.load-error__icon {
+  font-size: 56px;
+  min-width: 56px;
+}
+
+.load-error__title {
+  color: var(--ion-text-color);
+}
+
+.load-error__message {
+  max-width: 360px;
+}
+
+.load-error__button {
+  margin-top: var(--space-xs);
+  min-height: 48px;
 }
 
 .hero-wrapper {
@@ -56,9 +98,7 @@
 }
 
 .welcome-card__title {
-  margin: 0;
   font-family: var(--font-heading);
-  color: var(--ion-text-color);
 
   &:focus {
     outline: none;
@@ -75,7 +115,9 @@
   color: var(--ion-text-color);
 }
 
-.section-card {
+.section-card,
+.guest-card,
+.confirmation-card {
   margin: 0;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
@@ -88,10 +130,16 @@
   gap: var(--space-md);
 }
 
-.coordinates-list {
+.coordinates-list,
+.guests-list,
+.rsvp-section {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
+}
+
+.rsvp-section {
+  margin-top: var(--space-xs);
 }
 
 .coordinate-row {
@@ -100,9 +148,14 @@
   gap: var(--space-md);
 }
 
-.coordinate-row__icon {
+.coordinate-row__icon,
+.deadline-banner__icon,
+.table-card__icon {
   font-size: 24px;
   min-width: 24px;
+}
+
+.coordinate-row__icon {
   color: var(--ion-color-primary);
   margin-top: 2px;
 }
@@ -129,18 +182,6 @@
   min-height: 54px;
 }
 
-.rsvp-section {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-  margin-top: var(--space-xs);
-}
-
-.section-heading {
-  margin: 0;
-  color: var(--ion-text-color);
-}
-
 .deadline-banner {
   display: flex;
   align-items: center;
@@ -155,23 +196,6 @@
   background-color: var(--ion-color-light);
   color: var(--ion-color-dark);
   font-weight: 600;
-}
-
-.deadline-banner__icon {
-  font-size: 24px;
-  min-width: 24px;
-}
-
-.guests-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-md);
-}
-
-.guest-card {
-  margin: 0;
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-card);
 }
 
 .guest-card__content {
@@ -227,18 +251,19 @@
 }
 
 .confirmation-card {
-  margin: 0;
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-card);
   background-color: var(--ion-color-light);
 }
 
-.confirmation-card__content {
+.confirmation-card__content,
+.entry-code-card__content {
   padding: var(--space-lg);
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
+}
+
+.confirmation-card__content {
   gap: var(--space-md);
 }
 
@@ -248,22 +273,20 @@
   margin: 0 auto;
 }
 
-.confirmation-card__text {
-  margin: 0;
+.confirmation-card__text,
+.table-card__text {
   font-weight: 600;
   color: var(--ion-text-color);
 }
 
+.confirmation-card__text {
+  margin: 0;
+}
+
 .entry-code-card__content {
-  padding: var(--space-lg);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
   gap: var(--space-sm);
 
-  p,
-  h2 {
+  p {
     margin: 0;
   }
 }
@@ -280,11 +303,13 @@
   font-size: 1.5rem;
   font-weight: 700;
   letter-spacing: 0.12em;
+  color: var(--ion-text-color);
 }
 
 .entry-code-card__instruction {
   font-size: 1.125rem;
   font-weight: 700;
+  color: var(--ion-text-color);
 }
 
 .entry-code-card__tip {
@@ -319,11 +344,6 @@
   padding-top: var(--space-sm);
 }
 
-.gifts-card__title {
-  margin: 0;
-  color: var(--ion-text-color);
-}
-
 .gifts-intro {
   display: flex;
   flex-direction: column;
@@ -335,6 +355,19 @@
   line-height: 1.5;
 }
 
+.gifts-card__closed {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  margin: 0;
+  color: var(--ion-text-color);
+
+  ion-icon {
+    font-size: 20px;
+    color: var(--ion-color-medium);
+  }
+}
+
 .table-card__content {
   padding: var(--space-lg);
   display: flex;
@@ -343,14 +376,7 @@
 }
 
 .table-card__icon {
-  font-size: 24px;
-  min-width: 24px;
   color: var(--ion-color-secondary);
-}
-
-.table-card__text {
-  font-weight: 600;
-  color: var(--ion-text-color);
 }
 
 // Mientras la capa del video tapa la invitación, el contenido espera abajo y transparente
