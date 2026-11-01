@@ -15,8 +15,11 @@ export interface GuestTexts {
   reserveGiftConfirm(giftName: string): string;
   giftsTitle: string;
   giftsIntro: readonly string[];
+  giftsPageIntro: string;
+  giftsPageIntroNoList: string;
   giftsAnonymityNote: string;
-  giftsEnvelopeDefault: string;
+  giftsMoreBelow: string;
+  giftsBasicsTitle: string;
   giftReservedConfirmation: string;
   entryCodeTitle: string;
   entryCodeInstruction: string;
@@ -79,12 +82,21 @@ export function guestTexts(kind: InvitationKind, groupName: string): GuestTexts 
       : [
           'Su compañía es el mejor regalo, así que no sientan ningún compromiso. Si les hace ilusión llevar algo, preparamos una lista con algunas ideas.',
         ],
+    giftsPageIntro: isIndividual
+      ? 'Tu compañía es el mejor regalo. Si te hace ilusión llevar algo, elige de la lista para que los regalos no se repitan.'
+      : 'Su compañía es el mejor regalo. Si les hace ilusión llevar algo, elijan de la lista para que los regalos no se repitan.',
+    giftsPageIntroNoList: isIndividual
+      ? 'Tu compañía es el mejor regalo. Si te hace ilusión llevar algo, aquí tienes algunas ideas.'
+      : 'Su compañía es el mejor regalo. Si les hace ilusión llevar algo, aquí tienen algunas ideas.',
     giftsAnonymityNote: isIndividual
-      ? 'Lo que elijas es anónimo: ni nosotros ni los demás invitados sabremos qué regalo elegiste. Solo te pedimos elegirlo para que los regalos no se repitan.'
-      : 'Lo que elijan es anónimo: ni nosotros ni los demás invitados sabremos qué regalo eligieron. Solo les pedimos elegirlo para que los regalos no se repitan.',
-    giftsEnvelopeDefault: isIndividual
-      ? 'Si prefieres hacer un aporte en sobre, el día del evento habrá un lugar para dejarlo.'
-      : 'Si prefieren hacer un aporte en sobre, el día del evento habrá un lugar para dejarlo.',
+      ? 'Es anónimo: ni nosotros ni los demás invitados sabremos qué elegiste.'
+      : 'Es anónimo: ni nosotros ni los demás invitados sabremos qué eligieron.',
+    giftsMoreBelow: isIndividual
+      ? 'Al final también encontrarás'
+      : 'Al final también encontrarán',
+    giftsBasicsTitle: isIndividual
+      ? 'Básicos que nunca sobran, tráelos si quieres'
+      : 'Básicos que nunca sobran, tráiganlos si quieren',
     giftReservedConfirmation: isIndividual
       ? '¡Listo! Quedó elegido. Solo tú sabes que lo elegiste.'
       : '¡Listo! Quedó elegido. Solo ustedes saben que lo eligieron.',

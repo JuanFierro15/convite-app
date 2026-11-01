@@ -16,79 +16,79 @@
       </div>
     } @else if (invitation(); as inv) {
       <div class="gifts-body">
-        <ion-button
-          class="back-button"
-          fill="outline"
-          color="primary"
-          expand="block"
-          [routerLink]="['/i', code()]"
-        >
-          <ion-icon slot="start" name="arrow-back-outline" aria-hidden="true"></ion-icon>
+        <a class="back-link" [routerLink]="['/i', code()]">
+          <ion-icon name="arrow-back-outline" aria-hidden="true"></ion-icon>
           Volver a la invitación
-        </ion-button>
+        </a>
 
-        @if (suggestions().length > 0) {
-          <ion-card class="basics-card" aria-labelledby="basics-title">
-            <ion-card-content class="basics-card__content">
-              <ion-icon class="basics-card__icon" name="heart-outline" aria-hidden="true"></ion-icon>
-              <h2 id="basics-title" class="text-section basics-card__title">Básicos que nunca sobran, tráelos si quieres</h2>
-              <ul class="basics-card__list">
-                @for (item of suggestions(); track item.id) {
-                  <li class="basics-card__item">
-                    <span class="text-name">{{ item.name }}</span>
-                  </li>
-                }
-              </ul>
-            </ion-card-content>
-          </ion-card>
-        }
-
-        @if (envelope()) {
-          <ion-card class="envelope-card" aria-labelledby="envelope-title">
-            <ion-card-content class="envelope-card__content">
-              <ion-icon class="envelope-card__icon" name="mail-outline" aria-hidden="true"></ion-icon>
-              <h2 id="envelope-title" class="text-section envelope-card__title">Lluvia de sobres</h2>
-              <p class="text-body envelope-card__text">{{ envelopeText() }}</p>
-            </ion-card-content>
-          </ion-card>
-        }
-
-        @if (!inv.gifts_open) {
-          <div class="closed-banner" role="status">
-            <ion-icon
-              class="closed-banner__icon"
-              name="lock-closed-outline"
-              aria-hidden="true"
-            ></ion-icon>
-            <span>La lista de regalos ya está cerrada.</span>
-          </div>
-        }
-
-        <div class="anonymity-banner" role="note">
-          <ion-icon class="anonymity-banner__icon" name="eye-off-outline" aria-hidden="true"></ion-icon>
-          <span>{{ texts().giftsAnonymityNote }}</span>
-        </div>
-
-        @if (showReservedConfirmation()) {
-          <ion-card class="reserved-confirmation-card" role="status" aria-live="polite">
-            <ion-card-content class="reserved-confirmation-card__content">
-              <div class="reserved-confirmation-card__illustration">
-                <app-illustration
-                  name="gift-reserved"
-                  alt="Regalo apartado"
-                  [themeId]="inv.event.theme_id"
-                />
-              </div>
-              <p class="text-body reserved-confirmation-card__text">
-                {{ texts().giftReservedConfirmation }}
-              </p>
-            </ion-card-content>
-          </ion-card>
-        }
-
-        @if (gifts().length === 0) {
+        @if (layout().isEmpty) {
           <app-empty-state message="Todavía no hay regalos en la lista." />
         } @else {
+          <section class="gifts-header" aria-labelledby="gifts-title">
+            <app-illustration
+              class="gifts-header__image"
+              name="gift-reserved"
+              alt=""
+              aria-hidden="true"
+              [themeId]="inv.event.theme_id"
+            />
+            <h1 id="gifts-title" class="gifts-header__title">{{ texts().giftsTitle }}</h1>
+            <p class="gifts-header__intro">
+              {{ layout().hasList ? texts().giftsPageIntro : texts().giftsPageIntroNoList }}
+            </p>
+            @if (layout().hasList) {
+              <div class="gifts-header__note" role="note">
+                <ion-icon name="eye-off-outline" aria-hidden="true"></ion-icon>
+                <span>{{ texts().giftsAnonymityNote }}</span>
+              </div>
+            }
+            @if (layout().showShortcuts) {
+              <p class="gifts-header__more">{{ texts().giftsMoreBelow }}</p>
+              <div class="shortcuts">
+                @if (layout().showBasicsShortcut) {
+                  <button
+                    type="button"
+                    class="shortcut shortcut--basics"
+                    (click)="scrollToBasics()"
+                  >
+                    <ion-icon name="heart-outline" aria-hidden="true"></ion-icon>
+                    Básicos
+                  </button>
+                }
+                @if (layout().showEnvelopeShortcut) {
+                  <button
+                    type="button"
+                    class="shortcut shortcut--envelope"
+                    (click)="scrollToEnvelope()"
+                  >
+                    <ion-icon name="mail-outline" aria-hidden="true"></ion-icon>
+                    Lluvia de sobres
+                  </button>
+                }
+              </div>
+            }
+          </section>
+
+          @if (!inv.gifts_open) {
+            <div class="closed-banner" role="status">
+              <ion-icon
+                class="closed-banner__icon"
+                name="lock-closed-outline"
+                aria-hidden="true"
+              ></ion-icon>
+              <span>La lista de regalos ya está cerrada.</span>
+            </div>
+          }
+
+          @if (showReservedConfirmation()) {
+            <ion-card class="reserved-confirmation-card" role="status" aria-live="polite">
+              <ion-icon name="checkmark-circle" aria-hidden="true"></ion-icon>
+              <p class="reserved-confirmation-card__text">
+                {{ texts().giftReservedConfirmation }}
+              </p>
+            </ion-card>
+          }
+
           @if (mine().length > 0) {
             <section class="gift-section gift-section--mine" aria-labelledby="section-mine">
               <h2 id="section-mine" class="text-section gift-section__title">
@@ -147,105 +147,190 @@
             </section>
           }
 
-          <div #giftListStart class="gift-list-anchor"></div>
+          @if (layout().hasList) {
+            <section class="gift-list-section" aria-labelledby="list-title">
+              <div #giftListStart class="gift-list-anchor"></div>
+              <div>
+                <h2 id="list-title" class="gift-list-section__title">La lista de regalos</h2>
+                @if (inv.gifts_open) {
+                  <p class="gift-list-section__count">{{ availabilityLabel() }}</p>
+                }
+              </div>
 
-          @if (showFilter()) {
-            <ion-segment
-              class="gift-filter-segment"
-              [value]="activeCategory()"
-              (ionChange)="onFilterChange($event)"
-              aria-label="Filtrar regalos"
-            >
-              <ion-segment-button value="unique">
-                <ion-label>Únicos ({{ counts().unique }})</ion-label>
-              </ion-segment-button>
-              <ion-segment-button value="repeatable">
-                <ion-label>Repetibles ({{ counts().repeatable }})</ion-label>
-              </ion-segment-button>
-            </ion-segment>
+              @if (showFilter()) {
+                <ion-segment
+                  class="gift-filter-segment"
+                  [value]="activeCategory()"
+                  (ionChange)="onFilterChange($event)"
+                  aria-label="Filtrar regalos"
+                >
+                  <ion-segment-button value="unique">
+                    <ion-label>Únicos ({{ counts().unique }})</ion-label>
+                  </ion-segment-button>
+                  <ion-segment-button value="repeatable">
+                    <ion-label>Repetibles ({{ counts().repeatable }})</ion-label>
+                  </ion-segment-button>
+                </ion-segment>
+              }
+
+              @if (visible().length > 0) {
+                <div class="gift-list">
+                  @for (gift of paged().items; track gift.id) {
+                    <ion-card class="gift-card" [class.gift-card--sold-out]="isSoldOut(gift)">
+                      <ion-card-content class="gift-card__content">
+                        <p class="text-name gift-card__name">{{ gift.name }}</p>
+                        @if (gift.description; as desc) {
+                          <p class="text-body gift-card__description">{{ desc }}</p>
+                        }
+                        @if (gift.reserved_by_me) {
+                          <div class="chosen-badge badge-soft-success">
+                            <ion-icon name="checkmark-circle" aria-hidden="true"></ion-icon>
+                            <span>{{ texts().giftChosenBadge }}</span>
+                          </div>
+                          <ion-button
+                            fill="outline"
+                            color="primary"
+                            expand="block"
+                            [disabled]="!inv.gifts_open || processingGiftId() !== null"
+                            (click)="onConfirmRelease(gift)"
+                          >
+                            @if (processingGiftId() === gift.id) {
+                              <ion-spinner slot="start" name="crescent"></ion-spinner>
+                            }
+                            Liberar
+                          </ion-button>
+                        } @else if (isSoldOut(gift)) {
+                          <div class="taken-badge badge-soft-medium">
+                            <ion-icon name="lock-closed-outline" aria-hidden="true"></ion-icon>
+                            <span>Ya lo eligieron</span>
+                          </div>
+                        } @else {
+                          @if (remainingLabel(gift); as rem) {
+                            <p class="text-label gift-card__remaining">{{ rem }}</p>
+                          }
+                          <ion-button
+                            color="primary"
+                            expand="block"
+                            [disabled]="!inv.gifts_open || processingGiftId() !== null"
+                            (click)="onConfirmReserve(gift)"
+                          >
+                            @if (processingGiftId() === gift.id) {
+                              <ion-spinner slot="start" name="crescent"></ion-spinner>
+                            }
+                            Elegir este regalo
+                          </ion-button>
+                        }
+                      </ion-card-content>
+                    </ion-card>
+                  }
+                </div>
+              }
+
+              @if (paged().totalPages > 1) {
+                <nav class="pagination" aria-label="Paginación de regalos">
+                  <ion-button
+                    fill="outline"
+                    size="small"
+                    class="pagination__button"
+                    [disabled]="paged().page <= 1"
+                    aria-label="Página anterior"
+                    (click)="goToPreviousPage()"
+                  >
+                    <ion-icon slot="start" name="chevron-back-outline" aria-hidden="true"></ion-icon>
+                    Anterior
+                  </ion-button>
+                  <span class="text-label pagination__status" aria-live="polite">
+                    Página {{ paged().page }} de {{ paged().totalPages }}
+                  </span>
+                  <ion-button
+                    fill="outline"
+                    size="small"
+                    class="pagination__button"
+                    [disabled]="paged().page >= paged().totalPages"
+                    aria-label="Página siguiente"
+                    (click)="goToNextPage()"
+                  >
+                    Siguiente
+                    <ion-icon slot="end" name="chevron-forward-outline" aria-hidden="true"></ion-icon>
+                  </ion-button>
+                </nav>
+              }
+            </section>
           }
 
-          @if (visible().length > 0) {
-            <div class="gift-list">
-              @for (gift of paged().items; track gift.id) {
-                <ion-card class="gift-card" [class.gift-card--sold-out]="isSoldOut(gift)">
-                  <ion-card-content class="gift-card__content">
-                    <p class="text-name gift-card__name">{{ gift.name }}</p>
-                    @if (gift.description; as desc) {
-                      <p class="text-body gift-card__description">{{ desc }}</p>
-                    }
-                    @if (gift.reserved_by_me) {
-                      <div class="chosen-badge badge-soft-success">
-                        <ion-icon name="checkmark-circle" aria-hidden="true"></ion-icon>
-                        <span>{{ texts().giftChosenBadge }}</span>
-                      </div>
-                      <ion-button
-                        fill="outline"
-                        color="primary"
-                        expand="block"
-                        [disabled]="!inv.gifts_open || processingGiftId() !== null"
-                        (click)="onConfirmRelease(gift)"
-                      >
-                        @if (processingGiftId() === gift.id) {
-                          <ion-spinner slot="start" name="crescent"></ion-spinner>
-                        }
-                        Liberar
-                      </ion-button>
-                    } @else if (isSoldOut(gift)) {
-                      <div class="taken-badge badge-soft-medium">
-                        <ion-icon name="lock-closed-outline" aria-hidden="true"></ion-icon>
-                        <span>Ya lo eligieron</span>
-                      </div>
-                    } @else {
-                      @if (remainingLabel(gift); as rem) {
-                        <p class="text-label gift-card__remaining">{{ rem }}</p>
-                      }
-                      <ion-button
-                        color="primary"
-                        expand="block"
-                        [disabled]="!inv.gifts_open || processingGiftId() !== null"
-                        (click)="onConfirmReserve(gift)"
-                      >
-                        @if (processingGiftId() === gift.id) {
-                          <ion-spinner slot="start" name="crescent"></ion-spinner>
-                        }
-                        Elegir este regalo
-                      </ion-button>
-                    }
-                  </ion-card-content>
-                </ion-card>
-              }
+          @if (layout().showSeparator) {
+            <div class="others-divider">
+              <span aria-hidden="true"></span>
+              <h2 class="others-divider__title">Otras formas de acompañarnos</h2>
+              <span aria-hidden="true"></span>
             </div>
           }
 
-          @if (paged().totalPages > 1) {
-            <nav class="pagination" aria-label="Paginación de regalos">
-              <ion-button
-                fill="outline"
-                size="small"
-                class="pagination__button"
-                [disabled]="paged().page <= 1"
-                aria-label="Página anterior"
-                (click)="goToPreviousPage()"
+          @if (layout().hasBasics) {
+            <section #basicsCard id="basics-card" class="basics-card" aria-labelledby="basics-title">
+              <ion-icon class="basics-card__icon" name="heart-outline" aria-hidden="true"></ion-icon>
+              <div
+                #basicsTitle
+                id="basics-title"
+                class="basics-card__title"
+                role="heading"
+                [attr.aria-level]="layout().hasList ? 3 : 2"
+                tabindex="-1"
               >
-                <ion-icon slot="start" name="chevron-back-outline" aria-hidden="true"></ion-icon>
-                Anterior
-              </ion-button>
-              <span class="text-label pagination__status" aria-live="polite">
-                Página {{ paged().page }} de {{ paged().totalPages }}
-              </span>
-              <ion-button
-                fill="outline"
-                size="small"
-                class="pagination__button"
-                [disabled]="paged().page >= paged().totalPages"
-                aria-label="Página siguiente"
-                (click)="goToNextPage()"
+                {{ texts().giftsBasicsTitle }}
+              </div>
+              <ul class="basics-card__list">
+                @for (item of suggestions(); track item.id) {
+                  <li class="basics-card__item">{{ item.name }}</li>
+                }
+              </ul>
+            </section>
+          }
+
+          @if (layout().hasEnvelope) {
+            <section #envelopeCard id="envelope-card" class="envelope-card" aria-labelledby="envelope-title">
+              <app-illustration
+                class="envelope-card__rain-1"
+                name="rsvp-sent"
+                alt=""
+                aria-hidden="true"
+                [themeId]="inv.event.theme_id"
+              />
+              <app-illustration
+                class="envelope-card__rain-2"
+                name="rsvp-sent"
+                alt=""
+                aria-hidden="true"
+                [themeId]="inv.event.theme_id"
+              />
+              <app-illustration
+                class="envelope-card__rain-3"
+                name="rsvp-sent"
+                alt=""
+                aria-hidden="true"
+                [themeId]="inv.event.theme_id"
+              />
+              <app-illustration
+                class="envelope-card__main"
+                name="rsvp-sent"
+                alt=""
+                aria-hidden="true"
+                [themeId]="inv.event.theme_id"
+              />
+              <div
+                #envelopeTitle
+                id="envelope-title"
+                class="envelope-card__title"
+                role="heading"
+                [attr.aria-level]="layout().hasList ? 3 : 2"
+                tabindex="-1"
               >
-                Siguiente
-                <ion-icon slot="end" name="chevron-forward-outline" aria-hidden="true"></ion-icon>
-              </ion-button>
-            </nav>
+                Lluvia de sobres
+              </div>
+              @if (envelopeText(); as text) {
+                <p class="envelope-card__text">{{ text }}</p>
+              }
+            </section>
           }
         }
       </div>

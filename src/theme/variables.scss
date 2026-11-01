@@ -108,6 +108,15 @@
   --space-md: 16px;
   --space-lg: 24px;
   --space-xl: 32px;
+
+  /* Ventana de regalos */
+  --convite-envelope-bg: #F5D6CC;
+  --convite-envelope-ink: #6B3A28;
+  --convite-basics-bg: #E5EEEA;
+  --convite-basics-border: #C4D6CE;
+  --convite-basics-ink: #3A5A4D;
+  --convite-track-bg: #F3E6E3;
+  --convite-surface: #FFFFFF;
 }
 
 [data-theme="bautizo"] {
@@ -191,6 +200,15 @@
   /* Sombras cálidas recalculadas con los colores del tema bautizo */
   --shadow-card: 0 4px 16px rgba(var(--ion-text-color-rgb), 0.06), 0 1px 3px rgba(var(--ion-text-color-rgb), 0.04);
   --shadow-floating: 0 8px 24px rgba(var(--ion-color-primary-rgb), 0.20);
+
+  /* Ventana de regalos */
+  --convite-envelope-bg: #EDDDB4;
+  --convite-envelope-ink: #5A4520;
+  --convite-basics-bg: #E7ECE3;
+  --convite-basics-border: #C8D2C0;
+  --convite-basics-ink: #435236;
+  --convite-track-bg: #E4EBEE;
+  --convite-surface: #FFFFFF;
 }
 
 /* Tema: Miel y flores silvestres */
@@ -271,4 +289,13 @@
   /* Sombras cálidas recalculadas con los colores del tema de miel */
   --shadow-card: 0 4px 16px rgba(var(--ion-text-color-rgb), 0.06), 0 1px 3px rgba(var(--ion-text-color-rgb), 0.04);
   --shadow-floating: 0 8px 24px rgba(var(--ion-color-primary-rgb), 0.20);
+
+  /* Ventana de regalos */
+  --convite-envelope-bg: #F4DC9C;
+  --convite-envelope-ink: #5E400F;
+  --convite-basics-bg: #E9EFE8;
+  --convite-basics-border: #C9D6CB;
+  --convite-basics-ink: #3F5A49;
+  --convite-track-bg: #F3EBD6;
+  --convite-surface: #FFFFFF;
 }

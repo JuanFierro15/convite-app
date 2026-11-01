@@ -4,7 +4,10 @@ import {
   GUEST_GIFTS_PAGE_SIZE,
   categoryGuestGifts,
   envelopeGuestGift,
+  guestGiftAvailabilityLabel,
   guestGiftCategory,
+  guestGiftsLayout,
+  hasGuestGiftList,
   isGuestGiftSoldOut,
   myGuestGifts,
   orderGuestGiftIds,
@@ -280,6 +283,181 @@ describe('guest-gift-list utils', () => {
       expect(p3After.totalPages).toBe(2);
       expect(p3After.page).toBe(2);
       expect(p3After.items.length).toBe(6);
+    });
+  });
+
+  describe('guestGiftAvailabilityLabel', () => {
+    it('devuelve el texto exacto con 0, 1 y 19', () => {
+      expect(guestGiftAvailabilityLabel(0)).toBe(
+        'Ya eligieron todos los regalos de la lista',
+      );
+      expect(guestGiftAvailabilityLabel(-1)).toBe(
+        'Ya eligieron todos los regalos de la lista',
+      );
+      expect(guestGiftAvailabilityLabel(1)).toBe('1 regalo todavía disponible');
+      expect(guestGiftAvailabilityLabel(19)).toBe('19 regalos todavía disponibles');
+    });
+  });
+
+  describe('hasGuestGiftList y guestGiftsLayout', () => {
+    it('solo lista', () => {
+      const gifts = [buildGift({ kind: 'unique' })];
+      expect(hasGuestGiftList(gifts)).toBe(true);
+      expect(guestGiftsLayout(gifts)).toEqual({
+        hasList: true,
+        hasBasics: false,
+        hasEnvelope: false,
+        isEmpty: false,
+        showBasicsShortcut: false,
+        showEnvelopeShortcut: false,
+        showShortcuts: false,
+        showSeparator: false,
+      });
+    });
+
+    it('lista + básicos', () => {
+      const gifts = [
+        buildGift({ kind: 'unique' }),
+        buildGift({ kind: 'suggestion' }),
+      ];
+      expect(hasGuestGiftList(gifts)).toBe(true);
+      expect(guestGiftsLayout(gifts)).toEqual({
+        hasList: true,
+        hasBasics: true,
+        hasEnvelope: false,
+        isEmpty: false,
+        showBasicsShortcut: true,
+        showEnvelopeShortcut: false,
+        showShortcuts: true,
+        showSeparator: true,
+      });
+    });
+
+    it('lista + sobres', () => {
+      const gifts = [
+        buildGift({ kind: 'repeatable' }),
+        buildGift({ kind: 'envelope' }),
+      ];
+      expect(hasGuestGiftList(gifts)).toBe(true);
+      expect(guestGiftsLayout(gifts)).toEqual({
+        hasList: true,
+        hasBasics: false,
+        hasEnvelope: true,
+        isEmpty: false,
+        showBasicsShortcut: false,
+        showEnvelopeShortcut: true,
+        showShortcuts: true,
+        showSeparator: true,
+      });
+    });
+
+    it('lista + ambos', () => {
+      const gifts = [
+        buildGift({ kind: 'unique' }),
+        buildGift({ kind: 'suggestion' }),
+        buildGift({ kind: 'envelope' }),
+      ];
+      expect(hasGuestGiftList(gifts)).toBe(true);
+      expect(guestGiftsLayout(gifts)).toEqual({
+        hasList: true,
+        hasBasics: true,
+        hasEnvelope: true,
+        isEmpty: false,
+        showBasicsShortcut: true,
+        showEnvelopeShortcut: true,
+        showShortcuts: true,
+        showSeparator: true,
+      });
+    });
+
+    it('sin lista con solo básicos', () => {
+      const gifts = [buildGift({ kind: 'suggestion' })];
+      expect(hasGuestGiftList(gifts)).toBe(false);
+      expect(guestGiftsLayout(gifts)).toEqual({
+        hasList: false,
+        hasBasics: true,
+        hasEnvelope: false,
+        isEmpty: false,
+        showBasicsShortcut: false,
+        showEnvelopeShortcut: false,
+        showShortcuts: false,
+        showSeparator: false,
+      });
+    });
+
+    it('sin lista con solo sobres', () => {
+      const gifts = [buildGift({ kind: 'envelope' })];
+      expect(hasGuestGiftList(gifts)).toBe(false);
+      expect(guestGiftsLayout(gifts)).toEqual({
+        hasList: false,
+        hasBasics: false,
+        hasEnvelope: true,
+        isEmpty: false,
+        showBasicsShortcut: false,
+        showEnvelopeShortcut: false,
+        showShortcuts: false,
+        showSeparator: false,
+      });
+    });
+
+    it('sin lista con ambos', () => {
+      const gifts = [
+        buildGift({ kind: 'suggestion' }),
+        buildGift({ kind: 'envelope' }),
+      ];
+      expect(hasGuestGiftList(gifts)).toBe(false);
+      expect(guestGiftsLayout(gifts)).toEqual({
+        hasList: false,
+        hasBasics: true,
+        hasEnvelope: true,
+        isEmpty: false,
+        showBasicsShortcut: false,
+        showEnvelopeShortcut: false,
+        showShortcuts: false,
+        showSeparator: false,
+      });
+    });
+
+    it('vacío', () => {
+      const gifts: GuestGift[] = [];
+      expect(hasGuestGiftList(gifts)).toBe(false);
+      expect(guestGiftsLayout(gifts)).toEqual({
+        hasList: false,
+        hasBasics: false,
+        hasEnvelope: false,
+        isEmpty: true,
+        showBasicsShortcut: false,
+        showEnvelopeShortcut: false,
+        showShortcuts: false,
+        showSeparator: false,
+      });
+    });
+
+    it('lista toda agotada (sigue siendo lista)', () => {
+      const gifts = [
+        buildGift({ kind: 'unique', taken: true }),
+        buildGift({ kind: 'repeatable', full: true }),
+      ];
+      expect(hasGuestGiftList(gifts)).toBe(true);
+      const layout = guestGiftsLayout(gifts);
+      expect(layout.hasList).toBe(true);
+      expect(layout.isEmpty).toBe(false);
+    });
+
+    it('solo un libre', () => {
+      const gifts = [buildGift({ kind: 'free' })];
+      expect(hasGuestGiftList(gifts)).toBe(true);
+      const layout = guestGiftsLayout(gifts);
+      expect(layout.hasList).toBe(true);
+      expect(layout.isEmpty).toBe(false);
+    });
+
+    it('solo regalos reserved_by_me (sigue siendo lista)', () => {
+      const gifts = [buildGift({ kind: 'unique', reserved_by_me: true })];
+      expect(hasGuestGiftList(gifts)).toBe(true);
+      const layout = guestGiftsLayout(gifts);
+      expect(layout.hasList).toBe(true);
+      expect(layout.isEmpty).toBe(false);
     });
   });
 });

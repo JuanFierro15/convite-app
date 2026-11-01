@@ -70,9 +70,55 @@ const mockGifts: GuestGift[] = [
   },
 ];
 
+function buildUniqueGift(overrides: Partial<GuestGift> = {}): GuestGift {
+  return {
+    id: 'u-1',
+    name: 'Coche',
+    description: null,
+    category: null,
+    kind: 'unique',
+    reserved_by_me: false,
+    taken: false,
+    remaining: null,
+    full: false,
+    max_reservations: null,
+    ...overrides,
+  };
+}
+
+function buildSuggestionGift(overrides: Partial<GuestGift> = {}): GuestGift {
+  return {
+    id: 's-1',
+    name: 'Pañales',
+    description: null,
+    category: null,
+    kind: 'suggestion',
+    reserved_by_me: false,
+    taken: false,
+    remaining: null,
+    full: false,
+    max_reservations: null,
+    ...overrides,
+  };
+}
+
+function buildEnvelopeGift(overrides: Partial<GuestGift> = {}): GuestGift {
+  return {
+    id: 'env-1',
+    name: 'Sobres',
+    description: 'Aporte voluntario',
+    category: null,
+    kind: 'envelope',
+    reserved_by_me: false,
+    taken: false,
+    remaining: null,
+    full: false,
+    max_reservations: null,
+    ...overrides,
+  };
+}
+
 describe('GuestGiftsPage', () => {
-  let fixture: ComponentFixture<GuestGiftsPage>;
-  let component: GuestGiftsPage;
   let mockGuestApi: {
     getInvitation: ReturnType<typeof vi.fn>;
     getGifts: ReturnType<typeof vi.fn>;
@@ -83,6 +129,19 @@ describe('GuestGiftsPage', () => {
   let mockToastController: {
     create: ReturnType<typeof vi.fn>;
   };
+
+  async function createPage(gifts: GuestGift[], inv: GuestInvitation = mockGroupInvitation) {
+    mockGuestApi.getInvitation.mockResolvedValue(inv);
+    mockGuestApi.getGifts.mockResolvedValue(gifts);
+
+    const fixture = TestBed.createComponent(GuestGiftsPage);
+    const component = fixture.componentInstance;
+    fixture.componentRef.setInput('code', inv.invitation.code);
+    fixture.detectChanges();
+    await component.loadData();
+    fixture.detectChanges();
+    return { fixture, component };
+  }
 
   beforeEach(async () => {
     mockGuestApi = {
@@ -109,16 +168,460 @@ describe('GuestGiftsPage', () => {
     alertController = TestBed.inject(AlertController);
   });
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('renders a.back-link with routerLink to /i/<code\> and no ion-button back button', async () => {
+    const { fixture } = await createPage(mockGifts, mockGroupInvitation);
+
+    const backLink = fixture.nativeElement.querySelector('a.back-link');
+    expect(backLink).not.toBeNull();
+    expect(backLink?.textContent).toContain('Volver a la invitación');
+    expect(backLink?.querySelector('ion-icon[name="arrow-back-outline"]')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('ion-button.back-button')).toBeNull();
+  });
+
+  it('renders elements in correct DOM order with list, basics and envelope: back-link, header, list-section, divider, basics, envelope', async () => {
+    const list: GuestGift[] = [
+      buildUniqueGift({ id: 'u-1' }),
+      buildSuggestionGift({ id: 's-1' }),
+      buildEnvelopeGift({ id: 'env-1' }),
+    ];
+
+    const { fixture } = await createPage(list, mockGroupInvitation);
+
+    const bodyChildren = Array.from(fixture.nativeElement.querySelector('.gifts-body').children);
+    const backLink = fixture.nativeElement.querySelector('.back-link');
+    const header = fixture.nativeElement.querySelector('.gifts-header');
+    const listSection = fixture.nativeElement.querySelector('.gift-list-section');
+    const divider = fixture.nativeElement.querySelector('.others-divider');
+    const basics = fixture.nativeElement.querySelector('.basics-card');
+    const envelope = fixture.nativeElement.querySelector('.envelope-card');
+
+    expect(backLink).not.toBeNull();
+    expect(header).not.toBeNull();
+    expect(listSection).not.toBeNull();
+    expect(divider).not.toBeNull();
+    expect(basics).not.toBeNull();
+    expect(envelope).not.toBeNull();
+
+    const indices = [
+      bodyChildren.indexOf(backLink),
+      bodyChildren.indexOf(header),
+      bodyChildren.indexOf(listSection),
+      bodyChildren.indexOf(divider),
+      bodyChildren.indexOf(basics),
+      bodyChildren.indexOf(envelope),
+    ];
+
+    for (let i = 0; i < indices.length - 1; i++) {
+      expect(indices[i]).toBeGreaterThan(-1);
+      expect(indices[i + 1]).toBeGreaterThan(indices[i]);
+    }
+  });
+
+  describe('cabecera', () => {
+    it('muestra h1 con "Un detalle para Eloise", intro con lista y aviso de anonimato para grupo e individual', async () => {
+      const { fixture: groupFixture } = await createPage([buildUniqueGift()], mockGroupInvitation);
+
+      const headerTitle = groupFixture.nativeElement.querySelector('#gifts-title');
+      expect(headerTitle?.textContent?.trim()).toBe('Un detalle para Eloise');
+
+      const introEl = groupFixture.nativeElement.querySelector('.gifts-header__intro');
+      expect(introEl?.textContent?.trim()).toBe(
+        'Su compañía es el mejor regalo. Si les hace ilusión llevar algo, elijan de la lista para que los regalos no se repitan.',
+      );
+
+      const noteEl = groupFixture.nativeElement.querySelector('.gifts-header__note');
+      expect(noteEl).not.toBeNull();
+      expect(noteEl?.textContent?.trim()).toBe(
+        'Es anónimo: ni nosotros ni los demás invitados sabremos qué eligieron.',
+      );
+
+      // Individual con lista
+      const { fixture: indFixture } = await createPage([buildUniqueGift()], mockIndividualInvitation);
+
+      const indIntro = indFixture.nativeElement.querySelector('.gifts-header__intro');
+      expect(indIntro?.textContent?.trim()).toBe(
+        'Tu compañía es el mejor regalo. Si te hace ilusión llevar algo, elige de la lista para que los regalos no se repitan.',
+      );
+
+      const indNote = indFixture.nativeElement.querySelector('.gifts-header__note');
+      expect(indNote).not.toBeNull();
+      expect(indNote?.textContent?.trim()).toBe(
+        'Es anónimo: ni nosotros ni los demás invitados sabremos qué elegiste.',
+      );
+    });
+
+    it('sin lista muestra intro sin lista y oculta el aviso de anonimato', async () => {
+      const { fixture: groupFixture } = await createPage([buildSuggestionGift()], mockGroupInvitation);
+
+      const introEl = groupFixture.nativeElement.querySelector('.gifts-header__intro');
+      expect(introEl?.textContent?.trim()).toBe(
+        'Su compañía es el mejor regalo. Si les hace ilusión llevar algo, aquí tienen algunas ideas.',
+      );
+      expect(groupFixture.nativeElement.querySelector('.gifts-header__note')).toBeNull();
+
+      // Individual sin lista
+      const { fixture: indFixture } = await createPage([buildSuggestionGift()], mockIndividualInvitation);
+
+      const indIntro = indFixture.nativeElement.querySelector('.gifts-header__intro');
+      expect(indIntro?.textContent?.trim()).toBe(
+        'Tu compañía es el mejor regalo. Si te hace ilusión llevar algo, aquí tienes algunas ideas.',
+      );
+      expect(indFixture.nativeElement.querySelector('.gifts-header__note')).toBeNull();
+    });
+  });
+
+  describe('atajos', () => {
+    it('con lista y básicos: muestra solo atajo de básicos y texto "Al final también..."', async () => {
+      const { fixture } = await createPage(
+        [buildUniqueGift(), buildSuggestionGift()],
+        mockGroupInvitation,
+      );
+
+      expect(fixture.nativeElement.querySelector('.gifts-header__more')?.textContent?.trim()).toBe(
+        'Al final también encontrarán',
+      );
+      expect(fixture.nativeElement.querySelector('.shortcut--basics')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('.shortcut--envelope')).toBeNull();
+    });
+
+    it('con lista y sobres: muestra solo atajo de sobres', async () => {
+      const { fixture } = await createPage(
+        [buildUniqueGift(), buildEnvelopeGift()],
+        mockGroupInvitation,
+      );
+
+      expect(fixture.nativeElement.querySelector('.gifts-header__more')?.textContent?.trim()).toBe(
+        'Al final también encontrarán',
+      );
+      expect(fixture.nativeElement.querySelector('.shortcut--basics')).toBeNull();
+      expect(fixture.nativeElement.querySelector('.shortcut--envelope')).not.toBeNull();
+    });
+
+    it('con solo lista: sin atajos ni gifts-header__more', async () => {
+      const { fixture } = await createPage([buildUniqueGift()], mockGroupInvitation);
+
+      expect(fixture.nativeElement.querySelector('.gifts-header__more')).toBeNull();
+      expect(fixture.nativeElement.querySelector('.shortcuts')).toBeNull();
+    });
+
+    it('sin lista (solo básicos y sobres): sin atajos ni gifts-header__more', async () => {
+      const { fixture } = await createPage(
+        [buildSuggestionGift(), buildEnvelopeGift()],
+        mockGroupInvitation,
+      );
+
+      expect(fixture.nativeElement.querySelector('.gifts-header__more')).toBeNull();
+      expect(fixture.nativeElement.querySelector('.shortcuts')).toBeNull();
+    });
+  });
+
+  describe('conteo de disponibilidad', () => {
+    it('muestra "19 regalos todavía disponibles"', async () => {
+      const gifts19 = Array.from({ length: 19 }, (_, i) =>
+        buildUniqueGift({ id: `g-${i}`, taken: false }),
+      );
+      const { fixture } = await createPage(gifts19, mockGroupInvitation);
+
+      expect(fixture.nativeElement.querySelector('.gift-list-section__count')?.textContent?.trim()).toBe(
+        '19 regalos todavía disponibles',
+      );
+    });
+
+    it('muestra "1 regalo todavía disponible"', async () => {
+      const { fixture } = await createPage([buildUniqueGift({ taken: false })], mockGroupInvitation);
+
+      expect(fixture.nativeElement.querySelector('.gift-list-section__count')?.textContent?.trim()).toBe(
+        '1 regalo todavía disponible',
+      );
+    });
+
+    it('muestra "Ya eligieron todos los regalos de la lista" con 0 disponibles', async () => {
+      const { fixture } = await createPage([buildUniqueGift({ taken: true })], mockGroupInvitation);
+
+      expect(fixture.nativeElement.querySelector('.gift-list-section__count')?.textContent?.trim()).toBe(
+        'Ya eligieron todos los regalos de la lista',
+      );
+    });
+
+    it('con gifts_open false oculta el conteo y muestra .closed-banner', async () => {
+      const invClosed = { ...mockGroupInvitation, gifts_open: false };
+      const { fixture } = await createPage([buildUniqueGift()], invClosed);
+
+      expect(fixture.nativeElement.querySelector('.gift-list-section__count')).toBeNull();
+      expect(fixture.nativeElement.querySelector('.closed-banner')).not.toBeNull();
+    });
+  });
+
+  describe('separador', () => {
+    it('presente con lista y básicos', async () => {
+      const { fixture } = await createPage(
+        [buildUniqueGift(), buildSuggestionGift()],
+        mockGroupInvitation,
+      );
+      expect(fixture.nativeElement.querySelector('.others-divider')).not.toBeNull();
+    });
+
+    it('presente con lista y sobres', async () => {
+      const { fixture } = await createPage(
+        [buildUniqueGift(), buildEnvelopeGift()],
+        mockGroupInvitation,
+      );
+      expect(fixture.nativeElement.querySelector('.others-divider')).not.toBeNull();
+    });
+
+    it('ausente con solo lista', async () => {
+      const { fixture } = await createPage([buildUniqueGift()], mockGroupInvitation);
+      expect(fixture.nativeElement.querySelector('.others-divider')).toBeNull();
+    });
+
+    it('ausente sin lista', async () => {
+      const { fixture } = await createPage(
+        [buildSuggestionGift(), buildEnvelopeGift()],
+        mockGroupInvitation,
+      );
+      expect(fixture.nativeElement.querySelector('.others-divider')).toBeNull();
+    });
+  });
+
+  describe('básicos', () => {
+    it('muestra título con giftsBasicsTitle de la variante y un li por sugerencia', async () => {
+      const suggestions: GuestGift[] = [
+        buildSuggestionGift({ id: 's-1', name: 'Toallitas húmedas' }),
+        buildSuggestionGift({ id: 's-2', name: 'Crema antipañalitis' }),
+      ];
+
+      // Grupo
+      const { fixture: groupFixture } = await createPage(suggestions, mockGroupInvitation);
+      const basicsCard = groupFixture.nativeElement.querySelector('.basics-card');
+      expect(basicsCard).not.toBeNull();
+      expect(basicsCard.querySelector('#basics-title')?.textContent?.trim()).toBe(
+        'Básicos que nunca sobran, tráiganlos si quieren',
+      );
+
+      const items = basicsCard.querySelectorAll('.basics-card__item');
+      expect(items.length).toBe(2);
+      expect(items[0].textContent?.trim()).toBe('Toallitas húmedas');
+      expect(items[1].textContent?.trim()).toBe('Crema antipañalitis');
+
+      // Individual
+      const { fixture: indFixture } = await createPage(suggestions, mockIndividualInvitation);
+      const indTitle = indFixture.nativeElement.querySelector('#basics-title');
+      expect(indTitle?.textContent?.trim()).toBe(
+        'Básicos que nunca sobran, tráelos si quieres',
+      );
+    });
+  });
+
+  describe('sobres', () => {
+    it('con descripción de varias líneas muestra el texto recortado y 4 ilustraciones', async () => {
+      const envelopeGift = buildEnvelopeGift({ description: 'Línea 1\nLínea 2' });
+      const { fixture } = await createPage([envelopeGift], mockGroupInvitation);
+
+      const envelopeCard = fixture.nativeElement.querySelector('.envelope-card');
+      expect(envelopeCard).not.toBeNull();
+      expect(envelopeCard.querySelector('.envelope-card__text')?.textContent?.trim()).toBe(
+        'Línea 1\nLínea 2',
+      );
+
+      // Cuatro ilustraciones
+      expect(envelopeCard.querySelector('.envelope-card__rain-1')).not.toBeNull();
+      expect(envelopeCard.querySelector('.envelope-card__rain-2')).not.toBeNull();
+      expect(envelopeCard.querySelector('.envelope-card__rain-3')).not.toBeNull();
+      expect(envelopeCard.querySelector('.envelope-card__main')).not.toBeNull();
+    });
+
+    it('con null no muestra p.envelope-card__text', async () => {
+      const envelopeGift = buildEnvelopeGift({ description: null });
+      const { fixture } = await createPage([envelopeGift], mockGroupInvitation);
+
+      expect(fixture.nativeElement.querySelector('.envelope-card')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('.envelope-card__text')).toBeNull();
+    });
+
+    it('con texto vacío no muestra p.envelope-card__text', async () => {
+      const envelopeGift = buildEnvelopeGift({ description: '' });
+      const { fixture } = await createPage([envelopeGift], mockGroupInvitation);
+
+      expect(fixture.nativeElement.querySelector('.envelope-card')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('.envelope-card__text')).toBeNull();
+    });
+
+    it('con solo espacios y saltos de línea no muestra p.envelope-card__text', async () => {
+      const envelopeGift = buildEnvelopeGift({ description: '  \n  ' });
+      const { fixture } = await createPage([envelopeGift], mockGroupInvitation);
+
+      expect(fixture.nativeElement.querySelector('.envelope-card')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('.envelope-card__text')).toBeNull();
+    });
+  });
+
+  describe('niveles de encabezado', () => {
+    it('aria-level 3 en básicos y sobres con lista, y h2 en La lista de regalos', async () => {
+      const list: GuestGift[] = [
+        buildUniqueGift(),
+        buildSuggestionGift(),
+        buildEnvelopeGift(),
+      ];
+      const { fixture } = await createPage(list, mockGroupInvitation);
+
+      const listTitle = fixture.nativeElement.querySelector('#list-title');
+      expect(listTitle?.tagName.toLowerCase()).toBe('h2');
+      expect(listTitle?.textContent?.trim()).toBe('La lista de regalos');
+
+      const basicsTitle = fixture.nativeElement.querySelector('#basics-title');
+      expect(basicsTitle?.getAttribute('aria-level')).toBe('3');
+
+      const envelopeTitle = fixture.nativeElement.querySelector('#envelope-title');
+      expect(envelopeTitle?.getAttribute('aria-level')).toBe('3');
+    });
+
+    it('aria-level 2 en básicos y sobres sin lista', async () => {
+      const list: GuestGift[] = [
+        buildSuggestionGift(),
+        buildEnvelopeGift(),
+      ];
+      const { fixture } = await createPage(list, mockGroupInvitation);
+
+      const basicsTitleNoList = fixture.nativeElement.querySelector('#basics-title');
+      expect(basicsTitleNoList?.getAttribute('aria-level')).toBe('2');
+
+      const envelopeTitleNoList = fixture.nativeElement.querySelector('#envelope-title');
+      expect(envelopeTitleNoList?.getAttribute('aria-level')).toBe('2');
+    });
+  });
+
+  describe('vacío total', () => {
+    it('solo muestra el enlace back-link y el estado vacío, sin .gifts-header', async () => {
+      const { fixture } = await createPage([], mockGroupInvitation);
+
+      expect(fixture.nativeElement.querySelector('a.back-link')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('app-empty-state')).not.toBeNull();
+      expect(fixture.nativeElement.querySelector('.gifts-header')).toBeNull();
+      expect(fixture.nativeElement.querySelector('.closed-banner')).toBeNull();
+    });
+  });
+
+  describe('confirmación tras reservar', () => {
+    it('tiene role="status", aria-live="polite" y no tiene app-illustration dentro', async () => {
+      const { fixture, component } = await createPage(mockGifts, mockGroupInvitation);
+      mockGuestApi.reserveGift.mockResolvedValue(mockGifts);
+
+      await component.executeReserve('gift-1');
+      fixture.detectChanges();
+
+      const card = fixture.nativeElement.querySelector('.reserved-confirmation-card');
+      expect(card).not.toBeNull();
+      expect(card.getAttribute('role')).toBe('status');
+      expect(card.getAttribute('aria-live')).toBe('polite');
+      expect(card.querySelector('app-illustration')).toBeNull();
+      expect(card.querySelector('ion-icon[name="checkmark-circle"]')).not.toBeNull();
+    });
+  });
+
+  describe('atajos de scroll y foco', () => {
+    it('atajo de básicos llama a scrollToPoint con 300 ms y deja el foco en #basics-title', async () => {
+      const { fixture, component } = await createPage(
+        [buildUniqueGift(), buildSuggestionGift()],
+        mockGroupInvitation,
+      );
+
+      vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb: FrameRequestCallback) => {
+        cb(0);
+        return 0;
+      });
+
+      const ionContent = component.content()!;
+      const mockScrollEl = {
+        scrollTop: 100,
+        getBoundingClientRect: () => ({ top: 0, bottom: 800, left: 0, right: 400 }),
+      };
+      vi.spyOn(ionContent, 'getScrollElement').mockResolvedValue(mockScrollEl as unknown as HTMLElement);
+      const scrollToPointSpy = vi.spyOn(ionContent, 'scrollToPoint').mockResolvedValue(undefined);
+
+      component.scrollToBasics();
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(scrollToPointSpy).toHaveBeenCalledWith(0, expect.any(Number), 300);
+
+      const basicsTitle = fixture.nativeElement.querySelector('#basics-title');
+      expect(document.activeElement).toBe(basicsTitle);
+    });
+
+    it('con matchMedia prefers-reduced-motion reduce llama con 0 ms', async () => {
+      const { component } = await createPage(
+        [buildUniqueGift(), buildSuggestionGift()],
+        mockGroupInvitation,
+      );
+
+      vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb: FrameRequestCallback) => {
+        cb(0);
+        return 0;
+      });
+
+      vi.spyOn(window, 'matchMedia').mockImplementation((query: string) => ({
+        matches: query.includes('prefers-reduced-motion: reduce'),
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      } as unknown as MediaQueryList));
+
+      const ionContent = component.content()!;
+      const mockScrollEl = {
+        scrollTop: 100,
+        getBoundingClientRect: () => ({ top: 0, bottom: 800, left: 0, right: 400 }),
+      };
+      vi.spyOn(ionContent, 'getScrollElement').mockResolvedValue(mockScrollEl as unknown as HTMLElement);
+      const scrollToPointSpy = vi.spyOn(ionContent, 'scrollToPoint').mockResolvedValue(undefined);
+
+      component.scrollToBasics();
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(scrollToPointSpy).toHaveBeenCalledWith(0, expect.any(Number), 0);
+    });
+
+    it('atajo de sobres llama a scrollToPoint y enfoca #envelope-title', async () => {
+      const { fixture, component } = await createPage(
+        [buildUniqueGift(), buildEnvelopeGift()],
+        mockGroupInvitation,
+      );
+
+      vi.spyOn(window, 'requestAnimationFrame').mockImplementation((cb: FrameRequestCallback) => {
+        cb(0);
+        return 0;
+      });
+
+      const ionContent = component.content()!;
+      const mockScrollEl = {
+        scrollTop: 100,
+        getBoundingClientRect: () => ({ top: 0, bottom: 800, left: 0, right: 400 }),
+      };
+      vi.spyOn(ionContent, 'getScrollElement').mockResolvedValue(mockScrollEl as unknown as HTMLElement);
+      const scrollToPointSpy = vi.spyOn(ionContent, 'scrollToPoint').mockResolvedValue(undefined);
+
+      component.scrollToEnvelope();
+
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(scrollToPointSpy).toHaveBeenCalledWith(0, expect.any(Number), 300);
+
+      const envelopeTitle = fixture.nativeElement.querySelector('#envelope-title');
+      expect(document.activeElement).toBe(envelopeTitle);
+    });
+  });
+
+  // Pruebas existentes de lógica de reserva / liberación / paginación
   it('renders "Su regalo" for group invitation with 1 gift', async () => {
-    mockGuestApi.getInvitation.mockResolvedValue(mockGroupInvitation);
-    mockGuestApi.getGifts.mockResolvedValue(mockGifts);
-
-    fixture = TestBed.createComponent(GuestGiftsPage);
-    component = fixture.componentInstance;
-    fixture.componentRef.setInput('code', 'ABCD1234JK');
-
-    await component.loadData();
-    fixture.detectChanges();
+    const { fixture } = await createPage(mockGifts, mockGroupInvitation);
 
     const headingEl = fixture.nativeElement.querySelector('#section-mine');
     expect(headingEl?.textContent?.trim()).toBe('Su regalo');
@@ -128,15 +631,7 @@ describe('GuestGiftsPage', () => {
   });
 
   it('renders "Tu regalo" for individual invitation with 1 gift', async () => {
-    mockGuestApi.getInvitation.mockResolvedValue(mockIndividualInvitation);
-    mockGuestApi.getGifts.mockResolvedValue(mockGifts);
-
-    fixture = TestBed.createComponent(GuestGiftsPage);
-    component = fixture.componentInstance;
-    fixture.componentRef.setInput('code', 'WXYZ5678LM');
-
-    await component.loadData();
-    fixture.detectChanges();
+    const { fixture } = await createPage(mockGifts, mockIndividualInvitation);
 
     const headingEl = fixture.nativeElement.querySelector('#section-mine');
     expect(headingEl?.textContent?.trim()).toBe('Tu regalo');
@@ -146,18 +641,12 @@ describe('GuestGiftsPage', () => {
   });
 
   it('prompts confirmation with "Alguien más podrá elegirlo" when releasing', async () => {
-    mockGuestApi.getInvitation.mockResolvedValue(mockGroupInvitation);
-    mockGuestApi.getGifts.mockResolvedValue(mockGifts);
+    const { component } = await createPage(mockGifts, mockGroupInvitation);
 
     const alertCreateSpy = vi.spyOn(alertController, 'create').mockResolvedValue({
       present: vi.fn().mockResolvedValue(undefined),
     } as unknown as HTMLIonAlertElement);
 
-    fixture = TestBed.createComponent(GuestGiftsPage);
-    component = fixture.componentInstance;
-    fixture.componentRef.setInput('code', 'ABCD1234JK');
-
-    await component.loadData();
     await component.onConfirmRelease(mockGifts[0]);
 
     expect(alertCreateSpy).toHaveBeenCalledWith(
@@ -169,30 +658,13 @@ describe('GuestGiftsPage', () => {
   });
 
   it('prompts confirmation with reserveGiftConfirm when reserving', async () => {
-    mockGuestApi.getInvitation.mockResolvedValue(mockIndividualInvitation);
-    const unreservedGift: GuestGift = {
-      id: 'g-2',
-      name: 'Silla para carro',
-      description: null,
-      category: null,
-      kind: 'unique',
-      reserved_by_me: false,
-      taken: false,
-      remaining: null,
-      full: false,
-      max_reservations: null,
-    };
-    mockGuestApi.getGifts.mockResolvedValue([unreservedGift]);
+    const unreservedGift = buildUniqueGift({ id: 'g-2', name: 'Silla para carro' });
+    const { component } = await createPage([unreservedGift], mockIndividualInvitation);
 
     const alertCreateSpy = vi.spyOn(alertController, 'create').mockResolvedValue({
       present: vi.fn().mockResolvedValue(undefined),
     } as unknown as HTMLIonAlertElement);
 
-    fixture = TestBed.createComponent(GuestGiftsPage);
-    component = fixture.componentInstance;
-    fixture.componentRef.setInput('code', 'WXYZ5678LM');
-
-    await component.loadData();
     await component.onConfirmReserve(unreservedGift);
 
     expect(alertCreateSpy).toHaveBeenCalledWith(
@@ -204,18 +676,11 @@ describe('GuestGiftsPage', () => {
   });
 
   it('card agotada sin botón y con "Ya lo eligieron"; card elegida con "Tu elección" y "Liberar"; "Quedan 2 de 3" en un repetible', async () => {
-    const soldOutGift: GuestGift = {
+    const soldOutGift = buildUniqueGift({
       id: 'gift-sold',
       name: 'Mochila pañalera',
-      description: null,
-      category: null,
-      kind: 'unique',
-      reserved_by_me: false,
       taken: true,
-      remaining: null,
-      full: false,
-      max_reservations: null,
-    };
+    });
     const chosenGift: GuestGift = {
       id: 'gift-chosen',
       name: 'Biberones',
@@ -241,32 +706,19 @@ describe('GuestGiftsPage', () => {
       max_reservations: 3,
     };
 
-    mockGuestApi.getInvitation.mockResolvedValue(mockIndividualInvitation);
-    mockGuestApi.getGifts.mockResolvedValue([
-      soldOutGift,
-      chosenGift,
-      availableRepeatable,
-    ]);
+    const { fixture, component } = await createPage(
+      [soldOutGift, chosenGift, availableRepeatable],
+      mockIndividualInvitation,
+    );
 
-    fixture = TestBed.createComponent(GuestGiftsPage);
-    component = fixture.componentInstance;
-    fixture.componentRef.setInput('code', 'WXYZ5678LM');
-
-    await component.loadData();
-    // Default filter opens in repeatable; switch to repeatable to see availableRepeatable
-    fixture.detectChanges();
-
-    // Check chosen gift in "Tu regalo"
     const chosenEl = fixture.nativeElement.querySelector('.gift-section--mine .gift-card');
     expect(chosenEl?.textContent).toContain('Tu elección');
     const releaseBtn = chosenEl?.querySelector('ion-button');
     expect(releaseBtn?.textContent).toContain('Liberar');
 
-    // In repeatable category, availableRepeatable is visible
     const repEl = fixture.nativeElement.querySelector('.gift-card__remaining');
     expect(repEl?.textContent?.trim()).toBe('Quedan 2 de 3');
 
-    // Switch to unique filter to inspect sold out card
     component.onFilterChange(new CustomEvent('ionChange', { detail: { value: 'unique' } }));
     fixture.detectChanges();
 
@@ -277,29 +729,20 @@ describe('GuestGiftsPage', () => {
   });
 
   it('si reserveGift falla con gift_full, se muestra el mensaje y se recarga la lista', async () => {
-    mockGuestApi.getInvitation.mockResolvedValue(mockGroupInvitation);
-    mockGuestApi.getGifts.mockResolvedValue([
-      {
-        id: 'gift-rep',
-        name: 'Pañales etapa 1',
-        description: null,
-        category: null,
-        kind: 'repeatable',
-        reserved_by_me: false,
-        taken: false,
-        remaining: 1,
-        full: false,
-        max_reservations: 2,
-      },
-    ]);
-
+    const giftRep: GuestGift = {
+      id: 'gift-rep',
+      name: 'Pañales etapa 1',
+      description: null,
+      category: null,
+      kind: 'repeatable',
+      reserved_by_me: false,
+      taken: false,
+      remaining: 1,
+      full: false,
+      max_reservations: 2,
+    };
+    const { component } = await createPage([giftRep], mockGroupInvitation);
     mockGuestApi.reserveGift.mockRejectedValue(new GuestApiError('gift_full'));
-
-    fixture = TestBed.createComponent(GuestGiftsPage);
-    component = fixture.componentInstance;
-    fixture.componentRef.setInput('code', 'ABCD1234JK');
-
-    await component.loadData();
     mockGuestApi.getGifts.mockClear();
 
     await component.executeReserve('gift-rep');
@@ -313,91 +756,10 @@ describe('GuestGiftsPage', () => {
     expect(mockGuestApi.getGifts).toHaveBeenCalledWith('ABCD1234JK');
   });
 
-  it('renders anonymity banner with plural text for group invitations', async () => {
-    mockGuestApi.getInvitation.mockResolvedValue(mockGroupInvitation);
-    mockGuestApi.getGifts.mockResolvedValue(mockGifts);
-
-    fixture = TestBed.createComponent(GuestGiftsPage);
-    component = fixture.componentInstance;
-    fixture.componentRef.setInput('code', 'ABCD1234JK');
-
-    await component.loadData();
-    fixture.detectChanges();
-
-    const bannerEl = fixture.nativeElement.querySelector('.anonymity-banner');
-    expect(bannerEl).not.toBeNull();
-    expect(bannerEl?.textContent?.trim()).toBe(
-      'Lo que elijan es anónimo: ni nosotros ni los demás invitados sabremos qué regalo eligieron. Solo les pedimos elegirlo para que los regalos no se repitan.',
-    );
-  });
-
-  it('renders anonymity banner with singular text for individual invitations', async () => {
-    mockGuestApi.getInvitation.mockResolvedValue(mockIndividualInvitation);
-    mockGuestApi.getGifts.mockResolvedValue(mockGifts);
-
-    fixture = TestBed.createComponent(GuestGiftsPage);
-    component = fixture.componentInstance;
-    fixture.componentRef.setInput('code', 'WXYZ5678LM');
-
-    await component.loadData();
-    fixture.detectChanges();
-
-    const bannerEl = fixture.nativeElement.querySelector('.anonymity-banner');
-    expect(bannerEl).not.toBeNull();
-    expect(bannerEl?.textContent?.trim()).toBe(
-      'Lo que elijas es anónimo: ni nosotros ni los demás invitados sabremos qué regalo elegiste. Solo te pedimos elegirlo para que los regalos no se repitan.',
-    );
-  });
-
-  it('renders reserved confirmation text matching giftReservedConfirmation without the group name', async () => {
-    mockGuestApi.getInvitation.mockResolvedValue(mockGroupInvitation);
-    mockGuestApi.getGifts.mockResolvedValue(mockGifts);
-    mockGuestApi.reserveGift.mockResolvedValue(mockGifts);
-
-    fixture = TestBed.createComponent(GuestGiftsPage);
-    component = fixture.componentInstance;
-    fixture.componentRef.setInput('code', 'ABCD1234JK');
-
-    await component.loadData();
-    await component.executeReserve('gift-1');
-    fixture.detectChanges();
-
-    const confirmationEl = fixture.nativeElement.querySelector(
-      '.reserved-confirmation-card__text',
-    );
-    expect(confirmationEl).not.toBeNull();
-    expect(confirmationEl?.textContent?.trim()).toBe(
-      '¡Listo! Quedó elegido. Solo ustedes saben que lo eligieron.',
-    );
-    expect(confirmationEl?.textContent).not.toContain(mockGroupInvitation.invitation.group_name);
-  });
-
   it('abre en Repetibles con los conteos correctos; al tocar Únicos cambia la lista y vuelve a la página 1', async () => {
     const list: GuestGift[] = [
-      {
-        id: 'u-1',
-        name: 'Coche',
-        description: null,
-        category: null,
-        kind: 'unique',
-        reserved_by_me: false,
-        taken: false,
-        remaining: null,
-        full: false,
-        max_reservations: null,
-      },
-      {
-        id: 'u-2',
-        name: 'Cuna',
-        description: null,
-        category: null,
-        kind: 'unique',
-        reserved_by_me: false,
-        taken: false,
-        remaining: null,
-        full: false,
-        max_reservations: null,
-      },
+      buildUniqueGift({ id: 'u-1', name: 'Coche' }),
+      buildUniqueGift({ id: 'u-2', name: 'Cuna' }),
       {
         id: 'r-1',
         name: 'Pañales',
@@ -412,15 +774,7 @@ describe('GuestGiftsPage', () => {
       },
     ];
 
-    mockGuestApi.getInvitation.mockResolvedValue(mockIndividualInvitation);
-    mockGuestApi.getGifts.mockResolvedValue(list);
-
-    fixture = TestBed.createComponent(GuestGiftsPage);
-    component = fixture.componentInstance;
-    fixture.componentRef.setInput('code', 'WXYZ5678LM');
-
-    await component.loadData();
-    fixture.detectChanges();
+    const { fixture, component } = await createPage(list, mockIndividualInvitation);
 
     expect(component.preferredFilter()).toBe('repeatable');
     expect(component.activeCategory()).toBe('repeatable');
@@ -429,7 +783,6 @@ describe('GuestGiftsPage', () => {
     expect(component.visible().length).toBe(1);
     expect(component.visible()[0].id).toBe('r-1');
 
-    // Cambiar a Únicos
     component.onFilterChange(new CustomEvent('ionChange', { detail: { value: 'unique' } }));
     fixture.detectChanges();
 
@@ -438,154 +791,6 @@ describe('GuestGiftsPage', () => {
     expect(component.page()).toBe(1);
     expect(component.visible().length).toBe(2);
     expect(component.visible().map((g) => g.id)).toEqual(['u-1', 'u-2']);
-  });
-
-  it('con sugerencias, la card .basics-card aparece antes del aviso de anonimato, muestra el título exacto, un li por sugerencia sin descripción y sin botones', async () => {
-    const list: GuestGift[] = [
-      {
-        id: 'r-1',
-        name: 'Pañales',
-        description: null,
-        category: null,
-        kind: 'repeatable',
-        reserved_by_me: false,
-        taken: false,
-        remaining: 2,
-        full: false,
-        max_reservations: 3,
-      },
-      {
-        id: 's-1',
-        name: 'Libro de cuentos',
-        description: 'Cualquier edición ilustrada',
-        category: null,
-        kind: 'suggestion',
-        reserved_by_me: false,
-        taken: false,
-        remaining: null,
-        full: false,
-        max_reservations: null,
-      },
-      {
-        id: 's-2',
-        name: 'Ropa de 3 a 6 meses',
-        description: 'Colores pastel',
-        category: null,
-        kind: 'suggestion',
-        reserved_by_me: false,
-        taken: false,
-        remaining: null,
-        full: false,
-        max_reservations: null,
-      },
-    ];
-
-    mockGuestApi.getInvitation.mockResolvedValue(mockIndividualInvitation);
-    mockGuestApi.getGifts.mockResolvedValue(list);
-
-    fixture = TestBed.createComponent(GuestGiftsPage);
-    component = fixture.componentInstance;
-    fixture.componentRef.setInput('code', 'WXYZ5678LM');
-
-    await component.loadData();
-    fixture.detectChanges();
-
-    const basicsCard = fixture.nativeElement.querySelector('.basics-card');
-    const anonymityBanner = fixture.nativeElement.querySelector('.anonymity-banner');
-    expect(basicsCard).not.toBeNull();
-    expect(anonymityBanner).not.toBeNull();
-
-    const children = Array.from(fixture.nativeElement.querySelector('.gifts-body').children);
-    const basicsIndex = children.indexOf(basicsCard);
-    const anonymityIndex = children.indexOf(anonymityBanner);
-    expect(basicsIndex).toBeGreaterThan(-1);
-    expect(anonymityIndex).toBeGreaterThan(basicsIndex);
-
-    const titleEl = basicsCard.querySelector('.basics-card__title');
-    expect(titleEl?.textContent?.trim()).toBe('Básicos que nunca sobran, tráelos si quieres');
-
-    const items = basicsCard.querySelectorAll('.basics-card__item');
-    expect(items.length).toBe(2);
-    expect(items[0].textContent).toContain('Libro de cuentos');
-    expect(items[0].textContent).not.toContain('Cualquier edición ilustrada');
-    expect(items[1].textContent).toContain('Ropa de 3 a 6 meses');
-    expect(items[1].textContent).not.toContain('Colores pastel');
-    expect(basicsCard.querySelectorAll('.basics-card__item ion-icon').length).toBe(0);
-
-    expect(basicsCard.querySelectorAll('ion-button').length).toBe(0);
-  });
-
-  it('la card .basics-card aparece también con el filtro Únicos activo', async () => {
-    const list: GuestGift[] = [
-      {
-        id: 'u-1',
-        name: 'Cuna de viaje',
-        description: null,
-        category: null,
-        kind: 'unique',
-        reserved_by_me: false,
-        taken: false,
-        remaining: null,
-        full: false,
-        max_reservations: null,
-      },
-      {
-        id: 'r-1',
-        name: 'Pañales',
-        description: null,
-        category: null,
-        kind: 'repeatable',
-        reserved_by_me: false,
-        taken: false,
-        remaining: 2,
-        full: false,
-        max_reservations: 3,
-      },
-      {
-        id: 's-1',
-        name: 'Toallitas húmedas',
-        description: 'Sin fragancia',
-        category: null,
-        kind: 'suggestion',
-        reserved_by_me: false,
-        taken: false,
-        remaining: null,
-        full: false,
-        max_reservations: null,
-      },
-    ];
-
-    mockGuestApi.getInvitation.mockResolvedValue(mockIndividualInvitation);
-    mockGuestApi.getGifts.mockResolvedValue(list);
-
-    fixture = TestBed.createComponent(GuestGiftsPage);
-    component = fixture.componentInstance;
-    fixture.componentRef.setInput('code', 'WXYZ5678LM');
-
-    await component.loadData();
-    fixture.detectChanges();
-
-    component.onFilterChange(new CustomEvent('ionChange', { detail: { value: 'unique' } }));
-    fixture.detectChanges();
-
-    expect(component.activeCategory()).toBe('unique');
-    const basicsCard = fixture.nativeElement.querySelector('.basics-card');
-    expect(basicsCard).not.toBeNull();
-    expect(basicsCard.textContent).toContain('Toallitas húmedas');
-  });
-
-  it('sin sugerencias, la card .basics-card no aparece', async () => {
-    mockGuestApi.getInvitation.mockResolvedValue(mockIndividualInvitation);
-    mockGuestApi.getGifts.mockResolvedValue(mockGifts);
-
-    fixture = TestBed.createComponent(GuestGiftsPage);
-    component = fixture.componentInstance;
-    fixture.componentRef.setInput('code', 'WXYZ5678LM');
-
-    await component.loadData();
-    fixture.detectChanges();
-
-    expect(fixture.nativeElement.querySelector('.basics-card')).toBeNull();
   });
 
   it('con 8 repetibles disponibles hay 2 páginas; "Siguiente" muestra 2 cards y "Página 2 de 2"', async () => {
@@ -602,15 +807,7 @@ describe('GuestGiftsPage', () => {
       max_reservations: 3,
     }));
 
-    mockGuestApi.getInvitation.mockResolvedValue(mockIndividualInvitation);
-    mockGuestApi.getGifts.mockResolvedValue(list);
-
-    fixture = TestBed.createComponent(GuestGiftsPage);
-    component = fixture.componentInstance;
-    fixture.componentRef.setInput('code', 'WXYZ5678LM');
-
-    await component.loadData();
-    fixture.detectChanges();
+    const { fixture, component } = await createPage(list, mockIndividualInvitation);
 
     expect(component.paged().totalPages).toBe(2);
     expect(component.paged().page).toBe(1);
@@ -640,23 +837,14 @@ describe('GuestGiftsPage', () => {
       max_reservations: 3,
     }));
 
-    mockGuestApi.getInvitation.mockResolvedValue(mockIndividualInvitation);
-    mockGuestApi.getGifts.mockResolvedValue(list);
+    const { fixture, component } = await createPage(list, mockIndividualInvitation);
 
-    fixture = TestBed.createComponent(GuestGiftsPage);
-    component = fixture.componentInstance;
-    fixture.componentRef.setInput('code', 'WXYZ5678LM');
-    fixture.detectChanges();
-    await component.loadData();
-    fixture.detectChanges();
-
-    component.goToNextPage(); // pasa a página 2
+    component.goToNextPage();
     fixture.detectChanges();
 
     expect(component.paged().page).toBe(2);
     expect(component.paged().items.map((g) => g.id)).toEqual(['rep-7']);
 
-    // Al reservar rep-7
     const updated = list.map((g) => (g.id === 'rep-7' ? { ...g, reserved_by_me: true } : g));
     mockGuestApi.reserveGift.mockResolvedValue(updated);
 
@@ -706,17 +894,8 @@ describe('GuestGiftsPage', () => {
       max_reservations: 2,
     };
 
-    mockGuestApi.getInvitation.mockResolvedValue(mockIndividualInvitation);
-    mockGuestApi.getGifts.mockResolvedValue([g1, g2, g3]);
+    const { fixture, component } = await createPage([g1, g2, g3], mockIndividualInvitation);
 
-    fixture = TestBed.createComponent(GuestGiftsPage);
-    component = fixture.componentInstance;
-    fixture.componentRef.setInput('code', 'WXYZ5678LM');
-    fixture.detectChanges();
-    await component.loadData();
-    fixture.detectChanges();
-
-    // Simula que al reservar g1, el backend reporta que g2 se agotó por otra persona
     const updated = [
       { ...g1, reserved_by_me: true },
       { ...g2, full: true, remaining: 0 },
@@ -727,287 +906,17 @@ describe('GuestGiftsPage', () => {
     await component.executeReserve('g-1');
     fixture.detectChanges();
 
-    // g1 pasó a "mine", mientras que g2 (agotado) y g3 conservan su orden inicial
     expect(component.visible().map((g) => g.id)).toEqual(['g-2', 'g-3']);
     expect(component.visible()[0].full).toBe(true);
   });
 
-  it('con un envelope con descripción, aparece .envelope-card con el título "Lluvia de sobres" y la descripción', async () => {
-    const envelopeGift: GuestGift = {
-      id: 'env-1',
-      name: 'Lluvia de sobres',
-      description: 'Lluvia de sobres para la alcancía de Martina',
-      category: null,
-      kind: 'envelope',
-      reserved_by_me: false,
-      taken: false,
-      remaining: null,
-      full: false,
-      max_reservations: null,
-    };
-    mockGuestApi.getInvitation.mockResolvedValue(mockGroupInvitation);
-    mockGuestApi.getGifts.mockResolvedValue([envelopeGift]);
-
-    fixture = TestBed.createComponent(GuestGiftsPage);
-    component = fixture.componentInstance;
-    fixture.componentRef.setInput('code', 'ABCD1234JK');
-
-    await component.loadData();
-    fixture.detectChanges();
-
-    const envelopeCard = fixture.nativeElement.querySelector('.envelope-card');
-    expect(envelopeCard).not.toBeNull();
-    const titleEl = envelopeCard.querySelector('.envelope-card__title');
-    expect(titleEl?.textContent?.trim()).toBe('Lluvia de sobres');
-    const textEl = envelopeCard.querySelector('.envelope-card__text');
-    expect(textEl?.textContent?.trim()).toBe('Lluvia de sobres para la alcancía de Martina');
-  });
-
-  it('con descripción vacía o solo espacios, muestra el texto por defecto de grupo o individual', async () => {
-    const emptyDescEnvelope: GuestGift = {
-      id: 'env-1',
-      name: 'Lluvia de sobres',
-      description: '   ',
-      category: null,
-      kind: 'envelope',
-      reserved_by_me: false,
-      taken: false,
-      remaining: null,
-      full: false,
-      max_reservations: null,
-    };
-
-    // Caso grupo
-    mockGuestApi.getInvitation.mockResolvedValue(mockGroupInvitation);
-    mockGuestApi.getGifts.mockResolvedValue([emptyDescEnvelope]);
-
-    fixture = TestBed.createComponent(GuestGiftsPage);
-    component = fixture.componentInstance;
-    fixture.componentRef.setInput('code', 'ABCD1234JK');
-
-    await component.loadData();
-    fixture.detectChanges();
-
-    let textEl = fixture.nativeElement.querySelector('.envelope-card__text');
-    expect(textEl?.textContent?.trim()).toBe(
-      'Si prefieren hacer un aporte en sobre, el día del evento habrá un lugar para dejarlo.',
-    );
-
-    // Caso individual (con descripción null)
-    const nullDescEnvelope: GuestGift = { ...emptyDescEnvelope, description: null };
-    mockGuestApi.getInvitation.mockResolvedValue(mockIndividualInvitation);
-    mockGuestApi.getGifts.mockResolvedValue([nullDescEnvelope]);
-
-    const indFixture = TestBed.createComponent(GuestGiftsPage);
-    const indComponent = indFixture.componentInstance;
-    indFixture.componentRef.setInput('code', 'WXYZ5678LM');
-
-    await indComponent.loadData();
-    indFixture.detectChanges();
-
-    textEl = indFixture.nativeElement.querySelector('.envelope-card__text');
-    expect(textEl?.textContent?.trim()).toBe(
-      'Si prefieres hacer un aporte en sobre, el día del evento habrá un lugar para dejarlo.',
-    );
-  });
-
   it('sin envelope, no hay .envelope-card', async () => {
-    mockGuestApi.getInvitation.mockResolvedValue(mockIndividualInvitation);
-    mockGuestApi.getGifts.mockResolvedValue(mockGifts);
-
-    fixture = TestBed.createComponent(GuestGiftsPage);
-    component = fixture.componentInstance;
-    fixture.componentRef.setInput('code', 'WXYZ5678LM');
-
-    await component.loadData();
-    fixture.detectChanges();
-
+    const { fixture } = await createPage(mockGifts, mockIndividualInvitation);
     expect(fixture.nativeElement.querySelector('.envelope-card')).toBeNull();
   });
 
-  it('la card de básicos no muestra la lluvia de sobres aunque haya sugerencias y envelope a la vez', async () => {
-    const list: GuestGift[] = [
-      {
-        id: 's-1',
-        name: 'Pañales ecológicos',
-        description: null,
-        category: null,
-        kind: 'suggestion',
-        reserved_by_me: false,
-        taken: false,
-        remaining: null,
-        full: false,
-        max_reservations: null,
-      },
-      {
-        id: 'env-1',
-        name: 'Lluvia de sobres',
-        description: null,
-        category: null,
-        kind: 'envelope',
-        reserved_by_me: false,
-        taken: false,
-        remaining: null,
-        full: false,
-        max_reservations: null,
-      },
-    ];
-
-    mockGuestApi.getInvitation.mockResolvedValue(mockGroupInvitation);
-    mockGuestApi.getGifts.mockResolvedValue(list);
-
-    fixture = TestBed.createComponent(GuestGiftsPage);
-    component = fixture.componentInstance;
-    fixture.componentRef.setInput('code', 'ABCD1234JK');
-
-    await component.loadData();
-    fixture.detectChanges();
-
-    const basicsCard = fixture.nativeElement.querySelector('.basics-card');
-    expect(basicsCard).not.toBeNull();
-    expect(basicsCard?.textContent).toContain('Pañales ecológicos');
-    expect(basicsCard?.textContent).not.toContain('Lluvia de sobres');
-  });
-
-  it('la card de lluvia de sobres se ve con el filtro en "Únicos" y en la otra categoría', async () => {
-    const list: GuestGift[] = [
-      {
-        id: 'u-1',
-        name: 'Cuna',
-        description: null,
-        category: null,
-        kind: 'unique',
-        reserved_by_me: false,
-        taken: false,
-        remaining: null,
-        full: false,
-        max_reservations: null,
-      },
-      {
-        id: 'r-1',
-        name: 'Pañales',
-        description: null,
-        category: null,
-        kind: 'repeatable',
-        reserved_by_me: false,
-        taken: false,
-        remaining: 2,
-        full: false,
-        max_reservations: 3,
-      },
-      {
-        id: 'env-1',
-        name: 'Lluvia de sobres',
-        description: 'Aporte en sobre',
-        category: null,
-        kind: 'envelope',
-        reserved_by_me: false,
-        taken: false,
-        remaining: null,
-        full: false,
-        max_reservations: null,
-      },
-    ];
-
-    mockGuestApi.getInvitation.mockResolvedValue(mockIndividualInvitation);
-    mockGuestApi.getGifts.mockResolvedValue(list);
-
-    fixture = TestBed.createComponent(GuestGiftsPage);
-    component = fixture.componentInstance;
-    fixture.componentRef.setInput('code', 'WXYZ5678LM');
-
-    await component.loadData();
-    fixture.detectChanges();
-
-    expect(component.activeCategory()).toBe('repeatable');
-    expect(fixture.nativeElement.querySelector('.envelope-card')).not.toBeNull();
-
-    component.onFilterChange(new CustomEvent('ionChange', { detail: { value: 'unique' } }));
-    fixture.detectChanges();
-
-    expect(component.activeCategory()).toBe('unique');
-    expect(fixture.nativeElement.querySelector('.envelope-card')).not.toBeNull();
-  });
-
-  it('la .envelope-card está en el DOM después de .basics-card y antes de .anonymity-banner', async () => {
-    const list: GuestGift[] = [
-      {
-        id: 's-1',
-        name: 'Toallitas húmedas',
-        description: null,
-        category: null,
-        kind: 'suggestion',
-        reserved_by_me: false,
-        taken: false,
-        remaining: null,
-        full: false,
-        max_reservations: null,
-      },
-      {
-        id: 'env-1',
-        name: 'Lluvia de sobres',
-        description: 'Aporte libre',
-        category: null,
-        kind: 'envelope',
-        reserved_by_me: false,
-        taken: false,
-        remaining: null,
-        full: false,
-        max_reservations: null,
-      },
-    ];
-
-    mockGuestApi.getInvitation.mockResolvedValue(mockGroupInvitation);
-    mockGuestApi.getGifts.mockResolvedValue(list);
-
-    fixture = TestBed.createComponent(GuestGiftsPage);
-    component = fixture.componentInstance;
-    fixture.componentRef.setInput('code', 'ABCD1234JK');
-
-    await component.loadData();
-    fixture.detectChanges();
-
-    const basicsCard = fixture.nativeElement.querySelector('.basics-card');
-    const envelopeCard = fixture.nativeElement.querySelector('.envelope-card');
-    const anonymityBanner = fixture.nativeElement.querySelector('.anonymity-banner');
-
-    expect(basicsCard).not.toBeNull();
-    expect(envelopeCard).not.toBeNull();
-    expect(anonymityBanner).not.toBeNull();
-
-    const children = Array.from(fixture.nativeElement.querySelector('.gifts-body').children);
-    const basicsIndex = children.indexOf(basicsCard);
-    const envelopeIndex = children.indexOf(envelopeCard);
-    const anonymityIndex = children.indexOf(anonymityBanner);
-
-    expect(basicsIndex).toBeGreaterThan(-1);
-    expect(envelopeIndex).toBeGreaterThan(basicsIndex);
-    expect(anonymityIndex).toBeGreaterThan(envelopeIndex);
-  });
-
   it('no hay ningún botón dentro de la .envelope-card', async () => {
-    const envelopeGift: GuestGift = {
-      id: 'env-1',
-      name: 'Lluvia de sobres',
-      description: 'Aporte voluntario',
-      category: null,
-      kind: 'envelope',
-      reserved_by_me: false,
-      taken: false,
-      remaining: null,
-      full: false,
-      max_reservations: null,
-    };
-
-    mockGuestApi.getInvitation.mockResolvedValue(mockGroupInvitation);
-    mockGuestApi.getGifts.mockResolvedValue([envelopeGift]);
-
-    fixture = TestBed.createComponent(GuestGiftsPage);
-    component = fixture.componentInstance;
-    fixture.componentRef.setInput('code', 'ABCD1234JK');
-
-    await component.loadData();
-    fixture.detectChanges();
+    const { fixture } = await createPage([buildEnvelopeGift()], mockGroupInvitation);
 
     const envelopeCard = fixture.nativeElement.querySelector('.envelope-card');
     expect(envelopeCard).not.toBeNull();

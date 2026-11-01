@@ -162,3 +162,55 @@ export function visibleGuestGifts(
 
   return result;
 }
+
+/** Hay lista: al menos un regalo único, repetible o libre, agotado, elegido o no. */
+export function hasGuestGiftList(gifts: readonly GuestGift[]): boolean {
+  return gifts.some(
+    (gift) =>
+      gift.kind === 'unique' || gift.kind === 'repeatable' || gift.kind === 'free',
+  );
+}
+
+export interface GuestGiftsLayout {
+  hasList: boolean;
+  hasBasics: boolean;
+  hasEnvelope: boolean;
+  isEmpty: boolean;
+  showBasicsShortcut: boolean;
+  showEnvelopeShortcut: boolean;
+  showShortcuts: boolean;
+  showSeparator: boolean;
+}
+
+export function guestGiftsLayout(gifts: readonly GuestGift[]): GuestGiftsLayout {
+  const hasList = hasGuestGiftList(gifts);
+  const hasBasics = suggestionGuestGifts(gifts).length > 0;
+  const hasEnvelope = envelopeGuestGift(gifts) !== null;
+  const isEmpty = !hasList && !hasBasics && !hasEnvelope;
+  const showBasicsShortcut = hasList && hasBasics;
+  const showEnvelopeShortcut = hasList && hasEnvelope;
+  const showShortcuts = showBasicsShortcut || showEnvelopeShortcut;
+  const showSeparator = hasList && (hasBasics || hasEnvelope);
+
+  return {
+    hasList,
+    hasBasics,
+    hasEnvelope,
+    isEmpty,
+    showBasicsShortcut,
+    showEnvelopeShortcut,
+    showShortcuts,
+    showSeparator,
+  };
+}
+
+/** Línea de conteo bajo "La lista de regalos". */
+export function guestGiftAvailabilityLabel(available: number): string {
+  if (available > 1) {
+    return `${available} regalos todavía disponibles`;
+  }
+  if (available === 1) {
+    return '1 regalo todavía disponible';
+  }
+  return 'Ya eligieron todos los regalos de la lista';
+}

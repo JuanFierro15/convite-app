@@ -27,9 +27,125 @@
   gap: var(--space-lg);
 }
 
-.back-button {
+.back-link {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 4px;
+  color: var(--ion-color-primary-shade);
+  font-size: 16px;
+  font-weight: 600;
+  text-decoration: none;
+  text-transform: none;
+
+  ion-icon {
+    font-size: 20px;
+  }
+}
+
+.gifts-header {
+  position: relative;
+  margin-top: 18px;
+  padding: 120px 22px 24px;
+  border-radius: var(--radius-xl);
+  background: var(--ion-color-light);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: center;
+}
+
+.gifts-header__image {
+  position: absolute;
+  top: -18px;
+  left: 50%;
+  width: 160px;
+  height: 120px;
+  transform: translateX(-50%) rotate(-3deg);
+}
+
+:host ::ng-deep .gifts-header__image img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.gifts-header__title {
+  font-family: var(--font-heading);
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1.15;
   margin: 0;
-  min-height: 54px;
+  color: var(--ion-text-color);
+}
+
+.gifts-header__intro {
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--ion-text-color);
+  margin: 0;
+}
+
+.gifts-header__note {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  text-align: left;
+  background: var(--ion-background-color);
+  border-radius: 16px;
+  padding: 12px 14px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--ion-text-color);
+
+  ion-icon {
+    font-size: 20px;
+    color: var(--ion-color-primary);
+    flex-shrink: 0;
+  }
+}
+
+.gifts-header__more {
+  font-size: 14px;
+  color: var(--ion-color-medium-shade);
+  margin: 4px 0 0;
+}
+
+.shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.shortcut {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 0;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+
+  ion-icon {
+    font-size: 16px;
+  }
+}
+
+.shortcut--basics {
+  background: var(--convite-basics-bg);
+  color: var(--convite-basics-ink);
+}
+
+.shortcut--envelope {
+  background: var(--convite-envelope-bg);
+  color: var(--convite-envelope-ink);
 }
 
 .closed-banner {
@@ -50,44 +166,22 @@
   min-width: 24px;
 }
 
-.anonymity-banner {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--space-sm);
-  padding: var(--space-md);
-  border-radius: var(--radius-md);
-  background-color: rgba(var(--ion-color-primary-rgb), 0.08);
-  color: var(--ion-text-color);
-  line-height: 1.4;
-}
-
-.anonymity-banner__icon {
-  flex-shrink: 0;
-  font-size: 1.25rem;
-  margin-top: 2px;
-  color: var(--ion-color-primary);
-}
-
 .reserved-confirmation-card {
   margin: 0;
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-card);
   background-color: var(--ion-color-light);
-}
-
-.reserved-confirmation-card__content {
-  padding: var(--space-lg);
+  padding: var(--space-md);
   display: flex;
-  flex-direction: column;
   align-items: center;
-  text-align: center;
-  gap: var(--space-md);
-}
+  gap: var(--space-sm);
+  text-align: left;
 
-.reserved-confirmation-card__illustration {
-  width: 100%;
-  max-width: 200px;
-  margin: 0 auto;
+  ion-icon {
+    font-size: 24px;
+    color: var(--ion-color-success);
+    flex-shrink: 0;
+  }
 }
 
 .reserved-confirmation-card__text {
@@ -107,12 +201,63 @@
   color: var(--ion-text-color);
 }
 
+.gift-list-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
 .gift-list-anchor {
   scroll-margin-top: var(--space-md);
 }
 
+.gift-list-section__title {
+  font-family: var(--font-heading);
+  font-size: 25px;
+  font-weight: 600;
+  line-height: 1.2;
+  margin: 0;
+  color: var(--ion-text-color);
+}
+
+.gift-list-section__count {
+  font-size: 15px;
+  color: var(--ion-color-medium-shade);
+  margin: 4px 0 0;
+}
+
 .gift-filter-segment {
   width: 100%;
+  background: var(--convite-track-bg);
+  border-radius: 14px;
+  padding: 4px;
+
+  ion-segment-button {
+    --indicator-color: var(--convite-surface);
+    --indicator-height: 100%;
+    --indicator-box-shadow: 0 1px 4px rgba(var(--ion-text-color-rgb), 0.12);
+    --border-radius: 11px;
+    --color: var(--ion-color-medium-shade);
+    --color-checked: var(--ion-text-color);
+    min-height: 44px;
+    text-transform: none;
+    font-weight: 600;
+    font-size: 15px;
+    isolation: isolate;
+  }
+
+  // En md el indicador es una raya abajo con alto 0: se estira a todo el botón y va detrás del texto.
+  ion-segment-button::part(indicator) {
+    top: 0;
+    bottom: 0;
+    height: 100%;
+    padding: 0;
+    z-index: -1;
+  }
+
+  ion-segment-button::part(indicator-background) {
+    border-radius: 11px;
+  }
 }
 
 .gift-list {
@@ -167,6 +312,13 @@
   font-size: 18px;
 }
 
+// Ionic md pone los botones en mayúsculas; en la vista del invitado se leen mejor en minúsculas.
+ion-button,
+ion-segment-button {
+  text-transform: none;
+  letter-spacing: normal;
+}
+
 .pagination {
   display: flex;
   flex-wrap: wrap;
@@ -175,7 +327,6 @@
   margin-top: var(--space-md);
 }
 
-// La vista del invitado agranda el texto: a 360 px los dos botones y el estado no caben en una fila.
 .pagination__status {
   order: -1;
   flex-basis: 100%;
@@ -189,30 +340,56 @@
   margin: 0;
 }
 
-.basics-card {
-  margin: 0;
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-card);
-  border: 1px solid rgba(var(--ion-color-primary-rgb), 0.25);
+.others-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+
+  span {
+    flex: 1;
+    height: 1px;
+    background: var(--ion-color-light-shade);
+  }
 }
 
-.basics-card__content {
-  padding: var(--space-lg);
+.others-divider__title {
+  font-family: var(--font-heading);
+  font-size: 22px;
+  font-weight: 600;
+  text-align: center;
+  margin: 0;
+  color: var(--ion-text-color);
+}
+
+.basics-card {
+  background: var(--convite-basics-bg);
+  border: 0;
+  border-radius: 24px;
+  padding: 24px 22px;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  gap: 16px;
   text-align: center;
-  gap: var(--space-sm);
+  box-shadow: none;
 }
 
 .basics-card__icon {
-  font-size: 32px;
-  color: var(--ion-color-primary);
+  font-size: 28px;
+  color: var(--ion-color-secondary);
+  align-self: center;
 }
 
 .basics-card__title {
-  margin: 0 0 var(--space-xs);
+  font-family: var(--font-heading);
+  font-size: 21px;
+  line-height: 1.25;
+  font-weight: 600;
   color: var(--ion-text-color);
+
+  &:focus:not(:focus-visible) {
+    outline: none;
+  }
 }
 
 .basics-card__list {
@@ -220,60 +397,103 @@
   margin: 0;
   padding: 0;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--space-sm);
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
 }
 
 .basics-card__item {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-xs);
+  padding: 9px 14px;
+  border-radius: 999px;
+  background: var(--convite-surface);
+  border: 1px solid var(--convite-basics-border);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.3;
   color: var(--ion-text-color);
   max-width: 100%;
-  word-break: break-word;
-
-  // Viñeta propia: con la del navegador, en una lista centrada, queda lejos del texto.
-  &::before {
-    content: '•';
-    color: var(--ion-color-primary);
-    font-size: 1.25em;
-    line-height: 1;
-    flex-shrink: 0;
-  }
+  overflow-wrap: anywhere;
 }
 
 .envelope-card {
-  margin: 0;
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-card);
-  --background: rgba(var(--ion-color-secondary-rgb), 0.08);
-  background-color: rgba(var(--ion-color-secondary-rgb), 0.08);
-  border: 1px solid rgba(var(--ion-color-secondary-rgb), 0.35);
-}
-
-.envelope-card__content {
-  padding: var(--space-lg);
+  position: relative;
+  overflow: hidden;
+  background: var(--convite-envelope-bg);
+  border: 0;
+  border-radius: 28px;
+  padding: 196px 24px 30px;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  gap: 10px;
   text-align: center;
-  gap: var(--space-sm);
+  box-shadow: none;
 }
 
-.envelope-card__icon {
-  font-size: 32px;
-  color: var(--ion-color-secondary-shade);
+:host ::ng-deep .envelope-card app-illustration img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.envelope-card__rain-1 {
+  position: absolute;
+  top: 14px;
+  left: 22px;
+  width: 64px;
+  height: 48px;
+  transform: rotate(-20deg);
+  opacity: 0.85;
+}
+
+.envelope-card__rain-2 {
+  position: absolute;
+  top: 4px;
+  right: 34px;
+  width: 46px;
+  height: 35px;
+  transform: rotate(16deg);
+  opacity: 0.8;
+}
+
+.envelope-card__rain-3 {
+  position: absolute;
+  top: 96px;
+  right: 14px;
+  width: 40px;
+  height: 30px;
+  transform: rotate(-8deg);
+  opacity: 0.75;
+}
+
+.envelope-card__main {
+  position: absolute;
+  top: 34px;
+  left: 50%;
+  width: 210px;
+  height: 158px;
+  transform: translateX(-50%) rotate(-4deg);
 }
 
 .envelope-card__title {
-  margin: 0 0 var(--space-xs);
+  position: relative;
+  z-index: 1;
+  font-family: var(--font-heading);
+  font-size: 28px;
+  font-weight: 600;
   color: var(--ion-text-color);
+
+  &:focus:not(:focus-visible) {
+    outline: none;
+  }
 }
 
 .envelope-card__text {
-  margin: 0;
+  position: relative;
+  z-index: 1;
+  font-size: 16px;
+  line-height: 1.5;
   color: var(--ion-text-color);
+  margin: 0;
   white-space: pre-line;
   overflow-wrap: anywhere;
 }

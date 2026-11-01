@@ -50,6 +50,8 @@ import {
   ThemeService,
   envelopeGuestGift,
   guestErrorMessage,
+  guestGiftAvailabilityLabel,
+  guestGiftsLayout,
   guestTexts,
   isGuestGiftSoldOut,
   myGuestGifts,
@@ -97,6 +99,10 @@ export class GuestGiftsPage implements OnInit, ViewWillEnter {
 
   readonly content = viewChild(IonContent);
   readonly giftListStart = viewChild<ElementRef<HTMLElement>>('giftListStart');
+  readonly basicsCard = viewChild<ElementRef<HTMLElement>>('basicsCard');
+  readonly basicsTitle = viewChild<ElementRef<HTMLElement>>('basicsTitle');
+  readonly envelopeCard = viewChild<ElementRef<HTMLElement>>('envelopeCard');
+  readonly envelopeTitle = viewChild<ElementRef<HTMLElement>>('envelopeTitle');
 
   readonly loading = signal(true);
   readonly error = signal<string | null>(null);
@@ -125,6 +131,8 @@ export class GuestGiftsPage implements OnInit, ViewWillEnter {
     return guestTexts(kind, groupName);
   });
 
+  readonly layout = computed(() => guestGiftsLayout(this.gifts()));
+
   readonly filterState = computed(() =>
     resolveGuestGiftFilter(this.gifts(), this.preferredFilter()),
   );
@@ -132,12 +140,18 @@ export class GuestGiftsPage implements OnInit, ViewWillEnter {
   readonly activeCategory = computed(() => this.filterState().active);
   readonly showFilter = computed(() => this.filterState().showFilter);
   readonly counts = computed(() => selectableGuestGiftCounts(this.gifts()));
+  readonly availableCount = computed(
+    () => this.counts().unique + this.counts().repeatable,
+  );
+  readonly availabilityLabel = computed(() =>
+    guestGiftAvailabilityLabel(this.availableCount()),
+  );
   readonly mine = computed(() => myGuestGifts(this.gifts()));
   readonly suggestions = computed(() => suggestionGuestGifts(this.gifts()));
   readonly envelope = computed(() => envelopeGuestGift(this.gifts()));
   readonly envelopeText = computed(() => {
-    const desc = this.envelope()?.description?.trim();
-    return desc && desc.length > 0 ? desc : this.texts().giftsEnvelopeDefault;
+    const d = this.envelope()?.description?.trim();
+    return d ? d : null;
   });
   readonly visible = computed(() =>
     visibleGuestGifts(this.gifts(), this.activeCategory(), this.frozenIds()),
@@ -145,7 +159,6 @@ export class GuestGiftsPage implements OnInit, ViewWillEnter {
   readonly paged = computed(() =>
     paginate(this.visible(), this.page(), GUEST_GIFTS_PAGE_SIZE),
   );
-  readonly showSuggestions = computed(() => this.suggestions().length > 0);
 
   constructor() {
     addIcons({
@@ -250,7 +263,7 @@ export class GuestGiftsPage implements OnInit, ViewWillEnter {
     if (current > 1) {
       this.refreshOrder();
       this.page.set(current - 1);
-      this.scrollToGiftListStart();
+      this.scrollToElement(this.giftListStart()?.nativeElement);
     }
   }
 
@@ -259,7 +272,7 @@ export class GuestGiftsPage implements OnInit, ViewWillEnter {
     if (page < totalPages) {
       this.refreshOrder();
       this.page.set(page + 1);
-      this.scrollToGiftListStart();
+      this.scrollToElement(this.giftListStart()?.nativeElement);
     }
   }
 
@@ -370,15 +383,27 @@ export class GuestGiftsPage implements OnInit, ViewWillEnter {
     this.frozenIds.set(orderGuestGiftIds(this.gifts(), this.activeCategory()));
   }
 
-  private scrollToGiftListStart(): void {
+  private scrollDuration(): number {
+    if (
+      typeof matchMedia === 'function' &&
+      matchMedia('(prefers-reduced-motion: reduce)').matches
+    ) {
+      return 0;
+    }
+    return 300;
+  }
+
+  private scrollToElement(
+    target: HTMLElement | undefined,
+    focusTarget?: HTMLElement,
+  ): void {
     if (typeof requestAnimationFrame === 'undefined') {
       return;
     }
     requestAnimationFrame(async () => {
       try {
         const content = this.content();
-        const anchor = this.giftListStart()?.nativeElement;
-        if (!content || !anchor) {
+        if (!content || !target) {
           return;
         }
         if (typeof content.getScrollElement !== 'function') {
@@ -388,23 +413,40 @@ export class GuestGiftsPage implements OnInit, ViewWillEnter {
         if (
           !scrollEl ||
           typeof scrollEl.getBoundingClientRect !== 'function' ||
-          typeof anchor.getBoundingClientRect !== 'function'
+          typeof target.getBoundingClientRect !== 'function'
         ) {
           return;
         }
-        const anchorRect = anchor.getBoundingClientRect();
+        const targetRect = target.getBoundingClientRect();
         const scrollRect = scrollEl.getBoundingClientRect();
         const y = Math.max(
           0,
-          anchorRect.top - scrollRect.top + (scrollEl.scrollTop ?? 0) - 16,
+          targetRect.top - scrollRect.top + (scrollEl.scrollTop ?? 0) - 16,
         );
         if (typeof content.scrollToPoint === 'function') {
-          await content.scrollToPoint(0, y, 300);
+          await content.scrollToPoint(0, y, this.scrollDuration());
+        }
+        if (focusTarget && typeof focusTarget.focus === 'function') {
+          focusTarget.focus({ preventScroll: true });
         }
       } catch {
         // Ignora en entornos sin soporte completo de DOM o scroll (como jsdom)
       }
     });
+  }
+
+  scrollToBasics(): void {
+    this.scrollToElement(
+      this.basicsCard()?.nativeElement,
+      this.basicsTitle()?.nativeElement,
+    );
+  }
+
+  scrollToEnvelope(): void {
+    this.scrollToElement(
+      this.envelopeCard()?.nativeElement,
+      this.envelopeTitle()?.nativeElement,
+    );
   }
 
   private async handleActionError(err: unknown): Promise<void> {

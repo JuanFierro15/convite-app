@@ -43,14 +43,45 @@ describe('invitation-texts utils', () => {
     });
   });
 
-  describe('giftsEnvelopeDefault', () => {
-    it('returns exact text for group and individual invitations', () => {
-      expect(guestTexts('group', 'Familia Ejemplo').giftsEnvelopeDefault).toBe(
-        'Si prefieren hacer un aporte en sobre, el día del evento habrá un lugar para dejarlo.',
+  describe('nuevas claves de regalos y ausencia de clave anterior de sobre', () => {
+    it('devuelve el texto exacto para las 5 claves y no incluye clave por defecto de sobre', () => {
+      const groupTexts = guestTexts('group', 'Familia Ejemplo');
+      const indTexts = guestTexts('individual', 'Carlos');
+
+      expect(groupTexts.giftsPageIntro).toBe(
+        'Su compañía es el mejor regalo. Si les hace ilusión llevar algo, elijan de la lista para que los regalos no se repitan.',
       );
-      expect(guestTexts('individual', 'Carlos').giftsEnvelopeDefault).toBe(
-        'Si prefieres hacer un aporte en sobre, el día del evento habrá un lugar para dejarlo.',
+      expect(indTexts.giftsPageIntro).toBe(
+        'Tu compañía es el mejor regalo. Si te hace ilusión llevar algo, elige de la lista para que los regalos no se repitan.',
       );
+
+      expect(groupTexts.giftsPageIntroNoList).toBe(
+        'Su compañía es el mejor regalo. Si les hace ilusión llevar algo, aquí tienen algunas ideas.',
+      );
+      expect(indTexts.giftsPageIntroNoList).toBe(
+        'Tu compañía es el mejor regalo. Si te hace ilusión llevar algo, aquí tienes algunas ideas.',
+      );
+
+      expect(groupTexts.giftsAnonymityNote).toBe(
+        'Es anónimo: ni nosotros ni los demás invitados sabremos qué eligieron.',
+      );
+      expect(indTexts.giftsAnonymityNote).toBe(
+        'Es anónimo: ni nosotros ni los demás invitados sabremos qué elegiste.',
+      );
+
+      expect(groupTexts.giftsMoreBelow).toBe('Al final también encontrarán');
+      expect(indTexts.giftsMoreBelow).toBe('Al final también encontrarás');
+
+      expect(groupTexts.giftsBasicsTitle).toBe(
+        'Básicos que nunca sobran, tráiganlos si quieren',
+      );
+      expect(indTexts.giftsBasicsTitle).toBe(
+        'Básicos que nunca sobran, tráelos si quieres',
+      );
+
+      const legacyEnvelopeKey = ['gifts', 'Envelope', 'Default'].join('');
+      expect(legacyEnvelopeKey in groupTexts).toBe(false);
+      expect(legacyEnvelopeKey in indTexts).toBe(false);
     });
   });
 
@@ -78,11 +109,18 @@ describe('invitation-texts utils', () => {
       expect(texts.giftsIntro).toEqual([
         'Su compañía es el mejor regalo, así que no sientan ningún compromiso. Si les hace ilusión llevar algo, preparamos una lista con algunas ideas.',
       ]);
-      expect(texts.giftsAnonymityNote).toBe(
-        'Lo que elijan es anónimo: ni nosotros ni los demás invitados sabremos qué regalo eligieron. Solo les pedimos elegirlo para que los regalos no se repitan.',
+      expect(texts.giftsPageIntro).toBe(
+        'Su compañía es el mejor regalo. Si les hace ilusión llevar algo, elijan de la lista para que los regalos no se repitan.',
       );
-      expect(texts.giftsEnvelopeDefault).toBe(
-        'Si prefieren hacer un aporte en sobre, el día del evento habrá un lugar para dejarlo.',
+      expect(texts.giftsPageIntroNoList).toBe(
+        'Su compañía es el mejor regalo. Si les hace ilusión llevar algo, aquí tienen algunas ideas.',
+      );
+      expect(texts.giftsAnonymityNote).toBe(
+        'Es anónimo: ni nosotros ni los demás invitados sabremos qué eligieron.',
+      );
+      expect(texts.giftsMoreBelow).toBe('Al final también encontrarán');
+      expect(texts.giftsBasicsTitle).toBe(
+        'Básicos que nunca sobran, tráiganlos si quieren',
       );
       expect(texts.giftReservedConfirmation).toBe(
         '¡Listo! Quedó elegido. Solo ustedes saben que lo eligieron.',
@@ -115,11 +153,18 @@ describe('invitation-texts utils', () => {
       expect(texts.giftsIntro).toEqual([
         'Tu compañía es el mejor regalo, así que no sientas ningún compromiso. Si te hace ilusión llevar algo, preparamos una lista con algunas ideas.',
       ]);
-      expect(texts.giftsAnonymityNote).toBe(
-        'Lo que elijas es anónimo: ni nosotros ni los demás invitados sabremos qué regalo elegiste. Solo te pedimos elegirlo para que los regalos no se repitan.',
+      expect(texts.giftsPageIntro).toBe(
+        'Tu compañía es el mejor regalo. Si te hace ilusión llevar algo, elige de la lista para que los regalos no se repitan.',
       );
-      expect(texts.giftsEnvelopeDefault).toBe(
-        'Si prefieres hacer un aporte en sobre, el día del evento habrá un lugar para dejarlo.',
+      expect(texts.giftsPageIntroNoList).toBe(
+        'Tu compañía es el mejor regalo. Si te hace ilusión llevar algo, aquí tienes algunas ideas.',
+      );
+      expect(texts.giftsAnonymityNote).toBe(
+        'Es anónimo: ni nosotros ni los demás invitados sabremos qué elegiste.',
+      );
+      expect(texts.giftsMoreBelow).toBe('Al final también encontrarás');
+      expect(texts.giftsBasicsTitle).toBe(
+        'Básicos que nunca sobran, tráelos si quieres',
       );
       expect(texts.giftReservedConfirmation).toBe(
         '¡Listo! Quedó elegido. Solo tú sabes que lo elegiste.',
@@ -147,8 +192,11 @@ describe('invitation-texts utils', () => {
         'tableNote',
         'giftChosenBadge',
         'giftsTitle',
+        'giftsPageIntro',
+        'giftsPageIntroNoList',
         'giftsAnonymityNote',
-        'giftsEnvelopeDefault',
+        'giftsMoreBelow',
+        'giftsBasicsTitle',
         'giftReservedConfirmation',
         'entryCodeTitle',
         'entryCodeInstruction',
