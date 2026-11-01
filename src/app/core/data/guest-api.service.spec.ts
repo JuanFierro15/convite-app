@@ -1,5 +1,5 @@
 import { TestBed } from '@angular/core/testing';
-import { GUEST_ERROR_MESSAGES } from '../models/guest';
+import { guestErrorMessage } from '../models/guest';
 import { SupabaseService } from '../supabase/supabase.service';
 import { GuestApiService, toGuestApiError } from './guest-api.service';
 
@@ -26,10 +26,10 @@ describe('GuestApiService', () => {
   });
 
   describe('toGuestApiError', () => {
-    it('translates gift_full error code and message from GUEST_ERROR_MESSAGES', () => {
+    it('translates gift_full error code and message from guestErrorMessage', () => {
       const err = toGuestApiError({ message: 'gift_full' });
       expect(err.code).toBe('gift_full');
-      expect(err.message).toBe(GUEST_ERROR_MESSAGES['gift_full']);
+      expect(err.message).toBe(guestErrorMessage('gift_full'));
       expect(err.message).toBe('Este regalo ya completó sus cupos. Elige otro de la lista.');
     });
   });

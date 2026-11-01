@@ -1,4 +1,4 @@
-import { normalizeSearchText } from './text';
+import { joinSpanishNames, normalizeSearchText } from './text';
 
 describe('text utils', () => {
   it('removes accents and diacritics', () => {
@@ -22,4 +22,39 @@ describe('text utils', () => {
     expect(normalizeSearchText('convite')).toBe('convite');
     expect(normalizeSearchText('evento 2026')).toBe('evento 2026');
   });
+
+  describe('joinSpanishNames', () => {
+    it('returns empty string with 0 names or only empty/whitespace names', () => {
+      expect(joinSpanishNames([])).toBe('');
+      expect(joinSpanishNames(['', '   '])).toBe('');
+    });
+
+    it('formats 1 name', () => {
+      expect(joinSpanishNames(['Ana'])).toBe('Ana');
+      expect(joinSpanishNames(['  Ana  '])).toBe('Ana');
+    });
+
+    it('formats 2 names joined with y', () => {
+      expect(joinSpanishNames(['Ana', 'Pedro'])).toBe('Ana y Pedro');
+      expect(joinSpanishNames([' Ana ', ' Pedro '])).toBe('Ana y Pedro');
+    });
+
+    it('formats 3 names with comma and y', () => {
+      expect(joinSpanishNames(['Ana', 'Pedro', 'Luis'])).toBe('Ana, Pedro y Luis');
+    });
+
+    it('formats 4 names with commas and y', () => {
+      expect(joinSpanishNames(['Ana', 'Pedro', 'Luis', 'María'])).toBe(
+        'Ana, Pedro, Luis y María',
+      );
+    });
+
+    it('ignores empty and whitespace names among valid names', () => {
+      expect(joinSpanishNames(['Ana', '', '  ', 'Pedro'])).toBe('Ana y Pedro');
+      expect(joinSpanishNames(['', 'Ana', '   ', 'Pedro', 'Luis', ''])).toBe(
+        'Ana, Pedro y Luis',
+      );
+    });
+  });
 });
+

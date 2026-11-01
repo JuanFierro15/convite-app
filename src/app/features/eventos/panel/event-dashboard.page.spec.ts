@@ -206,4 +206,16 @@ describe('EventDashboardPage - Arrivals & Attendance', () => {
       `Límite para confirmar: ${component.deadlineDateText()}`,
     );
   });
+
+  it('renders updated KPI attendance labels', async () => {
+    component.ionViewWillEnter();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const kpiLabels = Array.from(
+      fixture.nativeElement.querySelectorAll('.kpi-card__label'),
+    ).map((el) => (el as HTMLElement).textContent?.trim());
+
+    expect(kpiLabels).toEqual(['Confirmaron', 'Sin respuesta', 'No asistirán']);
+  });
 });

@@ -154,28 +154,28 @@ describe('core exports and error translation', () => {
   describe('guestErrorMessage, GuestApiError and toGuestApiError', () => {
     it('translates known guest RPC error codes and falls back for unknown codes', () => {
       expect(guestErrorMessage('invalid_code')).toBe(
-        'No encontramos esta invitación. Revisa el enlace que te enviaron.',
+        'No encontramos esta invitación. Revisa que el enlace esté completo.',
       );
       expect(guestErrorMessage('deadline_passed')).toBe(
-        'El plazo para responder ya terminó. Si necesitas cambiar tu respuesta, escríbenos.',
+        'El plazo para responder ya terminó. Si necesitas cambiar tu respuesta, escríbenos al WhatsApp donde te llegó la invitación.',
       );
       expect(guestErrorMessage('already_reserved')).toBe(
         'Alguien acaba de elegir este regalo. Elige otro de la lista.',
       );
       expect(guestErrorMessage('gifts_closed')).toBe('La lista de regalos ya está cerrada.');
-      expect(GUEST_ERROR_MESSAGES['network_error']).toBe(CONNECTION_ERROR_MESSAGE);
+      expect(guestErrorMessage('network_error', 'individual')).toBe(CONNECTION_ERROR_MESSAGE);
       expect(GUEST_ERROR_MESSAGES['not_reserved_by_you']).toBe(
         'Este regalo ya no está elegido en esta invitación.',
       );
       expect(GUEST_ERROR_MESSAGES['load_failed']).toBe(
-        'No pudimos cargar tu invitación. Inténtalo de nuevo.',
+        'No pudimos cargar la invitación. Toca "Reintentar".',
       );
       expect(guestErrorMessage('network_error')).toBe(CONNECTION_ERROR_MESSAGE);
       expect(guestErrorMessage('not_reserved_by_you')).toBe(
         'Este regalo ya no está elegido en esta invitación.',
       );
       expect(guestErrorMessage('load_failed')).toBe(
-        'No pudimos cargar tu invitación. Inténtalo de nuevo.',
+        'No pudimos cargar la invitación. Toca "Reintentar".',
       );
       expect(guestErrorMessage('gift_not_reservable')).toBe(
         'Esta opción es solo una idea: no hace falta reservarla.',
@@ -208,12 +208,12 @@ describe('core exports and error translation', () => {
     it('uses fallbackCode for unknown errors in toGuestApiError while keeping known codes', () => {
       const loadErr = toGuestApiError({ message: 'some_db_failure' }, 'load_failed');
       expect(loadErr.code).toBe('load_failed');
-      expect(loadErr.message).toBe('No pudimos cargar tu invitación. Inténtalo de nuevo.');
+      expect(loadErr.message).toBe('No pudimos cargar la invitación. Toca "Reintentar".');
 
       const invalidCodeErr = toGuestApiError({ message: 'invalid_code' }, 'load_failed');
       expect(invalidCodeErr.code).toBe('invalid_code');
       expect(invalidCodeErr.message).toBe(
-        'No encontramos esta invitación. Revisa el enlace que te enviaron.',
+        'No encontramos esta invitación. Revisa que el enlace esté completo.',
       );
 
       const writeErr = toGuestApiError({ message: 'some_db_failure' });

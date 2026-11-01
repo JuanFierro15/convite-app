@@ -27,7 +27,7 @@
         <ion-label>Todas ({{ filterCounts().all }})</ion-label>
       </ion-segment-button>
       <ion-segment-button value="pending">
-        <ion-label>Pendientes ({{ filterCounts().pending }})</ion-label>
+        <ion-label>Sin respuesta ({{ filterCounts().pending }})</ion-label>
       </ion-segment-button>
       <ion-segment-button value="partial">
         <ion-label>Parciales ({{ filterCounts().partial }})</ion-label>
@@ -36,7 +36,7 @@
         <ion-label>Confirmadas ({{ filterCounts().accepted }})</ion-label>
       </ion-segment-button>
       <ion-segment-button value="declined">
-        <ion-label>Canceladas ({{ filterCounts().declined }})</ion-label>
+        <ion-label>No asistirán ({{ filterCounts().declined }})</ion-label>
       </ion-segment-button>
     </ion-segment>
   </ion-toolbar>
@@ -72,7 +72,7 @@
           (click)="openSendQueue()"
         >
           <ion-icon slot="start" name="logo-whatsapp" aria-hidden="true"></ion-icon>
-          Enviar invitaciones pendientes ({{ pendingSendCount() }})
+          Enviar por WhatsApp ({{ pendingSendCount() }} por enviar)
         </ion-button>
       }
 

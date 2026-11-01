@@ -93,11 +93,30 @@ describe('invitation-texts utils', () => {
       expect(texts.welcomeTitle).toBe('La familia Ejemplo está invitada');
       expect(texts.deadlineReminder(testDate)).toBe('Por favor respondan antes del 24 de noviembre');
       expect(texts.deadlinePassed).toBe(
-        'El plazo para responder ya terminó. Si necesitan cambiar su respuesta, escríbannos.',
+        'El plazo para responder ya terminó. Si necesitan cambiar su respuesta, escríbannos al WhatsApp donde les llegó la invitación.',
       );
       expect(texts.rsvpThanks(testDate)).toBe(
         '¡Gracias! Recibimos su respuesta. Pueden cambiarla hasta el 24 de noviembre.',
       );
+      expect(texts.rsvpThanksClosed).toBe('¡Gracias! Recibimos su respuesta.');
+      expect(texts.rsvpMissing(['Ana'], testDate)).toBe(
+        'Recibimos sus respuestas. Falta que responda: Ana. Pueden hacerlo hasta el 24 de noviembre.',
+      );
+      expect(texts.rsvpMissing(['Ana', 'Pedro'], testDate)).toBe(
+        'Recibimos sus respuestas. Falta que respondan: Ana y Pedro. Pueden hacerlo hasta el 24 de noviembre.',
+      );
+      expect(texts.rsvpMissing(['Ana', 'Pedro', 'Luis'], testDate)).toBe(
+        'Recibimos sus respuestas. Falta que respondan: Ana, Pedro y Luis. Pueden hacerlo hasta el 24 de noviembre.',
+      );
+      expect(texts.rsvpMissing(['Ana', '', '  ', 'Pedro'], testDate)).toBe(
+        'Recibimos sus respuestas. Falta que respondan: Ana y Pedro. Pueden hacerlo hasta el 24 de noviembre.',
+      );
+      expect(texts.rsvpMissing([], testDate)).toBe('');
+      expect(texts.rsvpMissing(['', '   '], testDate)).toBe('');
+      expect(texts.rsvpAnswerLabel('accepted')).toBe('Asistirá');
+      expect(texts.rsvpAnswerLabel('declined')).toBe('No asistirá');
+      expect(texts.rsvpAnswerLabel('pending')).toBe('Sin respuesta');
+      expect(texts.rsvpAnswerLabel('unknown')).toBe('Sin respuesta');
       expect(texts.tableNote).toBe('Su mesa se asignará pronto');
       expect(texts.giftsMineHeading(1)).toBe('Su regalo');
       expect(texts.giftsMineHeading(2)).toBe('Sus regalos');
@@ -105,6 +124,14 @@ describe('invitation-texts utils', () => {
       expect(texts.reserveGiftConfirm('Pañales')).toBe(
         '¿Desean elegir Pañales? Nadie más sabrá que lo eligieron ustedes.',
       );
+      expect(texts.releaseGiftButton).toBe('Ya no lo llevamos');
+      expect(texts.releaseGiftTitle).toBe('Dejar este regalo');
+      expect(texts.releaseGiftConfirm('Pañales')).toBe(
+        '¿Ya no llevarán Pañales? Quedará libre para que alguien más lo elija.',
+      );
+      expect(texts.releaseGiftConfirmButton).toBe('Sí, dejarlo libre');
+      expect(texts.chooseGiftAriaLabel('Pañales')).toBe('Elegir este regalo: Pañales');
+      expect(texts.releaseGiftAriaLabel('Pañales')).toBe('Ya no lo llevamos: Pañales');
       expect(texts.giftsTitle).toBe('Un detalle para Eloise');
       expect(texts.giftsIntro).toEqual([
         'Su compañía es el mejor regalo, así que no sientan ningún compromiso. Si les hace ilusión llevar algo, preparamos una lista con algunas ideas.',
@@ -126,9 +153,11 @@ describe('invitation-texts utils', () => {
         '¡Listo! Quedó elegido. Solo ustedes saben que lo eligieron.',
       );
       expect(texts.entryCodeTitle).toBe('Código de entrada');
-      expect(texts.entryCodeInstruction).toBe('Muestra este código en la entrada');
+      expect(texts.entryCodeInstruction).toBe(
+        'Muestren este código en la entrada. Sirve para todo el grupo.',
+      );
       expect(texts.entryCodeTip).toBe(
-        'Tómale una captura de pantalla para tenerlo a mano, aunque no haya señal.',
+        'Tómenle una captura de pantalla para tenerlo a mano, aunque no haya señal.',
       );
     });
 
@@ -137,11 +166,18 @@ describe('invitation-texts utils', () => {
       expect(texts.welcomeTitle).toBe('Carlos, te invitamos');
       expect(texts.deadlineReminder(testDate)).toBe('Por favor responde antes del 24 de noviembre');
       expect(texts.deadlinePassed).toBe(
-        'El plazo para responder ya terminó. Si necesitas cambiar tu respuesta, escríbenos.',
+        'El plazo para responder ya terminó. Si necesitas cambiar tu respuesta, escríbenos al WhatsApp donde te llegó la invitación.',
       );
       expect(texts.rsvpThanks(testDate)).toBe(
         '¡Gracias! Recibimos tu respuesta. Puedes cambiarla hasta el 24 de noviembre.',
       );
+      expect(texts.rsvpThanksClosed).toBe('¡Gracias! Recibimos tu respuesta.');
+      expect(texts.rsvpMissing(['Ana'], testDate)).toBe('');
+      expect(texts.rsvpMissing(['Ana', 'Pedro'], testDate)).toBe('');
+      expect(texts.rsvpAnswerLabel('accepted')).toBe('Asistirá');
+      expect(texts.rsvpAnswerLabel('declined')).toBe('No asistirá');
+      expect(texts.rsvpAnswerLabel('pending')).toBe('Sin respuesta');
+      expect(texts.rsvpAnswerLabel('custom')).toBe('Sin respuesta');
       expect(texts.tableNote).toBe('Tu mesa se asignará pronto');
       expect(texts.giftsMineHeading(1)).toBe('Tu regalo');
       expect(texts.giftsMineHeading(2)).toBe('Tus regalos');
@@ -149,6 +185,14 @@ describe('invitation-texts utils', () => {
       expect(texts.reserveGiftConfirm('Pañales')).toBe(
         '¿Quieres elegir Pañales? Nadie más sabrá que lo elegiste tú.',
       );
+      expect(texts.releaseGiftButton).toBe('Ya no lo llevo');
+      expect(texts.releaseGiftTitle).toBe('Dejar este regalo');
+      expect(texts.releaseGiftConfirm('Pañales')).toBe(
+        '¿Ya no llevarás Pañales? Quedará libre para que alguien más lo elija.',
+      );
+      expect(texts.releaseGiftConfirmButton).toBe('Sí, dejarlo libre');
+      expect(texts.chooseGiftAriaLabel('Pañales')).toBe('Elegir este regalo: Pañales');
+      expect(texts.releaseGiftAriaLabel('Pañales')).toBe('Ya no lo llevo: Pañales');
       expect(texts.giftsTitle).toBe('Un detalle para Eloise');
       expect(texts.giftsIntro).toEqual([
         'Tu compañía es el mejor regalo, así que no sientas ningún compromiso. Si te hace ilusión llevar algo, preparamos una lista con algunas ideas.',
@@ -189,8 +233,12 @@ describe('invitation-texts utils', () => {
         }[keyof typeof texts]
       > = [
         'deadlinePassed',
+        'rsvpThanksClosed',
         'tableNote',
         'giftChosenBadge',
+        'releaseGiftButton',
+        'releaseGiftTitle',
+        'releaseGiftConfirmButton',
         'giftsTitle',
         'giftsPageIntro',
         'giftsPageIntroNoList',
@@ -214,7 +262,12 @@ describe('invitation-texts utils', () => {
       expect(texts.giftsMineHeading(2)).not.toContain(namePart);
       expect(texts.deadlineReminder('24 de noviembre')).not.toContain(namePart);
       expect(texts.rsvpThanks('24 de noviembre')).not.toContain(namePart);
+      expect(texts.rsvpMissing(['Ana'], '24 de noviembre')).not.toContain(namePart);
+      expect(texts.rsvpAnswerLabel('accepted')).not.toContain(namePart);
       expect(texts.reserveGiftConfirm('Coche para bebé')).not.toContain(namePart);
+      expect(texts.releaseGiftConfirm('Coche para bebé')).not.toContain(namePart);
+      expect(texts.chooseGiftAriaLabel('Coche para bebé')).not.toContain(namePart);
+      expect(texts.releaseGiftAriaLabel('Coche para bebé')).not.toContain(namePart);
     });
   });
 });

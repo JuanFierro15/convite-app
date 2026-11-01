@@ -11,8 +11,8 @@ describe('StatusBadgeComponent', () => {
   it('renders the default Spanish text and soft badge class for each status', () => {
     const expected: Record<BadgeStatus, { text: string; cssClass: string }> = {
       accepted: { text: 'Confirmada', cssClass: 'badge-soft-success' },
-      pending: { text: 'Pendiente', cssClass: 'badge-soft-warning' },
-      declined: { text: 'Cancelada', cssClass: 'badge-soft-danger' },
+      pending: { text: 'Sin respuesta', cssClass: 'badge-soft-warning' },
+      declined: { text: 'No asistirá', cssClass: 'badge-soft-danger' },
       partial: { text: 'Parcial', cssClass: 'badge-soft-tertiary' },
     };
 
@@ -48,7 +48,7 @@ describe('StatusBadgeComponent', () => {
     fixture.detectChanges();
 
     const span: HTMLElement | null = fixture.nativeElement.querySelector('span');
-    expect(span?.textContent?.trim()).toBe('Pendiente');
+    expect(span?.textContent?.trim()).toBe('Sin respuesta');
     expect(span?.classList.contains('badge-soft-warning')).toBe(true);
 
     fixture.componentRef.setInput('label', 'Etiqueta Personalizada');

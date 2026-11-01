@@ -1,3 +1,5 @@
+import { joinSpanishNames } from './text';
+
 export type InvitationKind = 'group' | 'individual';
 
 export function toInvitationKind(value: unknown): InvitationKind {
@@ -9,10 +11,19 @@ export interface GuestTexts {
   deadlineReminder(date: string): string;
   deadlinePassed: string;
   rsvpThanks(date: string): string;
+  rsvpThanksClosed: string;
+  rsvpMissing(names: readonly string[], date: string): string;
+  rsvpAnswerLabel(rsvp: 'accepted' | 'declined' | 'pending' | string): string;
   tableNote: string;
   giftsMineHeading(count: number): string;
   giftChosenBadge: string;
   reserveGiftConfirm(giftName: string): string;
+  releaseGiftButton: string;
+  releaseGiftTitle: string;
+  releaseGiftConfirm(giftName: string): string;
+  releaseGiftConfirmButton: string;
+  chooseGiftAriaLabel(giftName: string): string;
+  releaseGiftAriaLabel(giftName: string): string;
   giftsTitle: string;
   giftsIntro: readonly string[];
   giftsPageIntro: string;
@@ -54,12 +65,38 @@ export function guestTexts(kind: InvitationKind, groupName: string): GuestTexts 
         ? `Por favor responde antes del ${date}`
         : `Por favor respondan antes del ${date}`,
     deadlinePassed: isIndividual
-      ? 'El plazo para responder ya terminó. Si necesitas cambiar tu respuesta, escríbenos.'
-      : 'El plazo para responder ya terminó. Si necesitan cambiar su respuesta, escríbannos.',
+      ? 'El plazo para responder ya terminó. Si necesitas cambiar tu respuesta, escríbenos al WhatsApp donde te llegó la invitación.'
+      : 'El plazo para responder ya terminó. Si necesitan cambiar su respuesta, escríbannos al WhatsApp donde les llegó la invitación.',
     rsvpThanks: (date: string) =>
       isIndividual
         ? `¡Gracias! Recibimos tu respuesta. Puedes cambiarla hasta el ${date}.`
         : `¡Gracias! Recibimos su respuesta. Pueden cambiarla hasta el ${date}.`,
+    rsvpThanksClosed: isIndividual
+      ? '¡Gracias! Recibimos tu respuesta.'
+      : '¡Gracias! Recibimos su respuesta.',
+    rsvpMissing: (names: readonly string[], date: string) => {
+      if (isIndividual) {
+        return '';
+      }
+      const cleaned = names.map((name) => name.trim()).filter((name) => name.length > 0);
+      if (cleaned.length === 0) {
+        return '';
+      }
+      const nombres = joinSpanishNames(cleaned);
+      if (cleaned.length === 1) {
+        return `Recibimos sus respuestas. Falta que responda: ${nombres}. Pueden hacerlo hasta el ${date}.`;
+      }
+      return `Recibimos sus respuestas. Falta que respondan: ${nombres}. Pueden hacerlo hasta el ${date}.`;
+    },
+    rsvpAnswerLabel: (rsvp: 'accepted' | 'declined' | 'pending' | string) => {
+      if (rsvp === 'accepted') {
+        return 'Asistirá';
+      }
+      if (rsvp === 'declined') {
+        return 'No asistirá';
+      }
+      return 'Sin respuesta';
+    },
     tableNote: isIndividual ? 'Tu mesa se asignará pronto' : 'Su mesa se asignará pronto',
     giftsMineHeading: (count: number) =>
       isIndividual
@@ -74,6 +111,16 @@ export function guestTexts(kind: InvitationKind, groupName: string): GuestTexts 
       isIndividual
         ? `¿Quieres elegir ${giftName}? Nadie más sabrá que lo elegiste tú.`
         : `¿Desean elegir ${giftName}? Nadie más sabrá que lo eligieron ustedes.`,
+    releaseGiftButton: isIndividual ? 'Ya no lo llevo' : 'Ya no lo llevamos',
+    releaseGiftTitle: 'Dejar este regalo',
+    releaseGiftConfirm: (giftName: string) =>
+      isIndividual
+        ? `¿Ya no llevarás ${giftName}? Quedará libre para que alguien más lo elija.`
+        : `¿Ya no llevarán ${giftName}? Quedará libre para que alguien más lo elija.`,
+    releaseGiftConfirmButton: 'Sí, dejarlo libre',
+    chooseGiftAriaLabel: (giftName: string) => `Elegir este regalo: ${giftName}`,
+    releaseGiftAriaLabel: (giftName: string) =>
+      isIndividual ? `Ya no lo llevo: ${giftName}` : `Ya no lo llevamos: ${giftName}`,
     giftsTitle: 'Un detalle para Eloise',
     giftsIntro: isIndividual
       ? [
@@ -101,7 +148,11 @@ export function guestTexts(kind: InvitationKind, groupName: string): GuestTexts 
       ? '¡Listo! Quedó elegido. Solo tú sabes que lo elegiste.'
       : '¡Listo! Quedó elegido. Solo ustedes saben que lo eligieron.',
     entryCodeTitle: 'Código de entrada',
-    entryCodeInstruction: 'Muestra este código en la entrada',
-    entryCodeTip: 'Tómale una captura de pantalla para tenerlo a mano, aunque no haya señal.',
+    entryCodeInstruction: isIndividual
+      ? 'Muestra este código en la entrada'
+      : 'Muestren este código en la entrada. Sirve para todo el grupo.',
+    entryCodeTip: isIndividual
+      ? 'Tómale una captura de pantalla para tenerlo a mano, aunque no haya señal.'
+      : 'Tómenle una captura de pantalla para tenerlo a mano, aunque no haya señal.',
   };
 }

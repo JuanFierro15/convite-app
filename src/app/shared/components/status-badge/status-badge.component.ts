@@ -4,8 +4,8 @@ export type BadgeStatus = 'accepted' | 'pending' | 'declined' | 'partial';
 
 const STATUS_LABELS: Record<BadgeStatus, string> = {
   accepted: 'Confirmada',
-  pending: 'Pendiente',
-  declined: 'Cancelada',
+  pending: 'Sin respuesta',
+  declined: 'No asistirá',
   partial: 'Parcial',
 };
 

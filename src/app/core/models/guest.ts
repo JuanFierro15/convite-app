@@ -47,23 +47,57 @@ export interface GuestGift {
   max_reservations: number | null;
 }
 
-export const GUEST_ERROR_MESSAGES: Record<string, string> = {
-  invalid_code: 'No encontramos esta invitación. Revisa el enlace que te enviaron.',
-  deadline_passed:
-    'El plazo para responder ya terminó. Si necesitas cambiar tu respuesta, escríbenos.',
-  already_reserved: 'Alguien acaba de elegir este regalo. Elige otro de la lista.',
+export type GuestErrorMessageEntry = string | { individual: string; group: string };
+
+export const GUEST_ERROR_MESSAGES: Record<string, GuestErrorMessageEntry> = {
+  invalid_code: 'No encontramos esta invitación. Revisa que el enlace esté completo.',
+  load_failed: 'No pudimos cargar la invitación. Toca "Reintentar".',
+  deadline_passed: {
+    individual:
+      'El plazo para responder ya terminó. Si necesitas cambiar tu respuesta, escríbenos al WhatsApp donde te llegó la invitación.',
+    group:
+      'El plazo para responder ya terminó. Si necesitan cambiar su respuesta, escríbannos al WhatsApp donde les llegó la invitación.',
+  },
+  already_reserved: {
+    individual: 'Alguien acaba de elegir este regalo. Elige otro de la lista.',
+    group: 'Alguien acaba de elegir este regalo. Elijan otro de la lista.',
+  },
+  gift_full: {
+    individual: 'Este regalo ya completó sus cupos. Elige otro de la lista.',
+    group: 'Este regalo ya completó sus cupos. Elijan otro de la lista.',
+  },
+  network_error: {
+    individual: CONNECTION_ERROR_MESSAGE,
+    group: 'No pudimos conectarnos. Revisen su conexión e inténtenlo de nuevo.',
+  },
   gifts_closed: 'La lista de regalos ya está cerrada.',
-  network_error: CONNECTION_ERROR_MESSAGE,
   not_reserved_by_you: 'Este regalo ya no está elegido en esta invitación.',
-  load_failed: 'No pudimos cargar tu invitación. Inténtalo de nuevo.',
-  gift_full: 'Este regalo ya completó sus cupos. Elige otro de la lista.',
   gift_not_reservable: 'Esta opción es solo una idea: no hace falta reservarla.',
 };
 
-const DEFAULT_GUEST_ERROR_MESSAGE = 'No pudimos guardar el cambio. Inténtalo de nuevo.';
+const DEFAULT_GUEST_ERROR_MESSAGES: Record<InvitationKind, string> = {
+  individual: 'No pudimos guardar el cambio. Inténtalo de nuevo.',
+  group: 'No pudimos guardar el cambio. Inténtenlo de nuevo.',
+};
 
-export function guestErrorMessage(code: string): string {
-  return GUEST_ERROR_MESSAGES[code] ?? DEFAULT_GUEST_ERROR_MESSAGE;
+export function guestErrorMessage(code: string, kind?: InvitationKind): string {
+  const targetKind: InvitationKind = kind === 'group' ? 'group' : 'individual';
+  const entry = GUEST_ERROR_MESSAGES[code];
+  if (!entry) {
+    return DEFAULT_GUEST_ERROR_MESSAGES[targetKind];
+  }
+  if (typeof entry === 'string') {
+    return entry;
+  }
+  return entry[targetKind];
+}
+
+/** Códigos que pueden salir antes de cargar la invitación; cualquier otro se muestra como load_failed. */
+export function guestLoadErrorCode(code: string): 'invalid_code' | 'network_error' | 'load_failed' {
+  if (code === 'invalid_code' || code === 'network_error') {
+    return code;
+  }
+  return 'load_failed';
 }
 
 export class GuestApiError extends Error {
