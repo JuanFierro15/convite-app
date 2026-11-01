@@ -37,14 +37,24 @@ import { Haptics, NotificationType } from '@capacitor/haptics';
 import {
   ArrivalInvitationView,
   ArrivalSessionService,
+  InvitationKind,
   QrScannerService,
   RealtimeService,
   ThemeService,
   extractInvitationCode,
   formatInvitationCode,
+  formatListAge,
+  isListStale,
 } from '../../../core';
 import { EmptyStateComponent } from '../../../shared';
 import { ArrivalGroupComponent } from '../grupo/arrival-group.component';
+
+export type ArrivedSummaryTone = 'complete' | 'partial' | 'none';
+
+export interface ArrivedSummary {
+  text: string;
+  tone: ArrivedSummaryTone;
+}
 
 @Component({
   selector: 'app-arrivals',
@@ -85,13 +95,11 @@ export class ArrivalsPage implements ViewWillEnter, ViewWillLeave {
   readonly searchbar = viewChild(IonSearchbar);
   readonly searchQuery = signal<string>('');
 
+  readonly now = signal<Date>(new Date());
+  private clockTimer: ReturnType<typeof setInterval> | null = null;
+
   private readonly isViewing = signal<boolean>(false);
   private stopRealtime: (() => void) | null = null;
-
-  readonly headerTitle = computed<string>(() => {
-    const name = this.session.snapshot()?.event?.name;
-    return name ? `Llegadas · ${name}` : 'Llegadas';
-  });
 
   readonly unconfirmedText = computed<string | null>(() => {
     const count = this.session.counts().arrivedUnconfirmed;
@@ -104,6 +112,36 @@ export class ArrivalsPage implements ViewWillEnter, ViewWillLeave {
     return null;
   });
 
+  readonly listAgeText = computed<string | null>(() => {
+    const downloadedAt = this.session.downloadedAt();
+    if (!downloadedAt) {
+      return null;
+    }
+    return formatListAge(downloadedAt, this.now());
+  });
+
+  readonly listStale = computed<boolean>(() => {
+    const downloadedAt = this.session.downloadedAt();
+    if (!downloadedAt) {
+      return false;
+    }
+    return isListStale(downloadedAt, this.now());
+  });
+
+  // Los mensajes de error ya traen punto final; el texto de la franja agrega el suyo.
+  readonly syncErrorText = computed<string | null>(() => {
+    const message = this.session.syncError()?.trim();
+    return message ? message.replace(/[.\s]+$/, '') : null;
+  });
+
+  readonly queueLineText = computed<string>(() => {
+    const count = this.session.pendingCount();
+    if (count === 1) {
+      return '1 llegada guardada en este celular, por sincronizar';
+    }
+    return `${count} llegadas guardadas en este celular, por sincronizar`;
+  });
+
   readonly searchResults = computed<ArrivalInvitationView[]>(() => {
     const query = this.searchQuery();
     return this.session.search(query);
@@ -111,6 +149,10 @@ export class ArrivalsPage implements ViewWillEnter, ViewWillLeave {
 
   constructor() {
     addIcons({ qrCodeOutline });
+
+    this.destroyRef.onDestroy(() => {
+      this.stopClock();
+    });
 
     effect(() => {
       const snap = this.session.snapshot();
@@ -145,11 +187,13 @@ export class ArrivalsPage implements ViewWillEnter, ViewWillLeave {
 
   ionViewWillEnter(): void {
     this.isViewing.set(true);
+    this.startClock();
     void this.session.open(this.id());
   }
 
   ionViewWillLeave(): void {
     this.isViewing.set(false);
+    this.stopClock();
     this.stopRealtime?.();
     this.stopRealtime = null;
   }
@@ -158,15 +202,44 @@ export class ArrivalsPage implements ViewWillEnter, ViewWillLeave {
     this.searchQuery.set(event.detail.value ?? '');
   }
 
+  clearSearch(): void {
+    this.searchQuery.set('');
+    const searchbar = this.searchbar();
+    if (searchbar) {
+      searchbar.value = '';
+    }
+  }
+
   formatCode(code: string): string {
     return formatInvitationCode(code);
   }
 
-  formatArrivedSummary(arrivedCount: number, totalCount: number): string {
-    if (arrivedCount === 1 && totalCount === 1) {
-      return '1 de 1 llegó';
+  formatArrivedSummary(
+    item: Pick<ArrivalInvitationView, 'arrivedCount' | 'totalCount'> & { kind?: InvitationKind },
+  ): ArrivedSummary {
+    const { arrivedCount, totalCount } = item;
+    const kind = item.kind ?? 'group';
+    const isIndividual = kind === 'individual';
+
+    if (arrivedCount === totalCount && totalCount > 0) {
+      return {
+        text: isIndividual ? 'Ya llegó' : 'Ya llegaron todos',
+        tone: 'complete',
+      };
     }
-    return `${arrivedCount} de ${totalCount} llegaron`;
+
+    if (arrivedCount > 0 && arrivedCount < totalCount) {
+      const verb = arrivedCount === 1 ? 'llegó' : 'llegaron';
+      return {
+        text: `${arrivedCount} de ${totalCount} ${verb}`,
+        tone: 'partial',
+      };
+    }
+
+    return {
+      text: isIndividual ? 'No ha llegado' : `0 de ${totalCount} llegaron`,
+      tone: 'none',
+    };
   }
 
   async openGroup(invitationId: string): Promise<void> {
@@ -178,6 +251,10 @@ export class ArrivalsPage implements ViewWillEnter, ViewWillLeave {
       expandToScroll: false,
     });
     await modal.present();
+    const { role } = await modal.onDidDismiss();
+    if (role === 'registered') {
+      this.clearSearch();
+    }
   }
 
   async onScanQr(): Promise<void> {
@@ -215,7 +292,23 @@ export class ArrivalsPage implements ViewWillEnter, ViewWillLeave {
       return;
     }
 
-    await this.openGroup(invitation.id);
+    void this.openGroup(invitation.id);
+  }
+
+  private startClock(): void {
+    this.now.set(new Date());
+    if (this.clockTimer === null) {
+      this.clockTimer = setInterval(() => {
+        this.now.set(new Date());
+      }, 60_000);
+    }
+  }
+
+  private stopClock(): void {
+    if (this.clockTimer !== null) {
+      clearInterval(this.clockTimer);
+      this.clockTimer = null;
+    }
   }
 
   private async handleCameraUnavailable(): Promise<void> {

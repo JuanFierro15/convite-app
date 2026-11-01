@@ -9,9 +9,38 @@ describe('ConnectionStatusService', () => {
     service = TestBed.inject(ConnectionStatusService);
   });
 
-  it('starts with retrying and slow as false', () => {
+  it('starts with retrying and slow as false and unreachable as false', () => {
     expect(service.retrying()).toBe(false);
     expect(service.slow()).toBe(false);
+    expect(service.unreachable()).toBe(false);
+  });
+
+  it('updates unreachable based on the last reported status via tracker', () => {
+    const trackerA = service.trackRequest();
+    const trackerB = service.trackRequest();
+
+    expect(service.unreachable()).toBe(false);
+
+    trackerA.unreachable();
+    expect(service.unreachable()).toBe(true);
+
+    trackerB.reachable();
+    expect(service.unreachable()).toBe(false);
+
+    trackerB.unreachable();
+    expect(service.unreachable()).toBe(true);
+
+    trackerA.reachable();
+    expect(service.unreachable()).toBe(false);
+  });
+
+  it('does not reset unreachable when tracker finishes', () => {
+    const tracker = service.trackRequest();
+    tracker.unreachable();
+    expect(service.unreachable()).toBe(true);
+
+    tracker.finish();
+    expect(service.unreachable()).toBe(true);
   });
 
   it('tracks two concurrent requests independently', () => {

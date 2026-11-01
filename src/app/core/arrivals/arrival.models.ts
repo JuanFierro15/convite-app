@@ -43,6 +43,8 @@ export interface RecordArrivalResult {
   arrived_by: string | null;
 }
 
+export type ArrivalConnection = 'online' | 'slow' | 'offline';
+
 export interface ArrivalGuestView {
   id: string;
   full_name: string;
@@ -59,6 +61,7 @@ export interface ArrivalInvitationView {
   guests: ArrivalGuestView[];
   arrivedCount: number;
   totalCount: number;
+  queuedCount: number;
 }
 
 export interface ArrivalNotice {

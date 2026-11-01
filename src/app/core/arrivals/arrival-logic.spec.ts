@@ -10,6 +10,7 @@ import {
   searchInvitations,
 } from './arrival-logic';
 import {
+  ArrivalInvitationView,
   ArrivalSnapshot,
   PendingArrival,
   RecordArrivalResult,
@@ -93,6 +94,7 @@ describe('arrival-logic', () => {
       expect(views[0].id).toBe('inv-1');
       expect(views[0].arrivedCount).toBe(2);
       expect(views[0].totalCount).toBe(2);
+      expect(views[0].queuedCount).toBe(1);
 
       const guest1 = views[0].guests[0];
       expect(guest1.id).toBe('guest-1');
@@ -108,6 +110,7 @@ describe('arrival-logic', () => {
       expect(views[1].id).toBe('inv-2');
       expect(views[1].arrivedCount).toBe(0);
       expect(views[1].totalCount).toBe(1);
+      expect(views[1].queuedCount).toBe(0);
       expect(views[1].guests[0].arrivedAt).toBeNull();
       expect(views[1].guests[0].synced).toBe(true);
     });
@@ -173,6 +176,7 @@ describe('arrival-logic', () => {
           kind: 'group' as const,
           arrivedCount: 0,
           totalCount: 2,
+          queuedCount: 0,
           guests: [
             { id: 'g-1', full_name: 'Persona 1', rsvp: null as any, arrivedAt: null, synced: true },
             { id: 'g-2', full_name: 'Persona 2', rsvp: undefined as any, arrivedAt: null, synced: true },
@@ -249,9 +253,102 @@ describe('arrival-logic', () => {
     });
 
     it('respects the limit argument', () => {
-      const views = buildInvitationViews(mockSnapshot, []);
-      const results = searchInvitations(views, 'a', 1);
+      const views: ArrivalInvitationView[] = [
+        {
+          id: 'inv-1',
+          code: 'ABCD1111',
+          group_name: 'Familia Ramírez',
+          kind: 'group',
+          guests: [],
+          arrivedCount: 0,
+          totalCount: 0,
+          queuedCount: 0,
+        },
+        {
+          id: 'inv-2',
+          code: 'ABCD2222',
+          group_name: 'Familia Gómez',
+          kind: 'group',
+          guests: [],
+          arrivedCount: 0,
+          totalCount: 0,
+          queuedCount: 0,
+        },
+      ];
+      const results = searchInvitations(views, 'fam', 1);
       expect(results).toHaveLength(1);
+      expect(results[0].id).toBe('inv-1');
+    });
+
+    it('matches by word start in group name or person name (word prefix search)', () => {
+      const testViews: ArrivalInvitationView[] = [
+        {
+          id: 'inv-ejemplo',
+          code: 'EJEM1234',
+          group_name: 'Familia Ejemplo',
+          kind: 'group',
+          guests: [
+            {
+              id: 'g-ana',
+              full_name: 'Ana Ejemplo',
+              rsvp: 'accepted',
+              arrivedAt: null,
+              synced: true,
+            },
+            {
+              id: 'g-luciana',
+              full_name: 'Luciana Ejemplo',
+              rsvp: 'accepted',
+              arrivedAt: null,
+              synced: true,
+            },
+            {
+              id: 'g-jose',
+              full_name: 'José Ejemplo',
+              rsvp: 'accepted',
+              arrivedAt: null,
+              synced: true,
+            },
+          ],
+          arrivedCount: 0,
+          totalCount: 3,
+          queuedCount: 0,
+        },
+      ];
+
+      // "Familia Ejemplo" con la consulta "ej" coincide; con "jem" no coincide; con "fam ej" coincide
+      expect(searchInvitations(testViews, 'ej')).toHaveLength(1);
+      expect(searchInvitations(testViews, 'jem')).toHaveLength(0);
+      expect(searchInvitations(testViews, 'fam ej')).toHaveLength(1);
+
+      // una persona "Ana Ejemplo" coincide con "an" y con "ana ej"; "Luciana Ejemplo" no coincide con "ana"
+      expect(searchInvitations(testViews, 'an')).toHaveLength(1);
+      expect(searchInvitations(testViews, 'ana ej')).toHaveLength(1);
+
+      const lucianaOnlyView: ArrivalInvitationView[] = [
+        {
+          id: 'inv-luciana',
+          code: 'LUCI1234',
+          group_name: 'Invitado Especial',
+          kind: 'individual',
+          guests: [
+            {
+              id: 'g-luciana',
+              full_name: 'Luciana Ejemplo',
+              rsvp: 'accepted',
+              arrivedAt: null,
+              synced: true,
+            },
+          ],
+          arrivedCount: 0,
+          totalCount: 1,
+          queuedCount: 0,
+        },
+      ];
+      expect(searchInvitations(lucianaOnlyView, 'ana')).toHaveLength(0);
+
+      // "jose" coincide con "José Ejemplo"
+      expect(searchInvitations(testViews, 'jose')).toHaveLength(1);
     });
   });
 

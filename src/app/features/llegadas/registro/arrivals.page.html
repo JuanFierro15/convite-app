@@ -4,24 +4,7 @@
       <ion-back-button [defaultHref]="'/eventos/' + id() + '/panel'" text=""></ion-back-button>
     </ion-buttons>
 
-    <ion-title>{{ headerTitle() }}</ion-title>
-
-    <ion-buttons slot="end" class="header-indicators">
-      @if (session.online()) {
-        <span class="badge-soft-success text-label">En línea</span>
-      } @else {
-        <span class="badge-soft-warning text-label">Sin conexión</span>
-      }
-
-      @if (session.pendingCount() > 0) {
-        <span class="badge-soft-warning text-label pending-badge">
-          @if (session.syncing()) {
-            <ion-spinner name="crescent" class="syncing-spinner" aria-label="Sincronizando"></ion-spinner>
-          }
-          {{ session.pendingCount() }} por sincronizar
-        </span>
-      }
-    </ion-buttons>
+    <ion-title>Llegadas</ion-title>
   </ion-toolbar>
 </ion-header>
 
@@ -51,6 +34,58 @@
     }
   } @else {
     <div class="arrivals-container">
+      <div class="arrivals-status" role="status" aria-live="polite">
+        <div class="arrivals-status__row">
+          @switch (session.connection()) {
+            @case ('online') {
+              <span class="connection-badge connection-badge--online badge-soft-success text-label">
+                En línea
+              </span>
+            }
+            @case ('slow') {
+              <span class="connection-badge connection-badge--slow badge-soft-warning text-label">
+                Conexión lenta
+              </span>
+            }
+            @case ('offline') {
+              <span class="connection-badge connection-badge--offline badge-soft-warning text-label">
+                Sin conexión
+              </span>
+            }
+          }
+
+          @if (listAgeText(); as age) {
+            <span class="list-age text-label" [class.list-age--stale]="listStale()">
+              Lista actualizada {{ age }}@if (listStale()) {. Actualízala cuando haya conexión.}
+            </span>
+          }
+        </div>
+
+        @if (session.pendingCount() > 0) {
+          <p class="queue-line text-label">
+            @if (session.syncing()) {
+              <ion-spinner name="crescent" class="queue-spinner" aria-hidden="true"></ion-spinner>
+            }
+            {{ queueLineText() }}
+          </p>
+
+          @if (syncErrorText(); as syncErr) {
+            <div class="sync-error">
+              <p class="text-label">No pudimos sincronizar: {{ syncErr }}. Se vuelve a intentar sola.</p>
+              <ion-button
+                class="sync-retry"
+                size="small"
+                fill="outline"
+                [disabled]="!session.online() || session.syncing()"
+                (click)="session.retrySync()"
+              >
+                Reintentar ahora
+              </ion-button>
+            </div>
+          }
+        }
+      </div>
+
       <ion-card class="counter-card">
         <ion-card-content class="counter-card__content">
           <p class="counter-lead text-body">Llegaron</p>
@@ -63,7 +98,7 @@
             <p class="counter-unconfirmed text-body">{{ unconfirmed }}</p>
           }
 
-          @if (!session.online()) {
+          @if (session.connection() !== 'online') {
             <p class="counter-offline text-label">Según este celular</p>
           }
         </ion-card-content>
@@ -107,14 +142,42 @@
           @if (searchResults().length > 0) {
             <ion-list class="search-results-list" lines="full">
               @for (item of searchResults(); track item.id) {
-                <ion-item button [detail]="true" (click)="openGroup(item.id)">
+                @let summary = formatArrivedSummary(item);
+                <ion-item
+                  button
+                  [detail]="true"
+                  [class.search-item--complete]="summary.tone === 'complete'"
+                  (click)="openGroup(item.id)"
+                >
                   <ion-label>
                     <h3 class="text-name">{{ item.group_name }}</h3>
                     <p class="text-label search-item-code">{{ formatCode(item.code) }}</p>
+                    @if (item.queuedCount > 0) {
+                      <span class="search-item-queued badge-soft-warning text-label">
+                        {{ item.queuedCount === 1 ? '1 sin sincronizar' : item.queuedCount + ' sin sincronizar' }}
+                      </span>
+                    }
                   </ion-label>
-                  <span slot="end" class="text-body search-item-count">
-                    {{ formatArrivedSummary(item.arrivedCount, item.totalCount) }}
-                  </span>
+
+                  @if (summary.tone === 'complete') {
+                    <span
+                      slot="end"
+                      class="search-item-badge search-item-badge--complete badge-soft-success text-label"
+                    >
+                      {{ summary.text }}
+                    </span>
+                  } @else if (summary.tone === 'partial') {
+                    <span
+                      slot="end"
+                      class="search-item-badge search-item-badge--partial badge-soft-warning text-label"
+                    >
+                      {{ summary.text }}
+                    </span>
+                  } @else {
+                    <span slot="end" class="text-body search-item-count">
+                      {{ summary.text }}
+                    </span>
+                  }
                 </ion-item>
               }
             </ion-list>
@@ -125,10 +188,6 @@
       </div>
 
       <div class="list-status-section">
-        @if (session.downloadedAtText(); as downloadedAt) {
-          <p class="downloaded-at-text text-body">Lista descargada {{ downloadedAt }}</p>
-        }
-
         <ion-button
           fill="outline"
           (click)="session.refresh()"
@@ -139,12 +198,6 @@
           }
           Actualizar lista
         </ion-button>
-
-        @if (session.stale()) {
-          <p class="stale-warning text-label">
-            La lista tiene más de 12 horas. Actualízala si hay conexión.
-          </p>
-        }
 
         @if (session.error(); as listError) {
           <p class="list-error text-label">{{ listError }}</p>

@@ -149,3 +149,24 @@ export function formatDownloadedAt(iso: string | Date, now: Date = new Date()): 
   const dayMonth = formatDayMonth(date);
   return `el ${dayMonth} a las ${time}`;
 }
+
+export function formatListAge(iso: string | Date, now: Date = new Date()): string {
+  const date = parseBogotaAwareDate(iso);
+  const diffMs = now.getTime() - date.getTime();
+
+  if (diffMs < 60_000) {
+    return 'hace un momento';
+  }
+
+  const minutes = Math.floor(diffMs / 60_000);
+  if (minutes < 60) {
+    return `hace ${minutes} min`;
+  }
+
+  const hours = Math.floor(diffMs / (60 * 60_000));
+  if (hours < 12) {
+    return `hace ${hours} h`;
+  }
+
+  return formatDownloadedAt(iso, now);
+}

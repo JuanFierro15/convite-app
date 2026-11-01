@@ -466,4 +466,87 @@ describe('resilient-fetch', () => {
     });
     expect(noContentResponse.status).toBe(204);
   });
+
+  it('calls reachable on 200 and 500 HTTP responses', async () => {
+    TestBed.configureTestingModule({});
+    const statusService = TestBed.inject(ConnectionStatusService);
+    statusService.trackRequest().unreachable();
+    expect(statusService.unreachable()).toBe(true);
+
+    const fetch200 = createResilientFetch(statusService, {
+      fetchImpl: vi.fn().mockResolvedValue(jsonResponse({ ok: true }, 200)),
+      sleep: vi.fn().mockResolvedValue(undefined),
+    });
+    await fetch200(`${BASE_URL}/rest/v1/invitations`);
+    expect(statusService.unreachable()).toBe(false);
+
+    statusService.trackRequest().unreachable();
+    expect(statusService.unreachable()).toBe(true);
+
+    const fetch500 = createResilientFetch(statusService, {
+      fetchImpl: vi.fn().mockResolvedValue(new Response('Internal Server Error', { status: 500 })),
+      sleep: vi.fn().mockResolvedValue(undefined),
+    });
+    const resp500 = await fetch500(`${BASE_URL}/rest/v1/invitations`);
+    expect(resp500.status).toBe(500);
+    expect(statusService.unreachable()).toBe(false);
+  });
+
+  it('calls unreachable on final network error and timeout error', async () => {
+    TestBed.configureTestingModule({});
+    const statusService = TestBed.inject(ConnectionStatusService);
+    expect(statusService.unreachable()).toBe(false);
+
+    const fetchNetworkError = createResilientFetch(statusService, {
+      fetchImpl: vi.fn().mockRejectedValue(new TypeError('Failed to fetch')),
+      random: () => 0,
+      sleep: vi.fn().mockResolvedValue(undefined),
+    });
+
+    await expect(fetchNetworkError(`${BASE_URL}/rest/v1/invitations`)).rejects.toThrow(TypeError);
+    expect(statusService.unreachable()).toBe(true);
+
+    statusService.trackRequest().reachable();
+    expect(statusService.unreachable()).toBe(false);
+
+    const fetchTimeout = createResilientFetch(statusService, {
+      fetchImpl: neverRespondingFetch(),
+      timeoutMs: 15,
+      random: () => 0,
+      sleep: vi.fn().mockResolvedValue(undefined),
+    });
+
+    await expect(fetchTimeout(`${BASE_URL}/rest/v1/invitations`)).rejects.toBeInstanceOf(RequestTimeoutError);
+    expect(statusService.unreachable()).toBe(true);
+  });
+
+  it('does not call unreachable when caller aborts the request', async () => {
+    TestBed.configureTestingModule({});
+    const statusService = TestBed.inject(ConnectionStatusService);
+    expect(statusService.unreachable()).toBe(false);
+
+    const preAborted = new AbortController();
+    preAborted.abort(new Error('user cancelled'));
+
+    const fetchWithCallerAbort = createResilientFetch(statusService, {
+      fetchImpl: neverRespondingFetch(),
+      timeoutMs: 100,
+      sleep: vi.fn().mockResolvedValue(undefined),
+    });
+
+    await expect(
+      fetchWithCallerAbort(`${BASE_URL}/rest/v1/invitations`, { signal: preAborted.signal }),
+    ).rejects.toThrow('user cancelled');
+    expect(statusService.unreachable()).toBe(false);
+
+    const inFlight = new AbortController();
+    setTimeout(() => {
+      inFlight.abort(new Error('cancelled during flight'));
+    }, 15);
+
+    await expect(
+      fetchWithCallerAbort(`${BASE_URL}/rest/v1/invitations`, { signal: inFlight.signal }),
+    ).rejects.toThrow('cancelled during flight');
+    expect(statusService.unreachable()).toBe(false);
+  });
 });

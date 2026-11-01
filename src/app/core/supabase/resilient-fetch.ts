@@ -177,6 +177,8 @@ export function createResilientFetch(
             signal: controller.signal,
           });
 
+          tracker?.reachable();
+
           const shouldSkipBody =
             method === 'HEAD' || NULL_BODY_STATUSES.has(response.status);
           const body = shouldSkipBody
@@ -203,6 +205,9 @@ export function createResilientFetch(
             continue;
           }
 
+          if (!callerSignal?.aborted) {
+            tracker?.unreachable();
+          }
           throw finalError;
         } finally {
           clearTimeout(timeoutTimer);
@@ -220,6 +225,9 @@ export function createResilientFetch(
         return bufferedResponse;
       }
 
+      if (!callerSignal?.aborted) {
+        tracker?.unreachable();
+      }
       throw new RequestTimeoutError();
     } finally {
       clearTimeout(slowTimer);

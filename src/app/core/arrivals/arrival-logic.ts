@@ -97,6 +97,7 @@ export function buildInvitationViews(
 
   return snapshot.invitations.map((inv) => {
     let arrivedCount = 0;
+    let queuedCount = 0;
     const guests: ArrivalGuestView[] = inv.guests.map((guest) => {
       if (guest.arrived_at !== null) {
         arrivedCount++;
@@ -112,6 +113,7 @@ export function buildInvitationViews(
       const pendingArrival = pendingByGuestId.get(guest.id);
       if (pendingArrival) {
         arrivedCount++;
+        queuedCount++;
         return {
           id: guest.id,
           full_name: guest.full_name,
@@ -138,6 +140,7 @@ export function buildInvitationViews(
       guests,
       arrivedCount,
       totalCount: guests.length,
+      queuedCount,
     };
   });
 }
@@ -173,6 +176,20 @@ export function findInvitationByCode(
   return null;
 }
 
+function matchesWordPrefixes(text: string, queryWords: readonly string[]): boolean {
+  if (queryWords.length === 0) {
+    return false;
+  }
+  const normalized = normalizeSearchText(text);
+  const words = normalized.split(/\s+/).filter((word) => word.length > 0);
+  if (words.length === 0) {
+    return false;
+  }
+  return queryWords.every((queryWord) =>
+    words.some((word) => word.startsWith(queryWord)),
+  );
+}
+
 export function searchInvitations(
   views: readonly ArrivalInvitationView[],
   query: string,
@@ -184,6 +201,7 @@ export function searchInvitations(
   }
 
   const normalizedQuery = normalizeSearchText(trimmed);
+  const queryWords = normalizedQuery.split(/\s+/).filter((word) => word.length > 0);
   const normalizedCode = normalizeInvitationCode(trimmed);
   const matchCode = normalizedCode.length >= 4;
 
@@ -192,11 +210,11 @@ export function searchInvitations(
   for (const view of views) {
     let matches = false;
 
-    if (normalizeSearchText(view.group_name).includes(normalizedQuery)) {
+    if (matchesWordPrefixes(view.group_name, queryWords)) {
       matches = true;
     } else if (
       view.guests.some((guest) =>
-        normalizeSearchText(guest.full_name).includes(normalizedQuery),
+        matchesWordPrefixes(guest.full_name, queryWords),
       )
     ) {
       matches = true;

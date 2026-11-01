@@ -7,6 +7,7 @@ import {
   signal,
 } from '@angular/core';
 import { AuthService } from '../auth/auth.service';
+import { ConnectionStatusService } from '../supabase/connection-status.service';
 import { ArrivalCounts } from '../utils/arrival-counts';
 import { formatDownloadedAt } from '../utils/dates';
 import {
@@ -18,6 +19,7 @@ import {
   searchInvitations,
 } from './arrival-logic';
 import {
+  ArrivalConnection,
   ArrivalInvitationView,
   ArrivalNotice,
   ArrivalSnapshot,
@@ -28,7 +30,23 @@ import { ArrivalSyncService } from './arrival-sync.service';
 import { ArrivalsRepository } from './arrivals.repository';
 import { NetworkStatusService } from './network-status.service';
 
-const TWELVE_HOURS_MS = 12 * 60 * 60 * 1000;
+export { ArrivalConnection } from './arrival.models';
+
+export const LIST_STALE_AFTER_MS = 60 * 60 * 1000;
+
+export function isListStale(
+  downloadedAtIso: string | null,
+  now: Date = new Date(),
+): boolean {
+  if (!downloadedAtIso) {
+    return false;
+  }
+  const downloadedTime = new Date(downloadedAtIso).getTime();
+  if (Number.isNaN(downloadedTime)) {
+    return false;
+  }
+  return now.getTime() - downloadedTime > LIST_STALE_AFTER_MS;
+}
 
 @Injectable({ providedIn: 'root' })
 export class ArrivalSessionService {
@@ -36,6 +54,7 @@ export class ArrivalSessionService {
   private readonly repository = inject(ArrivalsRepository);
   private readonly sync = inject(ArrivalSyncService);
   private readonly network = inject(NetworkStatusService);
+  private readonly connectionStatus = inject(ConnectionStatusService);
   private readonly auth = inject(AuthService);
 
   private readonly eventIdSignal = signal<string | null>(null);
@@ -68,9 +87,21 @@ export class ArrivalSessionService {
 
   readonly online: Signal<boolean> = computed(() => this.network.online());
 
+  readonly connection: Signal<ArrivalConnection> = computed(() => {
+    if (!this.network.online() || this.connectionStatus.unreachable()) {
+      return 'offline';
+    }
+    if (this.connectionStatus.retrying() || this.connectionStatus.slow()) {
+      return 'slow';
+    }
+    return 'online';
+  });
+
   readonly hasSession: Signal<boolean> = computed(() => this.auth.session() !== null);
 
   readonly syncing: Signal<boolean> = computed(() => this.sync.syncing());
+
+  readonly syncError: Signal<string | null> = computed(() => this.sync.lastError());
 
   readonly notices: Signal<ArrivalNotice[]> = computed(() => {
     const currentId = this.eventId();
@@ -80,6 +111,10 @@ export class ArrivalSessionService {
     return this.sync.notices().filter((notice) => notice.eventId === currentId);
   });
 
+  readonly downloadedAt: Signal<string | null> = computed(
+    () => this.snapshot()?.downloadedAt ?? null,
+  );
+
   readonly downloadedAtText: Signal<string> = computed(() => {
     const snap = this.snapshot();
     if (!snap) {
@@ -88,17 +123,9 @@ export class ArrivalSessionService {
     return formatDownloadedAt(snap.downloadedAt);
   });
 
-  readonly stale: Signal<boolean> = computed(() => {
-    const snap = this.snapshot();
-    if (!snap) {
-      return false;
-    }
-    const downloadedTime = new Date(snap.downloadedAt).getTime();
-    if (Number.isNaN(downloadedTime)) {
-      return false;
-    }
-    return Date.now() - downloadedTime > TWELVE_HOURS_MS;
-  });
+  readonly stale: Signal<boolean> = computed(() =>
+    isListStale(this.downloadedAt(), new Date()),
+  );
 
   constructor() {
     effect(() => {
@@ -157,6 +184,10 @@ export class ArrivalSessionService {
     } catch {
       // Prefetch silencioso, nunca lanza
     }
+  }
+
+  async retrySync(): Promise<void> {
+    await this.sync.syncAll();
   }
 
   findByCode(code: string): ArrivalInvitationView | null {

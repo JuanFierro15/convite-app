@@ -3,6 +3,8 @@ import { Injectable, Signal, computed, signal } from '@angular/core';
 export interface RequestTracker {
   markRetrying(): void;
   markSlow(): void;
+  reachable(): void;
+  unreachable(): void;
   finish(): void;
 }
 
@@ -10,9 +12,11 @@ export interface RequestTracker {
 export class ConnectionStatusService {
   private readonly retryingCount = signal(0);
   private readonly slowCount = signal(0);
+  private readonly unreachableSignal = signal(false);
 
   readonly retrying: Signal<boolean> = computed(() => this.retryingCount() > 0);
   readonly slow: Signal<boolean> = computed(() => this.slowCount() > 0);
+  readonly unreachable: Signal<boolean> = this.unreachableSignal.asReadonly();
 
   trackRequest(): RequestTracker {
     let markedRetrying = false;
@@ -33,6 +37,12 @@ export class ConnectionStatusService {
         }
         markedSlow = true;
         this.slowCount.update((count) => count + 1);
+      },
+      reachable: () => {
+        this.unreachableSignal.set(false);
+      },
+      unreachable: () => {
+        this.unreachableSignal.set(true);
       },
       finish: () => {
         if (finished) {

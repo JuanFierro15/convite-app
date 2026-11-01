@@ -1,21 +1,3 @@
-.header-indicators {
-  display: flex;
-  align-items: center;
-  gap: var(--space-xs);
-  padding-inline-end: var(--space-xs);
-}
-
-.pending-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-xs);
-}
-
-.syncing-spinner {
-  width: 14px;
-  height: 14px;
-}
-
 .arrivals-content {
   --background: var(--ion-background-color);
 }
@@ -46,6 +28,65 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
+}
+
+.arrivals-status {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: 0 var(--space-xs);
+
+  &__row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-xs);
+  }
+
+  .list-age {
+    color: var(--ion-color-medium);
+
+    &--stale {
+      color: var(--ion-color-warning-shade);
+      font-weight: 600;
+    }
+  }
+
+  .queue-line {
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    color: var(--ion-color-warning-shade);
+    font-weight: 500;
+
+    .queue-spinner {
+      width: 14px;
+      height: 14px;
+    }
+  }
+
+  .sync-error {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+    background: rgba(var(--ion-color-danger-rgb), 0.1);
+
+    p {
+      margin: 0;
+      color: var(--ion-color-danger-shade);
+      flex: 1 1 200px;
+    }
+
+    .sync-retry {
+      margin: 0;
+      --color: var(--ion-color-danger-shade);
+      --border-color: var(--ion-color-danger-shade);
+    }
+  }
 }
 
 .counter-card {
@@ -141,6 +182,30 @@
   }
 }
 
+// El botón de limpiar lo dibuja ion-searchbar por dentro: sin ::ng-deep el atributo del componente no lo alcanza.
+:host ::ng-deep .search-section ion-searchbar {
+  .searchbar-clear-button {
+    min-width: 48px;
+    width: 48px;
+    height: 48px;
+    top: 50%;
+    transform: translateY(-50%);
+    inset-inline-end: 0;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &.searchbar-has-value.searchbar-should-show-clear .searchbar-clear-button {
+    display: flex;
+  }
+
+  .searchbar-clear-icon {
+    width: 1.375rem;
+    height: 1.375rem;
+    margin: auto;
+  }
+}
+
 .search-results-list {
   margin-top: var(--space-xs);
   border-radius: var(--radius-md);
@@ -153,6 +218,13 @@
     --padding-end: var(--space-md);
     --inner-padding-end: 0;
     min-height: 54px;
+
+    &.search-item--complete {
+      h3,
+      .text-name {
+        color: var(--ion-color-medium-shade);
+      }
+    }
   }
 }
 
@@ -161,9 +233,21 @@
   margin-top: var(--space-xs);
 }
 
+.search-item-queued {
+  display: inline-flex;
+  margin-top: var(--space-xs);
+  font-size: 0.75rem;
+}
+
+.search-item-badge {
+  margin-inline-end: var(--space-xs);
+  white-space: nowrap;
+}
+
 .search-item-count {
   color: var(--ion-color-medium);
   margin-inline-end: var(--space-xs);
+  white-space: nowrap;
 }
 
 .search-no-results {
@@ -180,16 +264,6 @@
   gap: var(--space-xs);
   padding-top: var(--space-md);
   border-top: 1px solid var(--ion-border-color);
-
-  .downloaded-at-text {
-    margin: 0;
-    color: var(--ion-color-medium);
-  }
-
-  .stale-warning {
-    margin: 0;
-    color: var(--ion-color-warning-shade);
-  }
 
   .list-error {
     margin: 0;
