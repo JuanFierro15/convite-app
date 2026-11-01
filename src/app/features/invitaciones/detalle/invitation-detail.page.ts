@@ -54,6 +54,7 @@ import {
   invitationStatus,
 } from '../../../core';
 import { EmptyStateComponent, StatusBadgeComponent } from '../../../shared';
+import { createDiscardGuard } from '../formulario/discard-guard';
 import { InvitationFormComponent } from '../formulario/invitation-form.component';
 import { InvitationActionsService } from '../invitation-actions.service';
 import { InvitationQrComponent } from '../qr/invitation-qr.component';
@@ -172,12 +173,15 @@ export class InvitationDetailPage implements ViewWillEnter {
       return;
     }
 
+    const guard = createDiscardGuard(this.alertController);
     const modal = await this.modalController.create({
       component: InvitationFormComponent,
       componentProps: {
         eventId: this.id(),
         invitation: current,
+        discardGuard: guard,
       },
+      canDismiss: guard.canDismiss,
       breakpoints: [0, 0.9, 1],
       initialBreakpoint: 0.9,
       expandToScroll: false,
@@ -246,7 +250,7 @@ export class InvitationDetailPage implements ViewWillEnter {
 
     const alert = await this.alertController.create({
       header: 'Marcar como no enviada',
-      message: 'La invitación vuelve a la lista de pendientes para enviarla otra vez.',
+      message: 'La invitación vuelve a quedar por enviar.',
       buttons: [
         {
           text: 'Cancelar',
@@ -301,8 +305,8 @@ export class InvitationDetailPage implements ViewWillEnter {
       return;
     }
 
-    const sent = await this.invitationActions.shareWhatsApp(current, currentEvent);
-    if (sent) {
+    const result = await this.invitationActions.shareWhatsApp(current, currentEvent);
+    if (result.opened) {
       await this.reloadInvitation();
     }
   }

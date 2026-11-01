@@ -34,25 +34,27 @@ export class InvitationActionsService {
   async shareWhatsApp(
     invitation: Pick<InvitationRow, 'id' | 'group_name' | 'phone' | 'code' | 'kind'>,
     event: Pick<EventRow, 'name' | 'starts_at' | 'rsvp_deadline'>,
-  ): Promise<boolean> {
+    options: { notifyMarkFailure?: boolean } = {},
+  ): Promise<{ opened: boolean; marked: boolean }> {
+    const notifyMarkFailure = options.notifyMarkFailure ?? true;
     const message = this.whatsAppMessage(invitation, event);
 
-    const markSent = async (): Promise<void> => {
-      try {
-        await this.invitationsRepository.markWhatsAppSent(invitation.id);
-      } catch {
+    const markSentLocal = async (): Promise<boolean> => {
+      const marked = await this.markSent(invitation.id);
+      if (!marked && notifyMarkFailure) {
         await this.showToast(
           'Se abrió WhatsApp, pero no pudimos marcar la invitación como enviada.',
           'warning',
         );
       }
+      return marked;
     };
 
     const url = whatsappUrl(invitation.phone, message);
     if (url) {
       window.open(url, '_blank');
-      await markSent();
-      return true;
+      const marked = await markSentLocal();
+      return { opened: true, marked };
     }
 
     if (Capacitor.isNativePlatform()) {
@@ -61,11 +63,11 @@ export class InvitationActionsService {
           title: event.name,
           text: message,
         });
-        await markSent();
-        return true;
+        const marked = await markSentLocal();
+        return { opened: true, marked };
       } catch {
         // El usuario puede cerrar la hoja de compartir sin elegir una app.
-        return false;
+        return { opened: false, marked: false };
       }
     }
 
@@ -75,11 +77,11 @@ export class InvitationActionsService {
           title: event.name,
           text: message,
         });
-        await markSent();
-        return true;
+        const marked = await markSentLocal();
+        return { opened: true, marked };
       } catch {
         // El navegador lanza AbortError si el usuario cancela el menú de compartir.
-        return false;
+        return { opened: false, marked: false };
       }
     }
 
@@ -89,7 +91,16 @@ export class InvitationActionsService {
     } catch (err) {
       await this.showError(err);
     }
-    return false;
+    return { opened: false, marked: false };
+  }
+
+  async markSent(invitationId: string): Promise<boolean> {
+    try {
+      await this.invitationsRepository.markWhatsAppSent(invitationId);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   async confirmDelete(

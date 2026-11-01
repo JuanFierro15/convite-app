@@ -58,6 +58,7 @@ import {
   toInvitationKind,
 } from '../../../core';
 import { InvitationActionsService } from '../invitation-actions.service';
+import { DiscardGuard } from './discard-guard';
 
 interface GuestControlMap {
   id: FormControl<string>;
@@ -121,6 +122,7 @@ export class InvitationFormComponent implements OnInit, OnDestroy {
 
   @Input() eventId = '';
   @Input() invitation?: InvitationWithGuests;
+  @Input() discardGuard?: DiscardGuard;
 
   readonly isEdit = signal<boolean>(false);
   readonly saving = signal<boolean>(false);
@@ -130,6 +132,7 @@ export class InvitationFormComponent implements OnInit, OnDestroy {
   readonly duplicatePhoneWarning = signal<string | null>(null);
 
   private invitationId = '';
+  private initialSnapshot = '';
   private duplicatePhoneTimer: ReturnType<typeof setTimeout> | null = null;
   private duplicateCheckSequence = 0;
 
@@ -195,6 +198,36 @@ export class InvitationFormComponent implements OnInit, OnDestroy {
       this.guestsArray.clear();
       this.guestsArray.push(this.createGuestControl(''));
     }
+
+    this.initialSnapshot = this.snapshot();
+    if (this.discardGuard) {
+      this.discardGuard.hasChanges = () => this.hasChanges();
+    }
+  }
+
+  hasChanges(): boolean {
+    if (!this.initialSnapshot) {
+      return false;
+    }
+    return this.snapshot() !== this.initialSnapshot;
+  }
+
+  private snapshot(): string {
+    const rawKind = this.kind();
+    const groupName = this.form.controls.group_name.value.trim();
+    const phoneRaw = this.form.controls.phone.value ?? '';
+    const phoneDigits = phoneRaw.replace(/\D/g, '');
+    const guestNames =
+      rawKind === 'group'
+        ? this.guestsArray.controls.map((c) => c.controls.full_name.value.trim())
+        : [];
+
+    return JSON.stringify({
+      kind: rawKind,
+      groupName,
+      phoneDigits,
+      guestNames,
+    });
   }
 
   ngOnDestroy(): void {

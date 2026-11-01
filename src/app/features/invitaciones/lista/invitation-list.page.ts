@@ -10,6 +10,7 @@ import {
 } from '@angular/core';
 import { Router } from '@angular/router';
 import {
+  AlertController,
   IonBackButton,
   IonButton,
   IonButtons,
@@ -55,6 +56,7 @@ import {
   rsvpCounts,
 } from '../../../core';
 import { EmptyStateComponent, StatusBadgeComponent } from '../../../shared';
+import { createDiscardGuard } from '../formulario/discard-guard';
 import { InvitationFormComponent } from '../formulario/invitation-form.component';
 import { InvitationActionsService } from '../invitation-actions.service';
 
@@ -75,17 +77,15 @@ function formatInvitationSummary(guests: readonly GuestRow[]): string {
   const breakdownParts: string[] = [];
   if (counts.accepted > 0) {
     breakdownParts.push(
-      `${counts.accepted} ${counts.accepted === 1 ? 'aceptó' : 'aceptaron'}`,
+      `${counts.accepted} ${counts.accepted === 1 ? 'confirmó' : 'confirmaron'}`,
     );
   }
   if (counts.pending > 0) {
-    breakdownParts.push(
-      `${counts.pending} ${counts.pending === 1 ? 'pendiente' : 'pendientes'}`,
-    );
+    breakdownParts.push(`${counts.pending} sin respuesta`);
   }
   if (counts.declined > 0) {
     breakdownParts.push(
-      `${counts.declined} ${counts.declined === 1 ? 'no asiste' : 'no asisten'}`,
+      `${counts.declined} ${counts.declined === 1 ? 'no asistirá' : 'no asistirán'}`,
     );
   }
 
@@ -132,6 +132,7 @@ export class InvitationListPage implements ViewWillEnter {
   private readonly realtime = inject(RealtimeService);
   private readonly invitationActions = inject(InvitationActionsService);
   private readonly modalController = inject(ModalController);
+  private readonly alertController = inject(AlertController);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -341,18 +342,21 @@ export class InvitationListPage implements ViewWillEnter {
       return;
     }
 
-    const sent = await this.invitationActions.shareWhatsApp(invitation, currentEvent);
-    if (sent) {
+    const result = await this.invitationActions.shareWhatsApp(invitation, currentEvent);
+    if (result.opened) {
       await this.reloadInvitations();
     }
   }
 
   async openCreateModal(): Promise<void> {
+    const guard = createDiscardGuard(this.alertController);
     const modal = await this.modalController.create({
       component: InvitationFormComponent,
       componentProps: {
         eventId: this.id(),
+        discardGuard: guard,
       },
+      canDismiss: guard.canDismiss,
       breakpoints: [0, 0.9, 1],
       initialBreakpoint: 0.9,
       expandToScroll: false,

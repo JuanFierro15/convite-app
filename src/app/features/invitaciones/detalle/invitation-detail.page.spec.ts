@@ -137,7 +137,7 @@ describe('InvitationDetailPage', () => {
     component = fixture.componentInstance;
   });
 
-  it('configures openEditModal sheet with expandToScroll: false', async () => {
+  it('configures openEditModal sheet with expandToScroll: false, canDismiss and discardGuard in componentProps', async () => {
     component.invitation.set(sampleInvitation);
 
     await component.openEditModal();
@@ -145,10 +145,12 @@ describe('InvitationDetailPage', () => {
     expect(mockModalCtrl.create).toHaveBeenCalledWith(
       expect.objectContaining({
         component: InvitationFormComponent,
-        componentProps: {
+        componentProps: expect.objectContaining({
           eventId: 'evt-123',
           invitation: sampleInvitation,
-        },
+          discardGuard: expect.any(Object),
+        }),
+        canDismiss: expect.any(Function),
         breakpoints: [0, 0.9, 1],
         initialBreakpoint: 0.9,
         expandToScroll: false,
@@ -192,7 +194,7 @@ describe('InvitationDetailPage', () => {
     expect(mockAlertCtrl.create).toHaveBeenCalledWith(
       expect.objectContaining({
         header: 'Marcar como no enviada',
-        message: 'La invitación vuelve a la lista de pendientes para enviarla otra vez.',
+        message: 'La invitación vuelve a quedar por enviar.',
         buttons: expect.arrayContaining([
           expect.objectContaining({ text: 'Cancelar', role: 'cancel' }),
           expect.objectContaining({ text: 'Marcar' }),
@@ -211,7 +213,7 @@ describe('InvitationDetailPage', () => {
     expect(mockInvitationsRepo.get).toHaveBeenCalledWith('inv-1');
   });
 
-  it('reloads invitation if shareWhatsApp returns true, but not if false', async () => {
+  it('reloads invitation if shareWhatsApp returns opened: true, but not if opened: false', async () => {
     component.invitation.set(sampleInvitation);
     mockEventContext.event.set({
       id: 'evt-123',
@@ -220,14 +222,14 @@ describe('InvitationDetailPage', () => {
       rsvp_deadline: '2026-11-15T00:00:00-05:00',
     } as unknown as EventRow);
 
-    mockInvitationActions.shareWhatsApp.mockResolvedValue(true);
+    mockInvitationActions.shareWhatsApp.mockResolvedValue({ opened: true, marked: true });
     mockInvitationsRepo.get.mockClear();
 
     await component.onShareWhatsApp();
     expect(mockInvitationsRepo.get).toHaveBeenCalledWith('inv-1');
 
     mockInvitationsRepo.get.mockClear();
-    mockInvitationActions.shareWhatsApp.mockResolvedValue(false);
+    mockInvitationActions.shareWhatsApp.mockResolvedValue({ opened: false, marked: false });
 
     await component.onShareWhatsApp();
     expect(mockInvitationsRepo.get).not.toHaveBeenCalled();
@@ -246,7 +248,10 @@ describe('InvitationDetailPage', () => {
 
       const buttons = Array.from(segment.querySelectorAll('ion-segment-button'));
       const buttonTexts = buttons.map((btn) => btn.textContent?.trim());
-      expect(buttonTexts).toEqual(['Aceptó', 'Pendiente', 'No asiste']);
+      expect(buttonTexts).toEqual(['Confirmó', 'Sin respuesta', 'No asistirá']);
+
+      const buttonValues = buttons.map((btn) => btn.getAttribute('value'));
+      expect(buttonValues).toEqual(['accepted', 'pending', 'declined']);
     });
   });
 });

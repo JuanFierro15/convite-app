@@ -84,6 +84,7 @@ describe('InvitationSendPage', () => {
   };
   let mockInvitationActions: {
     shareWhatsApp: ReturnType<typeof vi.fn>;
+    markSent: ReturnType<typeof vi.fn>;
     whatsAppMessage: ReturnType<typeof vi.fn>;
     showError: ReturnType<typeof vi.fn>;
   };
@@ -114,7 +115,8 @@ describe('InvitationSendPage', () => {
     };
 
     mockInvitationActions = {
-      shareWhatsApp: vi.fn().mockResolvedValue(true),
+      shareWhatsApp: vi.fn().mockResolvedValue({ opened: true, marked: true }),
+      markSent: vi.fn().mockResolvedValue(true),
       whatsAppMessage: vi.fn().mockReturnValue('Hola A, te invitamos a nuestro evento.'),
       showError: vi.fn().mockResolvedValue(undefined),
     };
@@ -152,12 +154,12 @@ describe('InvitationSendPage', () => {
     );
   });
 
-  it('2. sendCurrent with shareWhatsApp returning true moves current to C, sets lastOpened to A, shows success text and updates progress to 2 de 3 enviadas', async () => {
+  it('2. sendCurrent with shareWhatsApp returning opened and marked moves current to C, sets lastOpened to A, shows success text and updates progress to 2 de 3 enviadas', async () => {
     component.invitations.set([invitationA, invitationB, invitationC, invitationD]);
     component.loading.set(false);
     fixture.detectChanges();
 
-    mockInvitationActions.shareWhatsApp.mockResolvedValue(true);
+    mockInvitationActions.shareWhatsApp.mockResolvedValue({ opened: true, marked: true });
 
     await component.sendCurrent();
     fixture.detectChanges();
@@ -172,12 +174,12 @@ describe('InvitationSendPage', () => {
     expect(progressEl?.textContent).toContain('2 de 3 enviadas');
   });
 
-  it('3. sendCurrent with shareWhatsApp returning false keeps current as A and has no lastOpened', async () => {
+  it('3. sendCurrent with shareWhatsApp returning opened: false keeps current as A and has no lastOpened', async () => {
     component.invitations.set([invitationA, invitationB, invitationC, invitationD]);
     component.loading.set(false);
     fixture.detectChanges();
 
-    mockInvitationActions.shareWhatsApp.mockResolvedValue(false);
+    mockInvitationActions.shareWhatsApp.mockResolvedValue({ opened: false, marked: false });
 
     await component.sendCurrent();
     fixture.detectChanges();
@@ -192,7 +194,7 @@ describe('InvitationSendPage', () => {
     component.loading.set(false);
     fixture.detectChanges();
 
-    mockInvitationActions.shareWhatsApp.mockResolvedValue(true);
+    mockInvitationActions.shareWhatsApp.mockResolvedValue({ opened: true, marked: true });
     await component.sendCurrent();
     fixture.detectChanges();
 
@@ -243,7 +245,7 @@ describe('InvitationSendPage', () => {
     component.loading.set(false);
     fixture.detectChanges();
 
-    let resolveShare!: (value: boolean) => void;
+    let resolveShare!: (value: { opened: boolean; marked: boolean }) => void;
     mockInvitationActions.shareWhatsApp.mockImplementation(
       () =>
         new Promise((resolve) => {
@@ -254,7 +256,7 @@ describe('InvitationSendPage', () => {
     const call1 = component.sendCurrent();
     const call2 = component.sendCurrent();
 
-    resolveShare(true);
+    resolveShare({ opened: true, marked: true });
     await Promise.all([call1, call2]);
 
     expect(mockInvitationActions.shareWhatsApp).toHaveBeenCalledTimes(1);
@@ -305,5 +307,123 @@ describe('InvitationSendPage', () => {
       expect.any(Function),
       expect.anything(),
     );
+  });
+
+  describe('marcado fallido y reintento (E-02)', () => {
+    it('con el marcado fallido la invitación sigue siendo la actual, no hay .last-opened, hay .mark-failed con el texto exacto y no se crea toast', async () => {
+      component.invitations.set([invitationA, invitationB, invitationC, invitationD]);
+      component.loading.set(false);
+      fixture.detectChanges();
+
+      mockInvitationActions.shareWhatsApp.mockResolvedValue({ opened: true, marked: false });
+
+      await component.sendCurrent();
+      fixture.detectChanges();
+
+      expect(component.current()?.id).toBe('inv-a');
+      expect(component.lastOpened()).toBeNull();
+      expect(fixture.nativeElement.querySelector('.last-opened')).toBeNull();
+
+      const markFailedEl = fixture.nativeElement.querySelector('.mark-failed');
+      expect(markFailedEl).not.toBeNull();
+      expect(markFailedEl.textContent).toContain('Se abrió el chat, pero no pudimos marcarla como enviada.');
+      expect(markFailedEl.textContent).toContain('Marcar como enviada');
+
+      expect(mockInvitationActions.showError).not.toHaveBeenCalled();
+      expect(mockInvitationActions.shareWhatsApp).toHaveBeenCalledWith(
+        invitationA,
+        expect.anything(),
+        { notifyMarkFailure: false },
+      );
+    });
+
+    it('al reintentar el marcado con éxito la saca de la cola, muestra .last-opened y no vuelve a llamar shareWhatsApp', async () => {
+      component.invitations.set([invitationA, invitationB, invitationC, invitationD]);
+      component.loading.set(false);
+      fixture.detectChanges();
+
+      mockInvitationActions.shareWhatsApp.mockResolvedValue({ opened: true, marked: false });
+      await component.sendCurrent();
+      fixture.detectChanges();
+
+      expect(component.current()?.id).toBe('inv-a');
+      expect(fixture.nativeElement.querySelector('.mark-failed')).not.toBeNull();
+
+      mockInvitationActions.shareWhatsApp.mockClear();
+      mockInvitationActions.markSent.mockResolvedValue(true);
+
+      await component.retryMark();
+      fixture.detectChanges();
+
+      expect(mockInvitationActions.markSent).toHaveBeenCalledWith('inv-a');
+      expect(mockInvitationActions.shareWhatsApp).not.toHaveBeenCalled();
+
+      expect(component.current()?.id).toBe('inv-c');
+      expect(component.lastOpened()).toEqual({ id: 'inv-a', groupName: 'A' });
+      expect(fixture.nativeElement.querySelector('.mark-failed')).toBeNull();
+      expect(fixture.nativeElement.querySelector('.last-opened')?.textContent).toContain('Se abrió el chat de A.');
+    });
+
+    it('al reintentar el marcado con falla la caja .mark-failed se queda y no vuelve a llamar shareWhatsApp', async () => {
+      component.invitations.set([invitationA, invitationB, invitationC, invitationD]);
+      component.loading.set(false);
+      fixture.detectChanges();
+
+      mockInvitationActions.shareWhatsApp.mockResolvedValue({ opened: true, marked: false });
+      await component.sendCurrent();
+      fixture.detectChanges();
+
+      mockInvitationActions.shareWhatsApp.mockClear();
+      mockInvitationActions.markSent.mockResolvedValue(false);
+
+      await component.retryMark();
+      fixture.detectChanges();
+
+      expect(mockInvitationActions.markSent).toHaveBeenCalledWith('inv-a');
+      expect(mockInvitationActions.shareWhatsApp).not.toHaveBeenCalled();
+
+      expect(component.current()?.id).toBe('inv-a');
+      expect(component.lastOpened()).toBeNull();
+      expect(fixture.nativeElement.querySelector('.mark-failed')).not.toBeNull();
+    });
+
+    it('saltar por ahora borra la caja .mark-failed', async () => {
+      component.invitations.set([invitationA, invitationB, invitationC, invitationD]);
+      component.loading.set(false);
+      fixture.detectChanges();
+
+      mockInvitationActions.shareWhatsApp.mockResolvedValue({ opened: true, marked: false });
+      await component.sendCurrent();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('.mark-failed')).not.toBeNull();
+
+      component.skipCurrent();
+      fixture.detectChanges();
+
+      expect(component.markFailed()).toBeNull();
+      expect(fixture.nativeElement.querySelector('.mark-failed')).toBeNull();
+      expect(component.current()?.id).toBe('inv-c');
+    });
+
+    it('no muestra .mark-failed si la invitación actual deja de coincidir con markFailed', async () => {
+      component.invitations.set([invitationA, invitationB, invitationC, invitationD]);
+      component.loading.set(false);
+      fixture.detectChanges();
+
+      mockInvitationActions.shareWhatsApp.mockResolvedValue({ opened: true, marked: false });
+      await component.sendCurrent();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('.mark-failed')).not.toBeNull();
+
+      // Al cambiar la lista (por ejemplo realtime), si la actual ya no es inv-a no se muestra
+      component.invitations.set([invitationC, invitationD]);
+      fixture.detectChanges();
+
+      expect(component.current()?.id).toBe('inv-c');
+      expect(component.markFailed()?.id).toBe('inv-a');
+      expect(fixture.nativeElement.querySelector('.mark-failed')).toBeNull();
+    });
   });
 });

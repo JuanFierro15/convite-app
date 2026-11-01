@@ -2,6 +2,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { AlertController, IonInput, ModalController } from '@ionic/angular';
 import { InvitationsRepository } from '../../../core';
 import { InvitationActionsService } from '../invitation-actions.service';
+import { DiscardGuard } from './discard-guard';
 import { InvitationFormComponent } from './invitation-form.component';
 
 describe('InvitationFormComponent', () => {
@@ -266,5 +267,105 @@ describe('InvitationFormComponent', () => {
 
     expect(mockAlertCtrl.create).toHaveBeenCalled();
     expect(mockInvitationsRepo.save).not.toHaveBeenCalled();
+  });
+
+  describe('hasChanges y guardia de descarte', () => {
+    it('sin tocar nada, hasChanges() es falso en nueva y en edición con teléfono formateado', () => {
+      component.ngOnInit();
+      expect(component.hasChanges()).toBe(false);
+
+      const editFixture = TestBed.createComponent(InvitationFormComponent);
+      const editComp = editFixture.componentInstance;
+      editComp.eventId = 'event-1';
+      editComp.invitation = {
+        id: 'inv-guard',
+        event_id: 'event-1',
+        group_name: 'Familia Guard',
+        kind: 'group',
+        phone: '+573001234567',
+        code: 'GRD123',
+        created_at: '2026-10-25T00:00:00Z',
+        updated_at: '2026-10-25T00:00:00Z',
+        whatsapp_sent_at: null,
+        guests: [
+          {
+            id: 'g-1',
+            invitation_id: 'inv-guard',
+            event_id: 'event-1',
+            full_name: 'Persona Guard',
+            rsvp: 'pending',
+            rsvp_updated_at: null,
+            arrived_at: null,
+            arrived_by: null,
+            sort_order: 0,
+            created_at: '2026-10-25T00:00:00Z',
+          },
+        ],
+      };
+
+      editComp.ngOnInit();
+      expect(editComp.hasChanges()).toBe(false);
+    });
+
+    it('escribir un nombre vuelve hasChanges verdadero y volver al inicial lo vuelve falso', () => {
+      component.ngOnInit();
+      expect(component.hasChanges()).toBe(false);
+
+      component.form.controls.group_name.setValue('Nuevo Nombre');
+      expect(component.hasChanges()).toBe(true);
+
+      component.form.controls.group_name.setValue('');
+      expect(component.hasChanges()).toBe(false);
+    });
+
+    it('cambiar el teléfono vuelve hasChanges verdadero y volver al inicial lo vuelve falso', () => {
+      component.ngOnInit();
+      expect(component.hasChanges()).toBe(false);
+
+      component.form.controls.phone.setValue('+57 300 999 8888');
+      expect(component.hasChanges()).toBe(true);
+
+      component.form.controls.phone.setValue('');
+      expect(component.hasChanges()).toBe(false);
+    });
+
+    it('cambiar el tipo vuelve hasChanges verdadero y volver al inicial lo vuelve falso', () => {
+      component.ngOnInit();
+      expect(component.hasChanges()).toBe(false);
+
+      component.setKind('individual');
+      expect(component.hasChanges()).toBe(true);
+
+      component.setKind('group');
+      expect(component.hasChanges()).toBe(false);
+    });
+
+    it('agregar una persona vuelve hasChanges verdadero y quitarla lo vuelve falso', () => {
+      component.ngOnInit();
+      expect(component.hasChanges()).toBe(false);
+
+      component.addGuest();
+      expect(component.hasChanges()).toBe(true);
+
+      component.removeGuest(1);
+      expect(component.hasChanges()).toBe(false);
+    });
+
+    it('el discardGuard recibido queda con hasChanges del formulario', () => {
+      const mockGuard: DiscardGuard = {
+        hasChanges: () => false,
+        canDismiss: vi.fn().mockResolvedValue(true),
+      };
+      component.discardGuard = mockGuard;
+      component.ngOnInit();
+
+      expect(mockGuard.hasChanges()).toBe(false);
+
+      component.form.controls.group_name.setValue('Nombre de Prueba');
+      expect(mockGuard.hasChanges()).toBe(true);
+
+      component.form.controls.group_name.setValue('');
+      expect(mockGuard.hasChanges()).toBe(false);
+    });
   });
 });

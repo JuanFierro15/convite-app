@@ -43,6 +43,36 @@
     margin: 0;
     --padding-start: var(--space-xs);
     --padding-end: var(--space-xs);
+    --color: var(--ion-color-primary-shade);
+  }
+}
+
+.mark-failed {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  background: rgba(var(--ion-color-warning-rgb), 0.14);
+  border-radius: var(--radius-md);
+  padding: var(--space-sm) var(--space-md);
+  color: var(--ion-text-color);
+
+  ion-icon {
+    font-size: 1.25rem;
+    flex-shrink: 0;
+    color: var(--ion-color-warning-shade);
+  }
+
+  .mark-failed__text {
+    flex: 1 1 180px;
+    margin: 0;
+  }
+
+  // El primario sobre el tinte amarillo queda en 3,8:1; el texto principal pasa de 12:1.
+  .mark-failed__retry {
+    margin: 0;
+    --color: var(--ion-text-color);
+    --border-color: var(--ion-color-warning-shade);
   }
 }
 

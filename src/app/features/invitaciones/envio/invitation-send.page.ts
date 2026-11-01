@@ -24,7 +24,7 @@ import {
   ViewWillEnter,
 } from '@ionic/angular';
 import { addIcons } from 'ionicons';
-import { checkmarkCircle, logoWhatsapp } from 'ionicons/icons';
+import { alertCircleOutline, checkmarkCircle, logoWhatsapp } from 'ionicons/icons';
 import {
   EventContextService,
   InvitationWithGuests,
@@ -72,7 +72,9 @@ export class InvitationSendPage implements ViewWillEnter {
   readonly error = signal<string | null>(null);
   readonly skippedIds = signal<ReadonlySet<string>>(new Set<string>());
   readonly lastOpened = signal<{ id: string; groupName: string } | null>(null);
+  readonly markFailed = signal<{ id: string; groupName: string } | null>(null);
   readonly sending = signal<boolean>(false);
+  readonly retryingMark = signal<boolean>(false);
   readonly undoing = signal<boolean>(false);
   readonly showPreview = signal<boolean>(false);
 
@@ -129,7 +131,7 @@ export class InvitationSendPage implements ViewWillEnter {
   });
 
   constructor() {
-    addIcons({ logoWhatsapp, checkmarkCircle });
+    addIcons({ logoWhatsapp, checkmarkCircle, alertCircleOutline });
   }
 
   ionViewWillEnter(): void {
@@ -173,8 +175,10 @@ export class InvitationSendPage implements ViewWillEnter {
         return;
       }
 
-      const opened = await this.invitationActions.shareWhatsApp(invitation, event);
-      if (opened) {
+      const result = await this.invitationActions.shareWhatsApp(invitation, event, {
+        notifyMarkFailure: false,
+      });
+      if (result.opened && result.marked) {
         const now = new Date().toISOString();
         this.invitations.update((items) =>
           items.map((item) =>
@@ -187,10 +191,43 @@ export class InvitationSendPage implements ViewWillEnter {
           this.skippedIds.set(nextSkipped);
         }
         this.lastOpened.set({ id: invitation.id, groupName: invitation.group_name });
+        this.markFailed.set(null);
+      } else if (result.opened && !result.marked) {
+        this.lastOpened.set(null);
+        this.markFailed.set({ id: invitation.id, groupName: invitation.group_name });
       }
     } finally {
       this.showPreview.set(false);
       this.sending.set(false);
+    }
+  }
+
+  async retryMark(): Promise<void> {
+    const failed = this.markFailed();
+    if (!failed || this.retryingMark()) {
+      return;
+    }
+
+    this.retryingMark.set(true);
+    try {
+      const ok = await this.invitationActions.markSent(failed.id);
+      if (ok) {
+        const now = new Date().toISOString();
+        this.invitations.update((items) =>
+          items.map((item) =>
+            item.id === failed.id ? { ...item, whatsapp_sent_at: now } : item,
+          ),
+        );
+        if (this.skippedIds().has(failed.id)) {
+          const nextSkipped = new Set(this.skippedIds());
+          nextSkipped.delete(failed.id);
+          this.skippedIds.set(nextSkipped);
+        }
+        this.lastOpened.set({ id: failed.id, groupName: failed.groupName });
+        this.markFailed.set(null);
+      }
+    } finally {
+      this.retryingMark.set(false);
     }
   }
 
@@ -224,6 +261,7 @@ export class InvitationSendPage implements ViewWillEnter {
     const nextSkipped = new Set(this.skippedIds());
     nextSkipped.add(current.id);
     this.skippedIds.set(nextSkipped);
+    this.markFailed.set(null);
     this.showPreview.set(false);
   }
 
@@ -244,6 +282,7 @@ export class InvitationSendPage implements ViewWillEnter {
       this.error.set(null);
       this.skippedIds.set(new Set());
       this.lastOpened.set(null);
+      this.markFailed.set(null);
     }
 
     if (!this.hasLoadedOnce) {

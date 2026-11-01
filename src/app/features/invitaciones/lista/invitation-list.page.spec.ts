@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { signal } from '@angular/core';
 import { Router, provideRouter } from '@angular/router';
-import { ModalController } from '@ionic/angular';
+import { AlertController, ModalController } from '@ionic/angular';
 import {
   AuthService,
   EventContextService,
@@ -25,6 +25,7 @@ describe('InvitationListPage', () => {
   let fixture: ComponentFixture<InvitationListPage>;
   let component: InvitationListPage;
   let mockModalCtrl: { create: ReturnType<typeof vi.fn> };
+  let mockAlertCtrl: { create: ReturnType<typeof vi.fn> };
   let mockModal: { present: ReturnType<typeof vi.fn>; onDidDismiss: ReturnType<typeof vi.fn> };
   let mockEventContext: {
     event: ReturnType<typeof signal<EventRow | null>>;
@@ -137,6 +138,9 @@ describe('InvitationListPage', () => {
     mockModalCtrl = {
       create: vi.fn().mockResolvedValue(mockModal),
     };
+    mockAlertCtrl = {
+      create: vi.fn(),
+    };
     mockEventContext = {
       event: signal(null),
       role: signal('owner'),
@@ -167,6 +171,7 @@ describe('InvitationListPage', () => {
       providers: [
         provideRouter([]),
         { provide: ModalController, useValue: mockModalCtrl },
+        { provide: AlertController, useValue: mockAlertCtrl },
         { provide: EventContextService, useValue: mockEventContext },
         { provide: InvitationsRepository, useValue: mockInvitationsRepo },
         { provide: AuthService, useValue: mockAuth },
@@ -180,15 +185,17 @@ describe('InvitationListPage', () => {
     component = fixture.componentInstance;
   });
 
-  it('configures openCreateModal sheet with expandToScroll: false', async () => {
+  it('configures openCreateModal sheet with expandToScroll: false, canDismiss and discardGuard in componentProps', async () => {
     await component.openCreateModal();
 
     expect(mockModalCtrl.create).toHaveBeenCalledWith(
       expect.objectContaining({
         component: InvitationFormComponent,
-        componentProps: {
+        componentProps: expect.objectContaining({
           eventId: 'evt-123',
-        },
+          discardGuard: expect.any(Object),
+        }),
+        canDismiss: expect.any(Function),
         breakpoints: [0, 0.9, 1],
         initialBreakpoint: 0.9,
         expandToScroll: false,
@@ -203,13 +210,145 @@ describe('InvitationListPage', () => {
 
     const sendQueueBtn = fixture.nativeElement.querySelector('.send-queue-button');
     expect(sendQueueBtn).not.toBeNull();
-    expect(sendQueueBtn.textContent).toContain('Enviar invitaciones pendientes (1)');
+    expect(sendQueueBtn.textContent).toContain('Enviar por WhatsApp (1 por enviar)');
 
     const sendStates = fixture.nativeElement.querySelectorAll('.send-state');
     expect(sendStates.length).toBe(3);
     expect(sendStates[0].textContent).toContain('Sin enviar');
     expect(sendStates[1].textContent).toContain('Enviada');
     expect(sendStates[2].textContent).toContain('Sin teléfono');
+  });
+
+  it('renders updated filter segment labels and summary text formatting', () => {
+    const invMixed: InvitationWithGuests = {
+      id: 'inv-mixed',
+      event_id: 'evt-123',
+      group_name: 'Familia Mixta',
+      kind: 'group',
+      phone: null,
+      code: 'MIX123',
+      created_at: '2026-10-01T00:00:00-05:00',
+      updated_at: '2026-10-01T00:00:00-05:00',
+      whatsapp_sent_at: null,
+      guests: [
+        {
+          id: 'g-m1',
+          invitation_id: 'inv-mixed',
+          event_id: 'evt-123',
+          full_name: 'Invitado Uno',
+          rsvp: 'accepted',
+          rsvp_updated_at: null,
+          arrived_at: null,
+          arrived_by: null,
+          sort_order: 0,
+          created_at: '2026-10-01T00:00:00-05:00',
+        },
+        {
+          id: 'g-m2',
+          invitation_id: 'inv-mixed',
+          event_id: 'evt-123',
+          full_name: 'Invitado Dos',
+          rsvp: 'pending',
+          rsvp_updated_at: null,
+          arrived_at: null,
+          arrived_by: null,
+          sort_order: 1,
+          created_at: '2026-10-01T00:00:00-05:00',
+        },
+        {
+          id: 'g-m3',
+          invitation_id: 'inv-mixed',
+          event_id: 'evt-123',
+          full_name: 'Invitado Tres',
+          rsvp: 'pending',
+          rsvp_updated_at: null,
+          arrived_at: null,
+          arrived_by: null,
+          sort_order: 2,
+          created_at: '2026-10-01T00:00:00-05:00',
+        },
+      ],
+    };
+
+    const invPlural: InvitationWithGuests = {
+      id: 'inv-pl',
+      event_id: 'evt-123',
+      group_name: 'Familia Plural',
+      kind: 'group',
+      phone: null,
+      code: 'PLU123',
+      created_at: '2026-10-01T00:00:00-05:00',
+      updated_at: '2026-10-01T00:00:00-05:00',
+      whatsapp_sent_at: null,
+      guests: [
+        {
+          id: 'g-p1',
+          invitation_id: 'inv-pl',
+          event_id: 'evt-123',
+          full_name: 'Invitado P1',
+          rsvp: 'accepted',
+          rsvp_updated_at: null,
+          arrived_at: null,
+          arrived_by: null,
+          sort_order: 0,
+          created_at: '2026-10-01T00:00:00-05:00',
+        },
+        {
+          id: 'g-p2',
+          invitation_id: 'inv-pl',
+          event_id: 'evt-123',
+          full_name: 'Invitado P2',
+          rsvp: 'accepted',
+          rsvp_updated_at: null,
+          arrived_at: null,
+          arrived_by: null,
+          sort_order: 1,
+          created_at: '2026-10-01T00:00:00-05:00',
+        },
+        {
+          id: 'g-p3',
+          invitation_id: 'inv-pl',
+          event_id: 'evt-123',
+          full_name: 'Invitado P3',
+          rsvp: 'declined',
+          rsvp_updated_at: null,
+          arrived_at: null,
+          arrived_by: null,
+          sort_order: 2,
+          created_at: '2026-10-01T00:00:00-05:00',
+        },
+        {
+          id: 'g-p4',
+          invitation_id: 'inv-pl',
+          event_id: 'evt-123',
+          full_name: 'Invitado P4',
+          rsvp: 'declined',
+          rsvp_updated_at: null,
+          arrived_at: null,
+          arrived_by: null,
+          sort_order: 3,
+          created_at: '2026-10-01T00:00:00-05:00',
+        },
+      ],
+    };
+
+    component.invitations.set([invMixed, invPlural]);
+    component.loading.set(false);
+    fixture.detectChanges();
+
+    const segmentButtons = fixture.nativeElement.querySelectorAll('ion-segment-button');
+    const buttonLabels = Array.from(segmentButtons).map((btn: any) => btn.textContent?.trim());
+    expect(buttonLabels).toContain('Todas (2)');
+    expect(buttonLabels).toContain('Sin respuesta (0)');
+    expect(buttonLabels).toContain('Parciales (2)');
+    expect(buttonLabels).toContain('Confirmadas (0)');
+    expect(buttonLabels).toContain('No asistirán (0)');
+
+    const summaries = Array.from(fixture.nativeElement.querySelectorAll('.summary-text')).map(
+      (el: any) => el.textContent?.trim(),
+    );
+    expect(summaries[0]).toBe('3 personas · 1 confirmó, 2 sin respuesta');
+    expect(summaries[1]).toBe('4 personas · 2 confirmaron, 2 no asistirán');
   });
 
   it('hides pending send button when all invitations with phone are sent', () => {
@@ -230,7 +369,7 @@ describe('InvitationListPage', () => {
     expect(navigateSpy).toHaveBeenCalledWith(['/eventos', 'evt-123', 'invitaciones', 'envio']);
   });
 
-  it('reloads invitations if shareWhatsApp returns true, but not if false', async () => {
+  it('reloads invitations if shareWhatsApp returns opened: true, but not if opened: false', async () => {
     mockEventContext.event.set({
       id: 'evt-123',
       name: 'Baby Shower',
@@ -238,14 +377,14 @@ describe('InvitationListPage', () => {
       rsvp_deadline: '2026-11-15T00:00:00-05:00',
     } as unknown as EventRow);
 
-    mockInvitationActions.shareWhatsApp.mockResolvedValue(true);
+    mockInvitationActions.shareWhatsApp.mockResolvedValue({ opened: true, marked: true });
     mockInvitationsRepo.list.mockClear();
 
     await component.onShareWhatsApp(new Event('click'), invWithoutSend);
     expect(mockInvitationsRepo.list).toHaveBeenCalledWith('evt-123');
 
     mockInvitationsRepo.list.mockClear();
-    mockInvitationActions.shareWhatsApp.mockResolvedValue(false);
+    mockInvitationActions.shareWhatsApp.mockResolvedValue({ opened: false, marked: false });
 
     await component.onShareWhatsApp(new Event('click'), invWithoutSend);
     expect(mockInvitationsRepo.list).not.toHaveBeenCalled();

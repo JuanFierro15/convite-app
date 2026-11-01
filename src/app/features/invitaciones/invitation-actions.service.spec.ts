@@ -76,7 +76,7 @@ describe('InvitationActionsService', () => {
       },
     );
 
-    expect(result).toBe(true);
+    expect(result).toEqual({ opened: true, marked: true });
     expect(openSpy).toHaveBeenCalled();
     const openedUrl = openSpy.mock.calls[0][0] as string;
     expect(openedUrl).toContain('wa.me/573001234567');
@@ -103,7 +103,7 @@ describe('InvitationActionsService', () => {
       },
     );
 
-    expect(result).toBe(true);
+    expect(result).toEqual({ opened: true, marked: true });
     expect(openSpy).toHaveBeenCalled();
     const openedUrl = openSpy.mock.calls[0][0] as string;
     expect(openedUrl).toContain('wa.me/573001234567');
@@ -136,7 +136,7 @@ describe('InvitationActionsService', () => {
       },
     );
 
-    expect(result).toBe(false);
+    expect(result).toEqual({ opened: false, marked: false });
     expect(writeTextSpy).toHaveBeenCalled();
     expect(mockInvitationsRepo.markWhatsAppSent).not.toHaveBeenCalled();
     expect(mockToastController.create).toHaveBeenCalledWith(
@@ -147,7 +147,7 @@ describe('InvitationActionsService', () => {
     );
   });
 
-  it('shows warning toast and still returns true if markWhatsAppSent fails', async () => {
+  it('shows warning toast and returns { opened: true, marked: false } if markWhatsAppSent fails by default', async () => {
     const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
     mockInvitationsRepo.markWhatsAppSent.mockRejectedValue(new Error('Network error'));
 
@@ -166,7 +166,7 @@ describe('InvitationActionsService', () => {
       },
     );
 
-    expect(result).toBe(true);
+    expect(result).toEqual({ opened: true, marked: false });
     expect(mockToastController.create).toHaveBeenCalledWith(
       expect.objectContaining({
         message: 'Se abrió WhatsApp, pero no pudimos marcar la invitación como enviada.',
@@ -174,5 +174,56 @@ describe('InvitationActionsService', () => {
       }),
     );
     openSpy.mockRestore();
+  });
+
+  it('does not show warning toast when notifyMarkFailure is false and mark fails', async () => {
+    const openSpy = vi.spyOn(window, 'open').mockImplementation(() => null);
+    mockInvitationsRepo.markWhatsAppSent.mockRejectedValue(new Error('Network error'));
+
+    const result = await service.shareWhatsApp(
+      {
+        id: 'inv-err-silent',
+        kind: 'individual',
+        group_name: 'Prueba Silenciosa',
+        phone: '+573001234567',
+        code: 'ABC1234',
+      },
+      {
+        name: 'Celebración Familiar',
+        starts_at: '2026-11-29T15:00:00-05:00',
+        rsvp_deadline: '2026-11-24T23:59:59-05:00',
+      },
+      { notifyMarkFailure: false },
+    );
+
+    expect(result).toEqual({ opened: true, marked: false });
+    expect(mockToastController.create).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Se abrió WhatsApp, pero no pudimos marcar la invitación como enviada.',
+      }),
+    );
+    openSpy.mockRestore();
+  });
+
+  describe('markSent', () => {
+    it('returns true when markWhatsAppSent succeeds', async () => {
+      mockInvitationsRepo.markWhatsAppSent.mockResolvedValue(undefined);
+
+      const success = await service.markSent('inv-123');
+
+      expect(success).toBe(true);
+      expect(mockInvitationsRepo.markWhatsAppSent).toHaveBeenCalledWith('inv-123');
+      expect(mockToastController.create).not.toHaveBeenCalled();
+    });
+
+    it('returns false and does not throw or show toast when markWhatsAppSent fails', async () => {
+      mockInvitationsRepo.markWhatsAppSent.mockRejectedValue(new Error('DB error'));
+
+      const success = await service.markSent('inv-fail');
+
+      expect(success).toBe(false);
+      expect(mockInvitationsRepo.markWhatsAppSent).toHaveBeenCalledWith('inv-fail');
+      expect(mockToastController.create).not.toHaveBeenCalled();
+    });
   });
 });

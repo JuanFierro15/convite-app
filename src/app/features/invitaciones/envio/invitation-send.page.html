@@ -45,6 +45,19 @@
         </div>
       }
 
+      @if (markFailed(); as failed) {
+        @if (failed.id === current()?.id) {
+          <div class="mark-failed" role="alert">
+            <ion-icon name="alert-circle-outline" aria-hidden="true"></ion-icon>
+            <span class="text-body mark-failed__text">Se abrió el chat, pero no pudimos marcarla como enviada.</span>
+            <ion-button class="mark-failed__retry" fill="outline" size="small" (click)="retryMark()" [disabled]="retryingMark()">
+              @if (retryingMark()) { <ion-spinner name="crescent" slot="start"></ion-spinner> }
+              Marcar como enviada
+            </ion-button>
+          </div>
+        }
+      }
+
       @if (current(); as c) {
         <p class="text-body tip-text">Toca Abrir WhatsApp, envía el mensaje y vuelve a la app para seguir con la siguiente.</p>
         <ion-card class="next-card">
