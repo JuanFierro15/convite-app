@@ -194,3 +194,32 @@ ion-content.content-with-fab {
 ion-fab.fab-vertical-bottom:not(.fab-edge) {
   bottom: calc(var(--space-md) + var(--ion-safe-area-bottom, 0px));
 }
+
+/* Botones de alerta grandes y distinguibles para confirmar con una mano */
+ion-alert.convite-alert {
+  .alert-button-group {
+    gap: var(--space-sm, 8px);
+    padding: var(--space-sm, 8px) var(--space-md, 16px);
+  }
+
+  .alert-button {
+    min-height: 48px;
+    text-transform: none;
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: var(--radius-md, 12px);
+    padding: 0 var(--space-md, 16px);
+
+    &.convite-alert__confirm {
+      background: var(--ion-color-primary);
+      color: var(--ion-color-primary-contrast);
+    }
+
+    &.convite-alert__cancel {
+      background: transparent;
+      color: var(--ion-color-primary-shade);
+      border: 1px solid var(--ion-color-primary);
+    }
+  }
+}
+

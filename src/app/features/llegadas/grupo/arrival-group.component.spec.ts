@@ -71,6 +71,7 @@ describe('ArrivalGroupComponent', () => {
     guests: sampleGuests,
     arrivedCount: 2,
     totalCount: 4,
+    queuedCount: 0,
   };
 
   beforeEach(async () => {
@@ -167,10 +168,19 @@ describe('ArrivalGroupComponent', () => {
     expect(mockAlertCtrl.create).toHaveBeenCalledWith(
       expect.objectContaining({
         header: `¿Deshacer la llegada de ${guestToUndo.full_name}?`,
-        buttons: expect.arrayContaining([
-          expect.objectContaining({ text: 'Cancelar', role: 'cancel' }),
-          expect.objectContaining({ text: 'Deshacer', role: 'confirm' }),
-        ]),
+        cssClass: 'convite-alert',
+        buttons: [
+          {
+            text: 'Cancelar',
+            role: 'cancel',
+            cssClass: 'convite-alert__cancel',
+          },
+          {
+            text: 'Deshacer',
+            role: 'confirm',
+            cssClass: 'convite-alert__confirm',
+          },
+        ],
       }),
     );
     expect(mockSession.undo).toHaveBeenCalledWith(guestToUndo.id);
@@ -208,6 +218,7 @@ describe('ArrivalGroupComponent', () => {
       expect.objectContaining({
         message: 'Fallo de conexión',
         color: 'danger',
+        positionAnchor: 'arrival-group-footer',
       }),
     );
   });
@@ -250,11 +261,21 @@ describe('ArrivalGroupComponent', () => {
 
     expect(mockAlertCtrl.create).toHaveBeenCalledWith(
       expect.objectContaining({
+        header: sampleGuests[3].full_name,
         message: 'No respondió la invitación. ¿Registrar su llegada de todas formas?',
-        buttons: expect.arrayContaining([
-          expect.objectContaining({ text: 'Cancelar', role: 'cancel' }),
-          expect.objectContaining({ text: 'Registrar', role: 'confirm' }),
-        ]),
+        cssClass: 'convite-alert',
+        buttons: [
+          {
+            text: 'Cancelar',
+            role: 'cancel',
+            cssClass: 'convite-alert__cancel',
+          },
+          {
+            text: 'Registrar llegada',
+            role: 'confirm',
+            cssClass: 'convite-alert__confirm',
+          },
+        ],
       }),
     );
     expect(component.isGuestSelected(unconfirmedGuest.id)).toBe(true);
@@ -293,10 +314,11 @@ describe('ArrivalGroupComponent', () => {
     expect(Haptics.notification).toHaveBeenCalledWith({ type: NotificationType.Success });
     expect(mockToastCtrl.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        message: 'Llegada registrada: 1 persona',
+        message: 'Llegada registrada: Familia Ejemplo, 1 persona',
         color: 'success',
       }),
     );
+    expect(mockToastCtrl.create.mock.calls[0][0].positionAnchor).toBeUndefined();
     expect(mockModalCtrl.dismiss).toHaveBeenCalledWith(null, 'registered');
   });
 
@@ -313,7 +335,7 @@ describe('ArrivalGroupComponent', () => {
 
     expect(mockToastCtrl.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        message: 'Llegada registrada: 2 personas',
+        message: 'Llegada registrada: Familia Ejemplo, 2 personas',
         color: 'success',
       }),
     );
@@ -351,6 +373,7 @@ describe('ArrivalGroupComponent', () => {
       expect.objectContaining({
         message: 'Error al registrar',
         color: 'danger',
+        positionAnchor: 'arrival-group-footer',
       }),
     );
     expect(mockModalCtrl.dismiss).not.toHaveBeenCalled();
@@ -500,7 +523,21 @@ describe('ArrivalGroupComponent', () => {
 
     expect(mockAlertCtrl.create).toHaveBeenCalledWith(
       expect.objectContaining({
+        header: nullRsvpGuests[0].full_name,
         message: 'No respondió la invitación. ¿Registrar su llegada de todas formas?',
+        cssClass: 'convite-alert',
+        buttons: [
+          {
+            text: 'Cancelar',
+            role: 'cancel',
+            cssClass: 'convite-alert__cancel',
+          },
+          {
+            text: 'Registrar llegada',
+            role: 'confirm',
+            cssClass: 'convite-alert__confirm',
+          },
+        ],
       }),
     );
   });
@@ -537,11 +574,21 @@ describe('ArrivalGroupComponent', () => {
 
     expect(mockAlertCtrl.create).toHaveBeenCalledWith(
       expect.objectContaining({
+        header: declinedGuest.full_name,
         message: 'Dijo que no asistiría. ¿Registrar su llegada de todas formas?',
-        buttons: expect.arrayContaining([
-          expect.objectContaining({ text: 'Cancelar', role: 'cancel' }),
-          expect.objectContaining({ text: 'Registrar', role: 'confirm' }),
-        ]),
+        cssClass: 'convite-alert',
+        buttons: [
+          {
+            text: 'Cancelar',
+            role: 'cancel',
+            cssClass: 'convite-alert__cancel',
+          },
+          {
+            text: 'Registrar llegada',
+            role: 'confirm',
+            cssClass: 'convite-alert__confirm',
+          },
+        ],
       }),
     );
     expect(newComp.isGuestSelected(declinedGuest.id)).toBe(true);
@@ -599,11 +646,21 @@ describe('ArrivalGroupComponent', () => {
 
     expect(mockAlertCtrl.create).toHaveBeenCalledWith(
       expect.objectContaining({
+        header: sampleGuests[3].full_name,
         message: 'No respondió la invitación. ¿Registrar su llegada de todas formas?',
-        buttons: expect.arrayContaining([
-          expect.objectContaining({ text: 'Cancelar', role: 'cancel' }),
-          expect.objectContaining({ text: 'Registrar', role: 'confirm' }),
-        ]),
+        cssClass: 'convite-alert',
+        buttons: [
+          {
+            text: 'Cancelar',
+            role: 'cancel',
+            cssClass: 'convite-alert__cancel',
+          },
+          {
+            text: 'Registrar llegada',
+            role: 'confirm',
+            cssClass: 'convite-alert__confirm',
+          },
+        ],
       }),
     );
     expect(component.isGuestSelected('guest-4')).toBe(true);
@@ -759,5 +816,44 @@ describe('ArrivalGroupComponent', () => {
     await firstClick;
 
     expect(component.isGuestSelected('guest-4')).toBe(true);
+  });
+
+  it('displays individual guest name in success toast for individual invitation without positionAnchor', async () => {
+    const individualGuest: ArrivalGuestView = {
+      id: 'guest-ind-1',
+      full_name: 'Ana Ejemplo',
+      rsvp: 'accepted',
+      arrivedAt: null,
+      synced: true,
+    };
+    const individualInvitation: ArrivalInvitationView = {
+      id: 'inv-ind-1',
+      code: 'IND1234567',
+      group_name: 'Ana Ejemplo',
+      kind: 'individual',
+      guests: [individualGuest],
+      arrivedCount: 0,
+      totalCount: 1,
+      queuedCount: 0,
+    };
+    mockSession.invitations.set([individualInvitation]);
+    mockSession.register.mockResolvedValue(1);
+
+    const indFixture = TestBed.createComponent(ArrivalGroupComponent);
+    const indComp = indFixture.componentInstance;
+    indComp.invitationId = 'inv-ind-1';
+    indFixture.detectChanges();
+    await indFixture.whenStable();
+
+    await indComp.onRegister();
+
+    expect(mockToastCtrl.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'Llegada registrada: Ana Ejemplo',
+        color: 'success',
+      }),
+    );
+    expect(mockToastCtrl.create.mock.calls[0][0].positionAnchor).toBeUndefined();
+    expect(mockModalCtrl.dismiss).toHaveBeenCalledWith(null, 'registered');
   });
 });

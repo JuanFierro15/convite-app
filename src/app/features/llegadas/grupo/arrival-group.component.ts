@@ -226,15 +226,19 @@ export class ArrivalGroupComponent implements OnInit {
           : 'No respondió la invitación. ¿Registrar su llegada de todas formas?';
 
       const alert = await this.alertCtrl.create({
+        header: guest.full_name,
         message,
+        cssClass: 'convite-alert',
         buttons: [
           {
             text: 'Cancelar',
             role: 'cancel',
+            cssClass: 'convite-alert__cancel',
           },
           {
-            text: 'Registrar',
+            text: 'Registrar llegada',
             role: 'confirm',
+            cssClass: 'convite-alert__confirm',
           },
         ],
       });
@@ -265,14 +269,17 @@ export class ArrivalGroupComponent implements OnInit {
 
     const alert = await this.alertCtrl.create({
       header: `¿Deshacer la llegada de ${guest.full_name}?`,
+      cssClass: 'convite-alert',
       buttons: [
         {
           text: 'Cancelar',
           role: 'cancel',
+          cssClass: 'convite-alert__cancel',
         },
         {
           text: 'Deshacer',
           role: 'confirm',
+          cssClass: 'convite-alert__confirm',
         },
       ],
     });
@@ -285,7 +292,7 @@ export class ArrivalGroupComponent implements OnInit {
         await this.session.undo(guest.id);
       } catch (err: unknown) {
         const message = err instanceof Error ? err.message : String(err);
-        await this.showToast(message, 'danger');
+        await this.showToast(message, 'danger', 'arrival-group-footer');
       }
     }
   }
@@ -314,18 +321,24 @@ export class ArrivalGroupComponent implements OnInit {
         // Ignorar en plataformas sin soporte háptico
       }
 
-      const toastMessage =
-        added === 0
-          ? 'Estas personas ya estaban registradas'
-          : added === 1
-            ? 'Llegada registrada: 1 persona'
-            : `Llegada registrada: ${added} personas`;
+      let toastMessage: string;
+      if (added === 0) {
+        toastMessage = 'Estas personas ya estaban registradas';
+      } else if (inv.kind === 'individual') {
+        const registeredGuest = inv.guests.find((guest) => idsToRegister.includes(guest.id));
+        const guestName = registeredGuest?.full_name ?? inv.group_name;
+        toastMessage = `Llegada registrada: ${guestName}`;
+      } else if (added === 1) {
+        toastMessage = `Llegada registrada: ${inv.group_name}, 1 persona`;
+      } else {
+        toastMessage = `Llegada registrada: ${inv.group_name}, ${added} personas`;
+      }
 
       await this.showToast(toastMessage, 'success');
       await this.modalCtrl.dismiss(null, 'registered');
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : String(err);
-      await this.showToast(message, 'danger');
+      await this.showToast(message, 'danger', 'arrival-group-footer');
     } finally {
       this.saving.set(false);
     }
@@ -342,12 +355,17 @@ export class ArrivalGroupComponent implements OnInit {
     }
   }
 
-  private async showToast(message: string, color: 'danger' | 'success'): Promise<void> {
+  private async showToast(
+    message: string,
+    color: 'danger' | 'success',
+    positionAnchor?: string,
+  ): Promise<void> {
     const toast = await this.toastCtrl.create({
       message,
       duration: 3000,
       color,
       position: 'bottom',
+      ...(positionAnchor ? { positionAnchor } : {}),
     });
     await toast.present();
   }
