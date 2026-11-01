@@ -29,6 +29,7 @@ export interface GuestTexts {
   chooseGiftAriaLabel(giftName: string): string;
   releaseGiftAriaLabel(giftName: string): string;
   giftsTitle: string;
+  giftsPageTitle: string;
   giftsIntro: readonly string[];
   giftsPageIntro: string;
   giftsPageIntroNoList: string;
@@ -130,6 +131,7 @@ export function guestTexts(kind: InvitationKind, groupName: string): GuestTexts 
     releaseGiftAriaLabel: (giftName: string) =>
       isIndividual ? `Ya no lo llevo: ${giftName}` : `Ya no lo llevamos: ${giftName}`,
     giftsTitle: 'Un detalle para Eloise',
+    giftsPageTitle: 'Lo que me va a servir',
     giftsIntro: isIndividual
       ? [
           'Tu compañía es el mejor regalo, así que no sientas ningún compromiso. Si te hace ilusión llevar algo, preparamos una lista con algunas ideas.',
@@ -138,11 +140,11 @@ export function guestTexts(kind: InvitationKind, groupName: string): GuestTexts 
           'Su compañía es el mejor regalo, así que no sientan ningún compromiso. Si les hace ilusión llevar algo, preparamos una lista con algunas ideas.',
         ],
     giftsPageIntro: isIndividual
-      ? 'Tu compañía es el mejor regalo. Si te hace ilusión llevar algo, elige de la lista para que los regalos no se repitan.'
-      : 'Su compañía es el mejor regalo. Si les hace ilusión llevar algo, elijan de la lista para que los regalos no se repitan.',
+      ? 'Estas son algunas cosas que voy a usar en mis primeros meses. Si eliges una, queda apartada para ti y así no se repite.'
+      : 'Estas son algunas cosas que voy a usar en mis primeros meses. Si eligen una, queda apartada para ustedes y así no se repite.',
     giftsPageIntroNoList: isIndividual
-      ? 'Tu compañía es el mejor regalo. Si te hace ilusión llevar algo, aquí tienes algunas ideas.'
-      : 'Su compañía es el mejor regalo. Si les hace ilusión llevar algo, aquí tienen algunas ideas.',
+      ? 'Estas son algunas cosas que voy a usar en mis primeros meses, por si te hace ilusión traerme algo.'
+      : 'Estas son algunas cosas que voy a usar en mis primeros meses, por si les hace ilusión traerme algo.',
     giftsPageIntroClosed: isIndividual
       ? 'La lista de regalos ya cerró. Gracias por tu cariño: tu compañía es el mejor regalo.'
       : 'La lista de regalos ya cerró. Gracias por su cariño: su compañía es el mejor regalo.',

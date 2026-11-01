@@ -222,15 +222,15 @@ describe('GuestGiftsPage', () => {
   });
 
   describe('cabecera', () => {
-    it('muestra h1 con "Un detalle para Eloise", intro con lista y aviso de anonimato para grupo e individual', async () => {
+    it('muestra h1 con "Lo que me va a servir", intro con lista y aviso de anonimato para grupo e individual', async () => {
       const { fixture: groupFixture } = await createPage([buildUniqueGift()], mockGroupInvitation);
 
       const headerTitle = groupFixture.nativeElement.querySelector('#gifts-title');
-      expect(headerTitle?.textContent?.trim()).toBe('Un detalle para Eloise');
+      expect(headerTitle?.textContent?.trim()).toBe('Lo que me va a servir');
 
       const introEl = groupFixture.nativeElement.querySelector('.gifts-header__intro');
       expect(introEl?.textContent?.trim()).toBe(
-        'Su compañía es el mejor regalo. Si les hace ilusión llevar algo, elijan de la lista para que los regalos no se repitan.',
+        'Estas son algunas cosas que voy a usar en mis primeros meses. Si eligen una, queda apartada para ustedes y así no se repite.',
       );
 
       const noteEl = groupFixture.nativeElement.querySelector('.gifts-header__note');
@@ -244,7 +244,7 @@ describe('GuestGiftsPage', () => {
 
       const indIntro = indFixture.nativeElement.querySelector('.gifts-header__intro');
       expect(indIntro?.textContent?.trim()).toBe(
-        'Tu compañía es el mejor regalo. Si te hace ilusión llevar algo, elige de la lista para que los regalos no se repitan.',
+        'Estas son algunas cosas que voy a usar en mis primeros meses. Si eliges una, queda apartada para ti y así no se repite.',
       );
 
       const indNote = indFixture.nativeElement.querySelector('.gifts-header__note');
@@ -259,7 +259,7 @@ describe('GuestGiftsPage', () => {
 
       const introEl = groupFixture.nativeElement.querySelector('.gifts-header__intro');
       expect(introEl?.textContent?.trim()).toBe(
-        'Su compañía es el mejor regalo. Si les hace ilusión llevar algo, aquí tienen algunas ideas.',
+        'Estas son algunas cosas que voy a usar en mis primeros meses, por si les hace ilusión traerme algo.',
       );
       expect(groupFixture.nativeElement.querySelector('.gifts-header__note')).toBeNull();
 
@@ -268,7 +268,7 @@ describe('GuestGiftsPage', () => {
 
       const indIntro = indFixture.nativeElement.querySelector('.gifts-header__intro');
       expect(indIntro?.textContent?.trim()).toBe(
-        'Tu compañía es el mejor regalo. Si te hace ilusión llevar algo, aquí tienes algunas ideas.',
+        'Estas son algunas cosas que voy a usar en mis primeros meses, por si te hace ilusión traerme algo.',
       );
       expect(indFixture.nativeElement.querySelector('.gifts-header__note')).toBeNull();
     });
@@ -452,13 +452,13 @@ describe('GuestGiftsPage', () => {
 
       const { fixture: groupFixture } = await createPage(availableList, mockGroupInvitation);
       expect(groupFixture.nativeElement.querySelector('.gifts-header__intro')?.textContent?.trim()).toBe(
-        'Su compañía es el mejor regalo. Si les hace ilusión llevar algo, elijan de la lista para que los regalos no se repitan.',
+        'Estas son algunas cosas que voy a usar en mis primeros meses. Si eligen una, queda apartada para ustedes y así no se repite.',
       );
       expect(groupFixture.nativeElement.querySelectorAll('.gift-card ion-button').length).toBe(1);
 
       const { fixture: indFixture } = await createPage(availableList, mockIndividualInvitation);
       expect(indFixture.nativeElement.querySelector('.gifts-header__intro')?.textContent?.trim()).toBe(
-        'Tu compañía es el mejor regalo. Si te hace ilusión llevar algo, elige de la lista para que los regalos no se repitan.',
+        'Estas son algunas cosas que voy a usar en mis primeros meses. Si eliges una, queda apartada para ti y así no se repite.',
       );
       expect(indFixture.nativeElement.querySelectorAll('.gift-card ion-button').length).toBe(1);
     });

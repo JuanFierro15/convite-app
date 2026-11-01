@@ -63,17 +63,17 @@ describe('invitation-texts utils', () => {
       const indTexts = guestTexts('individual', 'Carlos');
 
       expect(groupTexts.giftsPageIntro).toBe(
-        'Su compañía es el mejor regalo. Si les hace ilusión llevar algo, elijan de la lista para que los regalos no se repitan.',
+        'Estas son algunas cosas que voy a usar en mis primeros meses. Si eligen una, queda apartada para ustedes y así no se repite.',
       );
       expect(indTexts.giftsPageIntro).toBe(
-        'Tu compañía es el mejor regalo. Si te hace ilusión llevar algo, elige de la lista para que los regalos no se repitan.',
+        'Estas son algunas cosas que voy a usar en mis primeros meses. Si eliges una, queda apartada para ti y así no se repite.',
       );
 
       expect(groupTexts.giftsPageIntroNoList).toBe(
-        'Su compañía es el mejor regalo. Si les hace ilusión llevar algo, aquí tienen algunas ideas.',
+        'Estas son algunas cosas que voy a usar en mis primeros meses, por si les hace ilusión traerme algo.',
       );
       expect(indTexts.giftsPageIntroNoList).toBe(
-        'Tu compañía es el mejor regalo. Si te hace ilusión llevar algo, aquí tienes algunas ideas.',
+        'Estas son algunas cosas que voy a usar en mis primeros meses, por si te hace ilusión traerme algo.',
       );
 
       expect(groupTexts.giftsAnonymityNote).toBe(
@@ -171,14 +171,15 @@ describe('invitation-texts utils', () => {
       expect(texts.chooseGiftAriaLabel('Pañales')).toBe('Elegir este regalo: Pañales');
       expect(texts.releaseGiftAriaLabel('Pañales')).toBe('Ya no lo llevamos: Pañales');
       expect(texts.giftsTitle).toBe('Un detalle para Eloise');
+      expect(texts.giftsPageTitle).toBe('Lo que me va a servir');
       expect(texts.giftsIntro).toEqual([
         'Su compañía es el mejor regalo, así que no sientan ningún compromiso. Si les hace ilusión llevar algo, preparamos una lista con algunas ideas.',
       ]);
       expect(texts.giftsPageIntro).toBe(
-        'Su compañía es el mejor regalo. Si les hace ilusión llevar algo, elijan de la lista para que los regalos no se repitan.',
+        'Estas son algunas cosas que voy a usar en mis primeros meses. Si eligen una, queda apartada para ustedes y así no se repite.',
       );
       expect(texts.giftsPageIntroNoList).toBe(
-        'Su compañía es el mejor regalo. Si les hace ilusión llevar algo, aquí tienen algunas ideas.',
+        'Estas son algunas cosas que voy a usar en mis primeros meses, por si les hace ilusión traerme algo.',
       );
       expect(texts.giftsPageIntroClosed).toBe(
         'La lista de regalos ya cerró. Gracias por su cariño: su compañía es el mejor regalo.',
@@ -242,14 +243,15 @@ describe('invitation-texts utils', () => {
       expect(texts.chooseGiftAriaLabel('Pañales')).toBe('Elegir este regalo: Pañales');
       expect(texts.releaseGiftAriaLabel('Pañales')).toBe('Ya no lo llevo: Pañales');
       expect(texts.giftsTitle).toBe('Un detalle para Eloise');
+      expect(texts.giftsPageTitle).toBe('Lo que me va a servir');
       expect(texts.giftsIntro).toEqual([
         'Tu compañía es el mejor regalo, así que no sientas ningún compromiso. Si te hace ilusión llevar algo, preparamos una lista con algunas ideas.',
       ]);
       expect(texts.giftsPageIntro).toBe(
-        'Tu compañía es el mejor regalo. Si te hace ilusión llevar algo, elige de la lista para que los regalos no se repitan.',
+        'Estas son algunas cosas que voy a usar en mis primeros meses. Si eliges una, queda apartada para ti y así no se repite.',
       );
       expect(texts.giftsPageIntroNoList).toBe(
-        'Tu compañía es el mejor regalo. Si te hace ilusión llevar algo, aquí tienes algunas ideas.',
+        'Estas son algunas cosas que voy a usar en mis primeros meses, por si te hace ilusión traerme algo.',
       );
       expect(texts.giftsPageIntroClosed).toBe(
         'La lista de regalos ya cerró. Gracias por tu cariño: tu compañía es el mejor regalo.',
@@ -298,6 +300,7 @@ describe('invitation-texts utils', () => {
         'releaseGiftTitle',
         'releaseGiftConfirmButton',
         'giftsTitle',
+        'giftsPageTitle',
         'giftsPageIntro',
         'giftsPageIntroNoList',
         'giftsPageIntroClosed',
