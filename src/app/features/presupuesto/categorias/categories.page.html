@@ -1,0 +1,118 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button
+        [defaultHref]="'/eventos/' + id() + '/presupuesto'"
+        text=""
+        aria-label="Volver a presupuesto"
+      ></ion-back-button>
+    </ion-buttons>
+    <ion-title class="text-title">Categorías</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  <div class="page-container">
+    <div class="top-bar-actions">
+      <ion-button color="primary" size="small" (click)="openCreateCategoryModal()">
+        <ion-icon slot="start" name="add" aria-hidden="true"></ion-icon>
+        Nueva categoría
+      </ion-button>
+
+      <ion-button
+        fill="outline"
+        color="primary"
+        size="small"
+        (click)="addSuggestedCategories()"
+        [disabled]="addingSuggested() || busy()"
+      >
+        @if (addingSuggested()) {
+          <ion-spinner slot="start" name="crescent"></ion-spinner>
+        } @else {
+          <ion-icon slot="start" name="sparkles-outline" aria-hidden="true"></ion-icon>
+        }
+        Agregar categorías sugeridas
+      </ion-button>
+    </div>
+
+    @if (loading()) {
+      <div class="loading-state" role="status" aria-live="polite">
+        <ion-spinner name="crescent" color="primary"></ion-spinner>
+        <p class="text-body">Cargando categorías...</p>
+      </div>
+    } @else if (error(); as errorMsg) {
+      <app-empty-state
+        [message]="errorMsg"
+        actionLabel="Reintentar"
+        (action)="retryLoad()"
+      />
+    } @else if (categories().length === 0) {
+      <app-empty-state
+        message="Todavía no hay categorías. Agrega las sugeridas o crea las tuyas."
+        actionLabel="Agregar categorías sugeridas"
+        (action)="addSuggestedCategories()"
+      />
+    } @else {
+      <div class="category-list">
+        @for (category of categories(); track category.id; let i = $index) {
+          <ion-card class="category-card">
+            <ion-card-content class="category-card__content">
+              <div class="category-row">
+                <span class="category-name text-name">{{ category.name }}</span>
+                <div class="category-actions">
+                  <ion-button
+                    fill="clear"
+                    color="medium"
+                    class="action-button"
+                    [disabled]="i === 0 || busy()"
+                    (click)="moveCategoryUp(i)"
+                    [attr.aria-label]="'Subir categoría ' + category.name"
+                  >
+                    <ion-icon slot="icon-only" name="chevron-up-outline" aria-hidden="true"></ion-icon>
+                  </ion-button>
+
+                  <ion-button
+                    fill="clear"
+                    color="medium"
+                    class="action-button"
+                    [disabled]="i === categories().length - 1 || busy()"
+                    (click)="moveCategoryDown(i)"
+                    [attr.aria-label]="'Bajar categoría ' + category.name"
+                  >
+                    <ion-icon slot="icon-only" name="chevron-down-outline" aria-hidden="true"></ion-icon>
+                  </ion-button>
+
+                  <ion-button
+                    fill="clear"
+                    color="medium"
+                    class="action-button"
+                    [disabled]="busy()"
+                    (click)="openRenameCategoryModal(category)"
+                    [attr.aria-label]="'Renombrar categoría ' + category.name"
+                  >
+                    <ion-icon slot="icon-only" name="create-outline" aria-hidden="true"></ion-icon>
+                  </ion-button>
+
+                  <ion-button
+                    fill="clear"
+                    color="danger"
+                    class="action-button"
+                    [disabled]="busy()"
+                    (click)="confirmDeleteCategory(category)"
+                    [attr.aria-label]="'Borrar categoría ' + category.name"
+                  >
+                    <ion-icon slot="icon-only" name="trash-outline" aria-hidden="true"></ion-icon>
+                  </ion-button>
+                </div>
+              </div>
+            </ion-card-content>
+          </ion-card>
+        }
+      </div>
+    }
+  </div>
+</ion-content>

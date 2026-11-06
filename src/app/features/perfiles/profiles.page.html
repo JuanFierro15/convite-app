@@ -1,0 +1,174 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button
+        [defaultHref]="'/eventos/' + id() + '/panel'"
+        text=""
+        aria-label="Volver al panel del evento"
+      ></ion-back-button>
+    </ion-buttons>
+    <ion-title class="text-title">Perfiles</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  <div class="page-container">
+    @if (loading()) {
+      <div class="loading-state" role="status" aria-live="polite">
+        <ion-spinner name="crescent" color="primary"></ion-spinner>
+        <p class="text-body">Cargando perfiles...</p>
+      </div>
+    } @else if (error(); as errorMsg) {
+      <app-empty-state
+        [message]="errorMsg"
+        actionLabel="Reintentar"
+        (action)="retryLoad()"
+      />
+    } @else if (!teamId()) {
+      <app-empty-state message="Este evento no tiene perfiles disponibles." />
+    } @else {
+      @if (!canManage()) {
+        <p class="manage-note text-body">
+          Solo los propietarios del equipo pueden cambiar los perfiles.
+        </p>
+      } @else {
+        <div class="top-bar-actions">
+          <ion-button color="primary" size="small" (click)="openCreateProfileModal()">
+            <ion-icon slot="start" name="add" aria-hidden="true"></ion-icon>
+            Agregar perfil
+          </ion-button>
+        </div>
+      }
+
+      @if (profiles().length === 0) {
+        <app-empty-state
+          message="Agrega a las personas que pagan o se encargan de cosas, como &quot;Juan&quot;, &quot;Laura&quot; o &quot;Mamá&quot;. Son del equipo: sirven también para tus próximos eventos."
+          [actionLabel]="canManage() ? 'Agregar perfil' : undefined"
+          (action)="openCreateProfileModal()"
+        />
+      } @else {
+        @if (activeProfiles().length > 0) {
+          <div class="profile-list">
+            @for (profile of activeProfiles(); track profile.id; let i = $index) {
+              <ion-card class="profile-card">
+                <ion-card-content class="profile-card__content">
+                  <div class="profile-row">
+                    <span class="profile-name text-name">{{ profile.name }}</span>
+
+                    @if (canManage()) {
+                      <div class="profile-actions">
+                        <ion-button
+                          fill="clear"
+                          color="medium"
+                          class="action-button"
+                          [disabled]="i === 0 || busy()"
+                          (click)="moveProfileUp(i)"
+                          [attr.aria-label]="'Subir perfil ' + profile.name"
+                        >
+                          <ion-icon slot="icon-only" name="chevron-up-outline" aria-hidden="true"></ion-icon>
+                        </ion-button>
+
+                        <ion-button
+                          fill="clear"
+                          color="medium"
+                          class="action-button"
+                          [disabled]="i === activeProfiles().length - 1 || busy()"
+                          (click)="moveProfileDown(i)"
+                          [attr.aria-label]="'Bajar perfil ' + profile.name"
+                        >
+                          <ion-icon slot="icon-only" name="chevron-down-outline" aria-hidden="true"></ion-icon>
+                        </ion-button>
+
+                        <ion-button
+                          fill="clear"
+                          color="medium"
+                          class="action-button"
+                          [disabled]="busy()"
+                          (click)="openRenameProfileModal(profile)"
+                          [attr.aria-label]="'Renombrar perfil ' + profile.name"
+                        >
+                          <ion-icon slot="icon-only" name="create-outline" aria-hidden="true"></ion-icon>
+                        </ion-button>
+
+                        <ion-button
+                          fill="clear"
+                          color="medium"
+                          class="action-button"
+                          [disabled]="busy()"
+                          (click)="archiveProfile(profile)"
+                          [attr.aria-label]="'Archivar perfil ' + profile.name"
+                        >
+                          <ion-icon slot="icon-only" name="archive-outline" aria-hidden="true"></ion-icon>
+                        </ion-button>
+
+                        <ion-button
+                          fill="clear"
+                          color="danger"
+                          class="action-button"
+                          [disabled]="busy()"
+                          (click)="confirmDeleteProfile(profile)"
+                          [attr.aria-label]="'Borrar perfil ' + profile.name"
+                        >
+                          <ion-icon slot="icon-only" name="trash-outline" aria-hidden="true"></ion-icon>
+                        </ion-button>
+                      </div>
+                    }
+                  </div>
+                </ion-card-content>
+              </ion-card>
+            }
+          </div>
+        }
+
+        @if (archivedProfiles().length > 0) {
+          <div class="archived-section">
+            <h2 class="section-heading text-section">
+              Archivados: no salen en los selectores, pero siguen en el historial.
+            </h2>
+            <div class="profile-list">
+              @for (profile of archivedProfiles(); track profile.id) {
+                <ion-card class="profile-card profile-card--archived">
+                  <ion-card-content class="profile-card__content">
+                    <div class="profile-row">
+                      <span class="profile-name text-name">{{ profile.name }}</span>
+
+                      @if (canManage()) {
+                        <div class="profile-actions">
+                          <ion-button
+                            fill="clear"
+                            color="medium"
+                            class="action-button"
+                            [disabled]="busy()"
+                            (click)="unarchiveProfile(profile)"
+                            [attr.aria-label]="'Desarchivar perfil ' + profile.name"
+                          >
+                            <ion-icon slot="icon-only" name="refresh-outline" aria-hidden="true"></ion-icon>
+                          </ion-button>
+
+                          <ion-button
+                            fill="clear"
+                            color="danger"
+                            class="action-button"
+                            [disabled]="busy()"
+                            (click)="confirmDeleteProfile(profile)"
+                            [attr.aria-label]="'Borrar perfil ' + profile.name"
+                          >
+                            <ion-icon slot="icon-only" name="trash-outline" aria-hidden="true"></ion-icon>
+                          </ion-button>
+                        </div>
+                      }
+                    </div>
+                  </ion-card-content>
+                </ion-card>
+              }
+            </div>
+          </div>
+        }
+      }
+    }
+  </div>
+</ion-content>
