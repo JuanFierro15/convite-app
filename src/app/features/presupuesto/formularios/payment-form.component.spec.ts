@@ -97,7 +97,7 @@ describe('PaymentFormComponent', () => {
     component.ngOnInit();
     fixture.detectChanges();
 
-    expect(component.form.controls.amount_cop.value).toBe('250000');
+    expect(component.form.controls.amount_cop.value).toBe('250.000');
     expect(component.form.controls.paid_on.value).toBe(toBogotaDateInput(new Date()));
     expect(component.form.controls.paid_by_profile_id.value).toBe('');
     expect(component.form.dirty).toBe(false);

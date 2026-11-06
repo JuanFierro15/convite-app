@@ -153,7 +153,7 @@ describe('ExpenseFormComponent', () => {
     fixture.detectChanges();
 
     expect(component.form.controls.description.value).toBe('Bebidas para la fiesta');
-    expect(component.form.controls.amount_cop.value).toBe('200000');
+    expect(component.form.controls.amount_cop.value).toBe('200.000');
 
     component.form.controls.amount_cop.setValue('220.000');
 

@@ -49,6 +49,7 @@ import {
   newId,
   parseCopInput,
 } from '../../../core';
+import { CopInputDirective } from '../../../shared';
 import { DiscardGuard } from '../../invitaciones/formulario/discard-guard';
 
 function notBlankValidator(control: AbstractControl<string>): ValidationErrors | null {
@@ -79,6 +80,7 @@ function notBlankValidator(control: AbstractControl<string>): ValidationErrors |
     IonRadioGroup,
     IonRadio,
     IonSpinner,
+    CopInputDirective,
   ],
 })
 export class TaskFormComponent implements OnInit {

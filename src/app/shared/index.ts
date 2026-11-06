@@ -9,3 +9,4 @@ export {
   type BadgeStatus,
 } from './components/status-badge/status-badge.component';
 export { ThemePickerComponent } from './components/theme-picker/theme-picker.component';
+export { CopInputDirective } from './directives/cop-input.directive';

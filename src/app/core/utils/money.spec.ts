@@ -1,4 +1,4 @@
-import { formatCop, parseCopInput } from './money';
+import { formatCop, formatCopInput, parseCopInput } from './money';
 
 describe('money utils', () => {
   const NBSP = String.fromCharCode(160);
@@ -89,6 +89,53 @@ describe('money utils', () => {
       expect(parseCopInput('.100')).toBeNull();
       expect(parseCopInput('100.')).toBeNull();
       expect(parseCopInput('1..000')).toBeNull();
+    });
+  });
+
+  describe('formatCopInput', () => {
+    it('agrega los puntos a medida que crece el número', () => {
+      expect(formatCopInput('').value).toBe('');
+      expect(formatCopInput('100').value).toBe('100');
+      expect(formatCopInput('1000').value).toBe('1.000');
+      expect(formatCopInput('1.0000').value).toBe('10.000');
+      expect(formatCopInput('100.0000').value).toBe('1.000.000');
+      expect(formatCopInput('999999999').value).toBe('999.999.999');
+    });
+
+    it('quita los puntos que sobran al borrar', () => {
+      expect(formatCopInput('1.00').value).toBe('100');
+      expect(formatCopInput('1.000.00').value).toBe('100.000');
+    });
+
+    it('ignora lo que no sea dígito', () => {
+      expect(formatCopInput('$ 150.000').value).toBe('150.000');
+      expect(formatCopInput('12a').value).toBe('12');
+      expect(formatCopInput('abc').value).toBe('');
+    });
+
+    it('quita los ceros a la izquierda pero deja un cero solo', () => {
+      expect(formatCopInput('007').value).toBe('7');
+      expect(formatCopInput('0').value).toBe('0');
+      expect(formatCopInput('000').value).toBe('0');
+    });
+
+    it('deja el cursor al final cuando se escribe al final', () => {
+      expect(formatCopInput('1000')).toEqual({ value: '1.000', caret: 5 });
+      expect(formatCopInput('1.0000')).toEqual({ value: '10.000', caret: 6 });
+    });
+
+    it('conserva el cursor cuando se escribe en medio', () => {
+      expect(formatCopInput('12.000', 2)).toEqual({ value: '12.000', caret: 2 });
+      expect(formatCopInput('1.2000', 3)).toEqual({ value: '12.000', caret: 2 });
+    });
+
+    it('deja el cursor antes del punto para poder seguir borrando', () => {
+      expect(formatCopInput('1000', 1)).toEqual({ value: '1.000', caret: 1 });
+    });
+
+    it('descuenta los ceros quitados de la posición del cursor', () => {
+      expect(formatCopInput('007', 3)).toEqual({ value: '7', caret: 1 });
+      expect(formatCopInput('05', 1)).toEqual({ value: '5', caret: 0 });
     });
   });
 });

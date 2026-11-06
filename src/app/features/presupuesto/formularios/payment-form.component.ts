@@ -37,9 +37,11 @@ import {
   PaymentInput,
   TeamProfileRow,
   formatCop,
+  formatCopInput,
   parseCopInput,
   toBogotaDateInput,
 } from '../../../core';
+import { CopInputDirective } from '../../../shared';
 import { DiscardGuard, createDiscardGuard } from '../../invitaciones/formulario/discard-guard';
 
 export interface OpenPaymentFormOptions {
@@ -104,6 +106,7 @@ export async function openPaymentForm(
     IonSelect,
     IonSelectOption,
     IonSpinner,
+    CopInputDirective,
   ],
 })
 export class PaymentFormComponent implements OnInit {
@@ -136,7 +139,7 @@ export class PaymentFormComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    const proposedAmount = this.balance > 0 ? String(this.balance) : '';
+    const proposedAmount = this.balance > 0 ? formatCopInput(String(this.balance)).value : '';
     this.form.reset({
       amount_cop: proposedAmount,
       paid_on: this.today,

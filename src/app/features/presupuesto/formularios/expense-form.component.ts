@@ -38,9 +38,11 @@ import {
   ExpenseCategoryRow,
   ExpenseInput,
   ExpenseWithPayments,
+  formatCopInput,
   paidTotal,
   parseCopInput,
 } from '../../../core';
+import { CopInputDirective } from '../../../shared';
 import { DiscardGuard } from '../../invitaciones/formulario/discard-guard';
 
 function notBlankValidator(control: AbstractControl<string>): ValidationErrors | null {
@@ -69,6 +71,7 @@ function notBlankValidator(control: AbstractControl<string>): ValidationErrors |
     IonSelect,
     IonSelectOption,
     IonSpinner,
+    CopInputDirective,
   ],
 })
 export class ExpenseFormComponent implements OnInit {
@@ -103,7 +106,7 @@ export class ExpenseFormComponent implements OnInit {
       this.form.reset({
         description: this.expense.description,
         category_id: this.expense.category_id,
-        amount_cop: String(this.expense.amount_cop),
+        amount_cop: formatCopInput(String(this.expense.amount_cop)).value,
         note: this.expense.note ?? '',
       });
     } else {

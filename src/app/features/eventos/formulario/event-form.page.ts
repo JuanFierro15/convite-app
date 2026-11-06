@@ -42,12 +42,14 @@ import {
   ThemeId,
   ThemeService,
   endOfDayBogota,
+  formatCopInput,
   fromBogotaDateTimeInput,
+  parseCopInput,
   themeOptionsFor,
   toBogotaDateInput,
   toBogotaDateTimeInput,
 } from '../../../core';
-import { EmptyStateComponent, ThemePickerComponent } from '../../../shared';
+import { CopInputDirective, EmptyStateComponent, ThemePickerComponent } from '../../../shared';
 
 function requiredTrimmedValidator(
   control: AbstractControl<string>,
@@ -73,14 +75,7 @@ function nonNegativeIntegerValidator(
   if (!raw) {
     return null;
   }
-  if (!/^\d+$/.test(raw)) {
-    return { nonNegativeInteger: true };
-  }
-  const parsed = Number(raw);
-  if (!Number.isSafeInteger(parsed) || parsed < 0) {
-    return { nonNegativeInteger: true };
-  }
-  return null;
+  return parseCopInput(raw) === null ? { nonNegativeInteger: true } : null;
 }
 
 function rsvpDeadlineValidator(
@@ -113,11 +108,7 @@ function toNullableText(value: string): string | null {
 }
 
 function toNullableBudget(value: string | number | null | undefined): number | null {
-  const trimmed = String(value ?? '').trim();
-  if (!trimmed) {
-    return null;
-  }
-  return Number.parseInt(trimmed, 10);
+  return parseCopInput(String(value ?? ''));
 }
 
 @Component({
@@ -143,6 +134,7 @@ function toNullableBudget(value: string | number | null | undefined): number | n
     IonButton,
     EmptyStateComponent,
     ThemePickerComponent,
+    CopInputDirective,
   ],
 })
 export class EventFormPage implements ViewWillEnter {
@@ -319,7 +311,7 @@ export class EventFormPage implements ViewWillEnter {
         budget_cop:
           currentEvent.budget_cop !== null &&
           currentEvent.budget_cop !== undefined
-            ? String(currentEvent.budget_cop)
+            ? formatCopInput(String(currentEvent.budget_cop)).value
             : '',
       });
     } catch (err) {
