@@ -147,6 +147,46 @@ describe('TaskFormComponent', () => {
     expect(mockTasksRepo.save).not.toHaveBeenCalled();
   });
 
+  it('mantiene Crear gasto nuevo abierto cuando cambia un campo dentro del grupo de radios', async () => {
+    component.ngOnInit();
+    await fixture.whenStable();
+    component.expenseMode.set('new');
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const root = fixture.nativeElement as HTMLElement;
+    const fields = root.querySelectorAll('.new-expense-fields ion-input, .new-expense-fields ion-select');
+    expect(fields.length).toBe(3);
+
+    fields.forEach((field) => {
+      field.dispatchEvent(
+        new CustomEvent('ionChange', {
+          bubbles: true,
+          composed: true,
+          detail: { value: 'Torta de 3 pisos' },
+        }),
+      );
+    });
+    fixture.detectChanges();
+
+    expect(component.expenseMode()).toBe('new');
+    expect(root.querySelector('.new-expense-fields')).not.toBeNull();
+  });
+
+  it('cambia de modo cuando el evento viene del propio grupo de radios', async () => {
+    component.ngOnInit();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    const group = (fixture.nativeElement as HTMLElement).querySelector('ion-radio-group');
+    group?.dispatchEvent(
+      new CustomEvent('ionChange', { bubbles: true, composed: true, detail: { value: 'new' } }),
+    );
+
+    expect(component.expenseMode()).toBe('new');
+  });
+
   it('muestra aviso sin botón y deshabilita Crear gasto nuevo si no hay categorías, pero Vincular sigue disponible', async () => {
     mockBudgetRepo.listCategories.mockResolvedValue([]);
     component.ngOnInit();

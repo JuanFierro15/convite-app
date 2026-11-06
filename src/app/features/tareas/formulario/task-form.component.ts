@@ -312,6 +312,10 @@ export class TaskFormComponent implements OnInit {
   }
 
   onExpenseModeChange(event: CustomEvent): void {
+    // ionChange burbujea, y los campos del gasto están dentro del grupo de radios.
+    if (event.target !== event.currentTarget) {
+      return;
+    }
     const val = event.detail.value as 'none' | 'new' | 'link';
     this.expenseMode.set(val);
     this.form.markAsDirty();
