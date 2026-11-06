@@ -1,0 +1,109 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar>
+    <ion-title class="text-section">Registrar pago</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="cancel()" aria-label="Cerrar formulario">
+        <ion-icon slot="icon-only" name="close-outline" aria-hidden="true"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <form class="payment-form" [formGroup]="form" (ngSubmit)="save()" novalidate>
+    @if (hasNoProfiles()) {
+      <div class="no-profiles-banner" role="status">
+        <p class="banner-title text-body">
+          Este evento no tiene perfiles disponibles, así que no se pueden registrar pagos.
+        </p>
+        @if (canManageProfiles) {
+          <p class="banner-subtitle text-body">Crea un perfil para indicar quién pagó.</p>
+          <ion-button
+            fill="outline"
+            color="primary"
+            size="small"
+            class="go-profiles-btn"
+            (click)="goToProfiles()"
+          >
+            Ir a perfiles
+          </ion-button>
+        }
+      </div>
+    }
+
+    <div class="field-group">
+      <span class="field-label text-name" id="payment-amount-label">Monto</span>
+      <ion-input
+        aria-labelledby="payment-amount-label"
+        formControlName="amount_cop"
+        type="text"
+        inputmode="numeric"
+        fill="outline"
+        placeholder="Ej. 50.000"
+      ></ion-input>
+      @if (amountError; as errorMsg) {
+        <p class="field-error text-label" role="alert">{{ errorMsg }}</p>
+      }
+    </div>
+
+    <div class="field-group">
+      <span class="field-label text-name" id="payment-date-label">Fecha del pago</span>
+      <ion-input
+        aria-labelledby="payment-date-label"
+        formControlName="paid_on"
+        type="date"
+        fill="outline"
+        [max]="today"
+      ></ion-input>
+      @if (paidOnError; as errorMsg) {
+        <p class="field-error text-label" role="alert">{{ errorMsg }}</p>
+      }
+    </div>
+
+    <div class="field-group">
+      <span class="field-label text-name" id="payment-profile-label">Quién pagó</span>
+      <ion-select
+        aria-labelledby="payment-profile-label"
+        formControlName="paid_by_profile_id"
+        fill="outline"
+        placeholder="Elige quién pagó"
+        interface="popover"
+      >
+        @for (profile of profiles; track profile.id) {
+          <ion-select-option [value]="profile.id">{{ profile.name }}</ion-select-option>
+        }
+      </ion-select>
+      @if (profileError; as errorMsg) {
+        <p class="field-error text-label" role="alert">{{ errorMsg }}</p>
+      }
+    </div>
+  </form>
+</ion-content>
+
+<ion-footer class="ion-no-border">
+  <ion-toolbar class="footer-toolbar">
+    <div class="form-actions">
+      <ion-button
+        fill="outline"
+        color="medium"
+        expand="block"
+        (click)="cancel()"
+        [disabled]="saving()"
+      >
+        Cancelar
+      </ion-button>
+      <ion-button
+        color="primary"
+        expand="block"
+        (click)="save()"
+        [disabled]="saving() || hasNoProfiles()"
+      >
+        @if (saving()) {
+          <ion-spinner name="crescent"></ion-spinner>
+        } @else {
+          Guardar
+        }
+      </ion-button>
+    </div>
+  </ion-toolbar>
+</ion-footer>

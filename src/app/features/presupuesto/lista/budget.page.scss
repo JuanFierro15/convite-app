@@ -1,0 +1,368 @@
+:host {
+  display: block;
+}
+
+.page-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding-bottom: var(--space-xl);
+}
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-xl) var(--space-md);
+  gap: var(--space-sm);
+  color: var(--ion-color-medium);
+}
+
+.budget-card,
+.breakdown-card {
+  margin: 0;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  background: var(--ion-card-background);
+}
+
+.budget-card__content,
+.breakdown-card__content {
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+
+  h1, h2, h3, p, span {
+    color: var(--ion-text-color);
+  }
+
+  .text-title {
+    font-size: 1.5rem;
+    font-weight: 700;
+  }
+
+  .text-section {
+    font-size: 1.125rem;
+    font-weight: 600;
+  }
+
+  .text-name {
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .text-body {
+    font-size: 0.875rem;
+    font-weight: 400;
+  }
+
+  .text-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+}
+
+.budget-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.budget-card__title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xxs, 2px);
+}
+
+.budget-card__title {
+  margin: 0;
+}
+
+.budget-amount {
+  margin: 0;
+  color: var(--ion-color-primary-shade);
+}
+
+.edit-budget-btn {
+  margin: 0;
+  min-height: 44px;
+}
+
+.no-budget-banner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-md);
+  background: rgba(var(--ion-color-warning-rgb), 0.12);
+  border-radius: var(--radius-md);
+  border-left: 4px solid var(--ion-color-warning);
+}
+
+.no-budget-text {
+  margin: 0;
+  color: var(--ion-text-color);
+  font-weight: 500;
+}
+
+.define-budget-btn {
+  --color: var(--ion-color-primary-shade);
+  --border-color: var(--ion-color-primary-shade);
+  margin-top: var(--space-xs);
+  align-self: flex-start;
+  min-height: 44px;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-sm);
+  margin-top: var(--space-xs);
+  padding-top: var(--space-sm);
+  border-top: 1px solid var(--ion-border-color);
+}
+
+.metric-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xxs, 2px);
+}
+
+.metric-label {
+  margin: 0;
+  color: var(--ion-color-medium-shade);
+}
+
+.metric-value {
+  margin: 0;
+}
+
+ion-card-content .over-budget-text {
+  margin: 0;
+  color: var(--ion-color-danger);
+  font-weight: 700;
+}
+
+.breakdown-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.section-title {
+  margin: 0;
+  color: var(--ion-text-color);
+}
+
+.breakdown-list {
+  background: transparent;
+  padding: 0;
+}
+
+.breakdown-item {
+  --background: transparent;
+  --padding-start: 0;
+  --inner-padding-end: 0;
+  min-height: 44px;
+}
+
+.breakdown-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: var(--space-sm);
+}
+
+.breakdown-name {
+  margin: 0;
+  color: var(--ion-text-color);
+}
+
+.breakdown-amounts {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.breakdown-committed {
+  margin: 0;
+  font-weight: 600;
+}
+
+.breakdown-paid {
+  margin: 0;
+  color: var(--ion-color-medium-shade);
+}
+
+.breakdown-paid-total {
+  margin: 0;
+  color: var(--ion-text-color);
+}
+
+.no-payments {
+  margin: var(--space-xs) 0;
+  color: var(--ion-color-medium);
+}
+
+.quick-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.link-button {
+  flex: 1;
+  min-width: 140px;
+  min-height: 44px;
+  margin: 0;
+}
+
+.expense-list-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-top: var(--space-xs);
+}
+
+.expense-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.new-expense-btn {
+  margin: 0;
+  min-height: 44px;
+}
+
+.filter-segment {
+  background: var(--ion-color-light);
+  border-radius: var(--radius-md);
+  padding: var(--space-xs);
+}
+
+.filter-segment ion-segment-button {
+  --border-radius: var(--radius-sm);
+  --indicator-color: var(--ion-card-background);
+  min-height: 44px;
+  text-transform: none;
+  font-weight: 600;
+}
+
+.expense-list-anchor {
+  height: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.expenses-container {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.expense-card {
+  margin: 0;
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-card);
+  background: var(--ion-card-background);
+}
+
+.expense-card__content {
+  padding: var(--space-sm) var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+
+  h1, h2, h3, p, span {
+    color: var(--ion-text-color);
+  }
+
+  .text-name {
+    font-size: 1rem;
+    font-weight: 600;
+  }
+
+  .text-label {
+    font-size: 0.75rem;
+    font-weight: 500;
+  }
+}
+
+.expense-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-sm);
+}
+
+.expense-card__titles {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xxs, 2px);
+  flex: 1;
+  min-width: 0;
+}
+
+.expense-card__description {
+  margin: 0;
+  word-break: break-word;
+}
+
+.expense-card__category {
+  margin: 0;
+  color: var(--ion-color-medium-shade);
+}
+
+.expense-card__amount-col {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--space-xxs, 2px);
+}
+
+.expense-card__amount {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.expense-card__missing {
+  margin: 0;
+  color: var(--ion-color-warning-shade);
+  font-weight: 600;
+}
+
+.expense-card__badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+  gap: var(--space-xxs, 4px);
+  max-width: 100%;
+}
+
+.pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+  margin-top: var(--space-sm);
+}
+
+.pagination__status {
+  order: -1;
+  flex-basis: 100%;
+  color: var(--ion-color-medium-shade);
+  text-align: center;
+}
+
+.pagination__button {
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 44px;
+  margin: 0;
+}

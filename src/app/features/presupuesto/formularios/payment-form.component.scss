@@ -1,0 +1,72 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.payment-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  padding-bottom: var(--space-lg);
+}
+
+.no-profiles-banner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: var(--space-sm) var(--space-md);
+  background: rgba(var(--ion-color-warning-rgb), 0.12);
+  border-radius: var(--radius-md);
+  border-left: 4px solid var(--ion-color-warning);
+}
+
+.banner-title {
+  margin: 0;
+  color: var(--ion-text-color);
+  font-weight: 500;
+}
+
+.banner-subtitle {
+  margin: 0;
+  color: var(--ion-color-medium-shade);
+}
+
+.go-profiles-btn {
+  margin-top: var(--space-xs);
+  align-self: flex-start;
+  min-height: 44px;
+}
+
+.field-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.field-label {
+  color: var(--ion-text-color);
+  margin-bottom: var(--space-xs);
+}
+
+.field-error {
+  margin: var(--space-xs) 0 0;
+  color: var(--ion-color-danger);
+  font-weight: 600;
+}
+
+.footer-toolbar {
+  padding: var(--space-sm) var(--space-md);
+  border-top: 1px solid var(--ion-border-color);
+}
+
+.form-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-sm);
+}
+
+.form-actions ion-button {
+  margin: 0;
+  min-height: 44px;
+}

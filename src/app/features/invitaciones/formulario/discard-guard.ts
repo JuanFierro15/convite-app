@@ -5,7 +5,10 @@ export interface DiscardGuard {
   canDismiss: (data?: unknown, role?: string) => Promise<boolean>;
 }
 
-export function createDiscardGuard(alertController: AlertController): DiscardGuard {
+export function createDiscardGuard(
+  alertController: AlertController,
+  message = 'Lo que escribiste en esta invitación se perderá.',
+): DiscardGuard {
   let isAlertOpen = false;
 
   const guard: DiscardGuard = {
@@ -27,7 +30,7 @@ export function createDiscardGuard(alertController: AlertController): DiscardGua
       try {
         const alert = await alertController.create({
           header: '¿Descartar los cambios?',
-          message: 'Lo que escribiste en esta invitación se perderá.',
+          message,
           buttons: [
             { text: 'Seguir editando', role: 'cancel' },
             { text: 'Descartar', role: 'destructive' },

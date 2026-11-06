@@ -1,0 +1,157 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button
+        [defaultHref]="'/eventos/' + id() + '/presupuesto'"
+        text=""
+        aria-label="Volver a presupuesto"
+      ></ion-back-button>
+    </ion-buttons>
+    <ion-title class="text-title">Detalle del gasto</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  @if (loading()) {
+    <div class="loading-state" role="status" aria-live="polite">
+      <ion-spinner name="crescent" color="primary"></ion-spinner>
+      <p class="text-body">Cargando gasto...</p>
+    </div>
+  } @else if (error(); as errorMsg) {
+    <app-empty-state
+      [message]="errorMsg"
+      actionLabel="Reintentar"
+      (action)="retryLoad()"
+    />
+  } @else if (expense() === null) {
+    <app-empty-state
+      message="Este gasto ya no existe."
+      actionLabel="Volver a presupuesto"
+      (action)="goToBudget()"
+    />
+  } @else {
+    @let exp = expense()!;
+    <div class="page-container">
+      <ion-card class="detail-card">
+        <ion-card-content class="detail-card__content">
+          <div class="detail-card__top">
+            <div class="detail-card__titles">
+              <h1 class="expense-title text-title">{{ exp.description }}</h1>
+              <span class="expense-category text-label">{{ categoryName() }}</span>
+            </div>
+            <div class="detail-card__status">
+              <span [class]="statusBadgeClass() + ' text-label'">{{ statusLabel() }}</span>
+            </div>
+          </div>
+
+          <div class="amount-row">
+            <span class="amount-label text-body">Monto:</span>
+            <span class="amount-value text-title">{{ formatMoney(exp.amount_cop) }}</span>
+          </div>
+
+          @if (status() === 'partial') {
+            <p class="balance-missing text-body">
+              Faltan {{ formatMoney(balance()) }}
+            </p>
+          }
+
+          @if (exp.note) {
+            <div class="note-box">
+              <span class="note-heading text-label">Nota</span>
+              <p class="note-text text-body">{{ exp.note }}</p>
+            </div>
+          }
+
+          @if (exp.task) {
+            <div class="task-box">
+              <p class="task-text text-body">Tarea: {{ exp.task.title }}</p>
+            </div>
+          }
+
+          <div class="detail-actions">
+            <ion-button
+              fill="outline"
+              color="primary"
+              (click)="openEdit()"
+              aria-label="Editar gasto"
+            >
+              <ion-icon slot="start" name="create-outline" aria-hidden="true"></ion-icon>
+              Editar
+            </ion-button>
+            <ion-button
+              fill="outline"
+              color="danger"
+              (click)="confirmDeleteExpense()"
+              [disabled]="deletingExpense()"
+              aria-label="Borrar gasto"
+            >
+              @if (deletingExpense()) {
+                <ion-spinner name="crescent"></ion-spinner>
+              } @else {
+                <ion-icon slot="start" name="trash-outline" aria-hidden="true"></ion-icon>
+                Borrar
+              }
+            </ion-button>
+          </div>
+        </ion-card-content>
+      </ion-card>
+
+      <section class="payments-section" aria-labelledby="payments-heading">
+        <h2 id="payments-heading" class="text-section section-heading">Pagos</h2>
+
+        @if (exp.payments.length === 0) {
+          <p class="no-payments text-body">Todavía no hay pagos.</p>
+        } @else {
+          <ion-list class="payments-list">
+            @for (payment of exp.payments; track payment.id) {
+              <ion-item class="payment-item" lines="full">
+                <div class="payment-row">
+                  <div class="payment-info">
+                    <span class="payment-profile text-name">{{ getProfileName(payment.paid_by_profile_id) }}</span>
+                    <span class="payment-date text-label">{{ formatDate(payment.paid_on) }}</span>
+                  </div>
+                  <div class="payment-amount-col">
+                    <span class="payment-amount text-name">{{ formatMoney(payment.amount_cop) }}</span>
+                    <ion-button
+                      fill="clear"
+                      color="danger"
+                      class="delete-payment-btn"
+                      [attr.aria-label]="'Borrar pago de ' + formatMoney(payment.amount_cop)"
+                      (click)="confirmDeletePayment(payment)"
+                      [disabled]="deletingPaymentId() === payment.id"
+                    >
+                      @if (deletingPaymentId() === payment.id) {
+                        <ion-spinner slot="icon-only" name="crescent"></ion-spinner>
+                      } @else {
+                        <ion-icon slot="icon-only" name="trash-outline" aria-hidden="true"></ion-icon>
+                      }
+                    </ion-button>
+                  </div>
+                </div>
+              </ion-item>
+            }
+          </ion-list>
+        }
+      </section>
+
+      <div class="register-payment-wrapper">
+        @if (status() === 'paid') {
+          <p class="paid-notice text-body">Este gasto ya está pagado.</p>
+        } @else {
+          <ion-button
+            color="primary"
+            expand="block"
+            class="register-payment-btn"
+            (click)="openRegisterPayment()"
+          >
+            Registrar pago
+          </ion-button>
+        }
+      </div>
+    </div>
+  }
+</ion-content>

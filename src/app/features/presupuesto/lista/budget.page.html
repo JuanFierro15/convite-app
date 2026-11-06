@@ -1,0 +1,281 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button
+        [defaultHref]="'/eventos/' + id() + '/panel'"
+        text=""
+        aria-label="Volver al panel"
+      ></ion-back-button>
+    </ion-buttons>
+    <ion-title class="text-title">Presupuesto y gastos</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  @if (loading()) {
+    <div class="loading-state" role="status" aria-live="polite">
+      <ion-spinner name="crescent" color="primary"></ion-spinner>
+      <p class="text-body">Cargando presupuesto...</p>
+    </div>
+  } @else if (error(); as errorMsg) {
+    <app-empty-state
+      [message]="errorMsg"
+      actionLabel="Reintentar"
+      (action)="retryLoad()"
+    />
+  } @else {
+    @let sum = summary();
+    <div class="page-container">
+      <ion-card class="budget-card">
+        <ion-card-content class="budget-card__content">
+          <div class="budget-card__header">
+            <div class="budget-card__title-wrap">
+              <h2 class="text-section budget-card__title">Presupuesto</h2>
+              @if (sum.budget !== null) {
+                <span class="budget-amount text-title">{{ formatMoney(sum.budget) }}</span>
+              }
+            </div>
+            <ion-button
+              fill="clear"
+              size="small"
+              class="edit-budget-btn"
+              [routerLink]="['/eventos', id(), 'editar']"
+            >
+              <ion-icon slot="start" name="create-outline" aria-hidden="true"></ion-icon>
+              Editar
+            </ion-button>
+          </div>
+
+          @if (sum.budget === null) {
+            <div class="no-budget-banner" role="status">
+              <p class="no-budget-text text-body">
+                Este evento no tiene presupuesto. Defínelo para ver cuánto te queda disponible.
+              </p>
+              <ion-button
+                fill="outline"
+                size="small"
+                class="define-budget-btn"
+                [routerLink]="['/eventos', id(), 'editar']"
+              >
+                Definir presupuesto
+              </ion-button>
+            </div>
+          }
+
+          <div class="metrics-grid">
+            <div class="metric-item">
+              <span class="metric-label text-label">Comprometido</span>
+              <span class="metric-value text-name">{{ formatMoney(sum.committed) }}</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label text-label">Pagado</span>
+              <span class="metric-value text-name">{{ formatMoney(sum.paid) }}</span>
+            </div>
+            <div class="metric-item">
+              <span class="metric-label text-label">Por pagar</span>
+              <span class="metric-value text-name">{{ formatMoney(sum.toPay) }}</span>
+            </div>
+
+            @if (sum.budget !== null) {
+              <div class="metric-item metric-available">
+                @if (sum.overBy > 0) {
+                  <span class="metric-label text-label">Disponible</span>
+                  <span class="over-budget-text text-name">
+                    Te pasaste por {{ formatMoney(sum.overBy) }}
+                  </span>
+                } @else {
+                  <span class="metric-label text-label">Disponible</span>
+                  <span class="metric-value text-name">{{ formatMoney(sum.available!) }}</span>
+                }
+              </div>
+            }
+          </div>
+        </ion-card-content>
+      </ion-card>
+
+      @if (expenses().length > 0) {
+        <section class="breakdown-section" aria-labelledby="category-breakdown-heading">
+          <h2 id="category-breakdown-heading" class="section-title text-section">Por categoría</h2>
+          <ion-card class="breakdown-card">
+            <ion-card-content class="breakdown-card__content">
+              <ion-list class="breakdown-list">
+                @for (cat of categoryBreakdown(); track cat.category_id) {
+                  <ion-item class="breakdown-item" lines="full">
+                    <div class="breakdown-row">
+                      <span class="breakdown-name text-name">{{ cat.name }}</span>
+                      <div class="breakdown-amounts">
+                        <span class="breakdown-committed text-body">
+                          {{ formatMoney(cat.committed) }}
+                        </span>
+                        <span class="breakdown-paid text-label">
+                          Pagado: {{ formatMoney(cat.paid) }}
+                        </span>
+                      </div>
+                    </div>
+                  </ion-item>
+                }
+              </ion-list>
+            </ion-card-content>
+          </ion-card>
+        </section>
+      }
+
+      <section class="breakdown-section" aria-labelledby="profile-breakdown-heading">
+        <h2 id="profile-breakdown-heading" class="section-title text-section">Quién ha pagado</h2>
+        <ion-card class="breakdown-card">
+          <ion-card-content class="breakdown-card__content">
+            @if (profileBreakdown().length === 0) {
+              <p class="no-payments text-body">Todavía no hay pagos registrados.</p>
+            } @else {
+              <ion-list class="breakdown-list">
+                @for (prof of profileBreakdown(); track prof.profile_id) {
+                  <ion-item class="breakdown-item" lines="full">
+                    <div class="breakdown-row">
+                      <span class="breakdown-name text-name">{{ prof.name }}</span>
+                      <span class="breakdown-paid-total text-name">{{ formatMoney(prof.paid) }}</span>
+                    </div>
+                  </ion-item>
+                }
+              </ion-list>
+            }
+          </ion-card-content>
+        </ion-card>
+      </section>
+
+      <div class="quick-links">
+        <ion-button
+          fill="outline"
+          color="primary"
+          class="link-button"
+          [routerLink]="['/eventos', id(), 'presupuesto', 'categorias']"
+        >
+          Categorías
+        </ion-button>
+        @if (canManage()) {
+          <ion-button
+            fill="outline"
+            color="primary"
+            class="link-button"
+            [routerLink]="['/eventos', id(), 'perfiles']"
+          >
+            Perfiles
+          </ion-button>
+        }
+      </div>
+
+      <div class="expense-list-section">
+        <div class="expense-list-header">
+          <ion-button color="primary" class="new-expense-btn" (click)="openCreateExpense()">
+            <ion-icon slot="start" name="add" aria-hidden="true"></ion-icon>
+            Nuevo gasto
+          </ion-button>
+        </div>
+
+        <ion-segment
+          [value]="filter()"
+          (ionChange)="onFilterChange($event)"
+          aria-label="Filtrar gastos"
+          class="filter-segment"
+        >
+          <ion-segment-button value="all">
+            <ion-label>Todos</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="to_pay">
+            <ion-label>Por pagar</ion-label>
+          </ion-segment-button>
+          <ion-segment-button value="paid">
+            <ion-label>Pagados</ion-label>
+          </ion-segment-button>
+        </ion-segment>
+
+        <div #expenseListStart class="expense-list-anchor"></div>
+
+        @if (expenses().length === 0) {
+          <app-empty-state
+            message="Todavía no hay gastos. Agrega el primero para empezar a llevar las cuentas."
+          />
+        } @else if (pagedExpenses().items.length === 0) {
+          @if (filter() === 'to_pay') {
+            <app-empty-state message="No hay gastos por pagar." />
+          } @else if (filter() === 'paid') {
+            <app-empty-state message="Todavía no hay gastos pagados." />
+          }
+        } @else {
+          <div class="expenses-container">
+            @for (expense of pagedExpenses().items; track expense.id) {
+              <ion-card
+                class="expense-card"
+                button
+                (click)="goToExpenseDetail(expense.id)"
+              >
+                <ion-card-content class="expense-card__content">
+                  <div class="expense-card__header">
+                    <div class="expense-card__titles">
+                      <h3 class="expense-card__description text-name">{{ expense.description }}</h3>
+                      <span class="expense-card__category text-label">
+                        {{ getCategoryName(expense.category_id) }}
+                      </span>
+                    </div>
+                    <div class="expense-card__amount-col">
+                      <span class="expense-card__amount text-name">
+                        {{ formatMoney(expense.amount_cop) }}
+                      </span>
+                      <div class="expense-card__badges">
+                        @if (showsTaskDoneMark(expense)) {
+                          <span class="badge-soft-secondary text-label">Tarea hecha</span>
+                        }
+                        <span [class]="getStatusBadgeClass(expense) + ' text-label'">
+                          {{ getStatusLabel(expense) }}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  @if (isPartial(expense)) {
+                    <p class="expense-card__missing text-label">
+                      Faltan {{ formatMoney(getMissingAmount(expense)) }}
+                    </p>
+                  }
+                </ion-card-content>
+              </ion-card>
+            }
+          </div>
+
+          @if (pagedExpenses().totalPages > 1) {
+            <nav class="pagination" aria-label="Paginación de gastos">
+              <ion-button
+                fill="outline"
+                size="small"
+                class="pagination__button"
+                [disabled]="pagedExpenses().page <= 1"
+                aria-label="Página anterior"
+                (click)="goToPreviousPage()"
+              >
+                <ion-icon slot="start" name="chevron-back-outline" aria-hidden="true"></ion-icon>
+                Anterior
+              </ion-button>
+              <span class="text-label pagination__status" aria-live="polite">
+                Página {{ pagedExpenses().page }} de {{ pagedExpenses().totalPages }}
+              </span>
+              <ion-button
+                fill="outline"
+                size="small"
+                class="pagination__button"
+                [disabled]="pagedExpenses().page >= pagedExpenses().totalPages"
+                aria-label="Página siguiente"
+                (click)="goToNextPage()"
+              >
+                Siguiente
+                <ion-icon slot="end" name="chevron-forward-outline" aria-hidden="true"></ion-icon>
+              </ion-button>
+            </nav>
+          }
+        }
+      </div>
+    </div>
+  }
+</ion-content>

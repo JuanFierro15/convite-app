@@ -1,0 +1,108 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar>
+    <ion-title class="text-section">
+      {{ isEditing() ? 'Editar gasto' : 'Nuevo gasto' }}
+    </ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="cancel()" aria-label="Cerrar formulario">
+        <ion-icon slot="icon-only" name="close-outline" aria-hidden="true"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <form class="expense-form" [formGroup]="form" (ngSubmit)="save()" novalidate>
+    <div class="field-group">
+      <span class="field-label text-name" id="expense-description-label">Descripción</span>
+      <ion-input
+        aria-labelledby="expense-description-label"
+        formControlName="description"
+        fill="outline"
+        placeholder="Ej. Torta de vainilla"
+        [maxlength]="120"
+        [counter]="true"
+      ></ion-input>
+      @if (descriptionError; as errorMsg) {
+        <p class="field-error text-label" role="alert">{{ errorMsg }}</p>
+      }
+    </div>
+
+    <div class="field-group">
+      <span class="field-label text-name" id="expense-category-label">Categoría</span>
+      <ion-select
+        aria-labelledby="expense-category-label"
+        formControlName="category_id"
+        fill="outline"
+        placeholder="Elige una categoría"
+        interface="popover"
+      >
+        @for (category of categories; track category.id) {
+          <ion-select-option [value]="category.id">{{ category.name }}</ion-select-option>
+        }
+      </ion-select>
+      @if (categoryError; as errorMsg) {
+        <p class="field-error text-label" role="alert">{{ errorMsg }}</p>
+      }
+    </div>
+
+    <div class="field-group">
+      <span class="field-label text-name" id="expense-amount-label">Monto</span>
+      <ion-input
+        aria-labelledby="expense-amount-label"
+        formControlName="amount_cop"
+        type="text"
+        inputmode="numeric"
+        fill="outline"
+        placeholder="Ej. 120.000"
+      ></ion-input>
+      @if (amountError; as errorMsg) {
+        <p class="field-error text-label" role="alert">{{ errorMsg }}</p>
+      }
+    </div>
+
+    <div class="field-group">
+      <span class="field-label text-name" id="expense-note-label">Nota</span>
+      <ion-textarea
+        aria-labelledby="expense-note-label"
+        formControlName="note"
+        fill="outline"
+        placeholder="Detalles opcionales"
+        [rows]="3"
+        [maxlength]="500"
+        [counter]="true"
+      ></ion-textarea>
+      @if (noteError; as errorMsg) {
+        <p class="field-error text-label" role="alert">{{ errorMsg }}</p>
+      }
+    </div>
+  </form>
+</ion-content>
+
+<ion-footer class="ion-no-border">
+  <ion-toolbar class="footer-toolbar">
+    <div class="form-actions">
+      <ion-button
+        fill="outline"
+        color="medium"
+        expand="block"
+        (click)="cancel()"
+        [disabled]="saving()"
+      >
+        Cancelar
+      </ion-button>
+      <ion-button
+        color="primary"
+        expand="block"
+        (click)="save()"
+        [disabled]="saving()"
+      >
+        @if (saving()) {
+          <ion-spinner name="crescent"></ion-spinner>
+        } @else {
+          Guardar
+        }
+      </ion-button>
+    </div>
+  </ion-toolbar>
+</ion-footer>
