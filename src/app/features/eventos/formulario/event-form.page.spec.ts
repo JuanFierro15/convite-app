@@ -23,6 +23,7 @@ const mockEvent: EventRow = {
   welcome_message: null,
   rsvp_deadline: '2026-11-15T23:59:59-05:00',
   budget_cop: null,
+  team_id: null,
   created_at: '2026-10-01T00:00:00-05:00',
   updated_at: '2026-10-01T00:00:00-05:00',
 };

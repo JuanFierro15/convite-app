@@ -51,6 +51,7 @@ export type Database = {
           name: string
           rsvp_deadline: string
           starts_at: string
+          team_id: string | null
           theme_id: string
           updated_at: string
           venue_address: string | null
@@ -67,6 +68,7 @@ export type Database = {
           name: string
           rsvp_deadline: string
           starts_at: string
+          team_id?: string | null
           theme_id?: string
           updated_at?: string
           venue_address?: string | null
@@ -83,13 +85,164 @@ export type Database = {
           name?: string
           rsvp_deadline?: string
           starts_at?: string
+          team_id?: string | null
           theme_id?: string
           updated_at?: string
           venue_address?: string | null
           venue_name?: string | null
           welcome_message?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "events_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expense_categories: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          name: string
+          sort_order: number
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          name: string
+          sort_order?: number
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          name?: string
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_categories_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expense_payments: {
+        Row: {
+          amount_cop: number
+          created_at: string
+          event_id: string
+          expense_id: string
+          id: string
+          paid_by_profile_id: string
+          paid_on: string
+        }
+        Insert: {
+          amount_cop: number
+          created_at?: string
+          event_id: string
+          expense_id: string
+          id?: string
+          paid_by_profile_id: string
+          paid_on?: string
+        }
+        Update: {
+          amount_cop?: number
+          created_at?: string
+          event_id?: string
+          expense_id?: string
+          id?: string
+          paid_by_profile_id?: string
+          paid_on?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_payments_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_payments_expense_same_event"
+            columns: ["expense_id", "event_id"]
+            isOneToOne: false
+            referencedRelation: "expenses"
+            referencedColumns: ["id", "event_id"]
+          },
+          {
+            foreignKeyName: "expense_payments_paid_by_profile_id_fkey"
+            columns: ["paid_by_profile_id"]
+            isOneToOne: false
+            referencedRelation: "team_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expenses: {
+        Row: {
+          amount_cop: number
+          category_id: string
+          created_at: string
+          description: string
+          event_id: string
+          id: string
+          note: string | null
+          task_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount_cop: number
+          category_id: string
+          created_at?: string
+          description: string
+          event_id: string
+          id?: string
+          note?: string | null
+          task_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount_cop?: number
+          category_id?: string
+          created_at?: string
+          description?: string
+          event_id?: string
+          id?: string
+          note?: string | null
+          task_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_category_same_event"
+            columns: ["category_id", "event_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id", "event_id"]
+          },
+          {
+            foreignKeyName: "expenses_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_task_same_event"
+            columns: ["task_id", "event_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id", "event_id"]
+          },
+        ]
       }
       gift_reservations: {
         Row: {
@@ -282,6 +435,60 @@ export type Database = {
           },
         ]
       }
+      tasks: {
+        Row: {
+          assignee_profile_id: string | null
+          created_at: string
+          done_at: string | null
+          done_by: string | null
+          due_date: string
+          event_id: string
+          id: string
+          note: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          assignee_profile_id?: string | null
+          created_at?: string
+          done_at?: string | null
+          done_by?: string | null
+          due_date: string
+          event_id: string
+          id?: string
+          note?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          assignee_profile_id?: string | null
+          created_at?: string
+          done_at?: string | null
+          done_by?: string | null
+          due_date?: string
+          event_id?: string
+          id?: string
+          note?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tasks_assignee_profile_id_fkey"
+            columns: ["assignee_profile_id"]
+            isOneToOne: false
+            referencedRelation: "team_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       team_members: {
         Row: {
           created_at: string
@@ -304,6 +511,41 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "team_members_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      team_profiles: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          id: string
+          name: string
+          sort_order: number
+          team_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          id?: string
+          name: string
+          sort_order?: number
+          team_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          id?: string
+          name?: string
+          sort_order?: number
+          team_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_profiles_team_id_fkey"
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
@@ -334,6 +576,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_manage_profiles: { Args: { p_event_id: string }; Returns: boolean }
+      delete_task: {
+        Args: { p_delete_expense?: boolean; p_task_id: string }
+        Returns: Json
+      }
       get_gifts: { Args: { p_code: string }; Returns: Json }
       get_invitation: { Args: { p_code: string }; Returns: Json }
       record_arrivals: {
@@ -359,8 +606,25 @@ export type Database = {
         }
         Returns: Json
       }
+      save_task: {
+        Args: {
+          p_assignee_profile_id: string
+          p_due_date: string
+          p_event_id: string
+          p_expense?: Json
+          p_expense_action?: string
+          p_note: string
+          p_task_id: string
+          p_title: string
+        }
+        Returns: Json
+      }
       set_rsvp: {
         Args: { p_code: string; p_guest_id: string; p_rsvp: string }
+        Returns: Json
+      }
+      set_task_done: {
+        Args: { p_done: boolean; p_task_id: string }
         Returns: Json
       }
     }

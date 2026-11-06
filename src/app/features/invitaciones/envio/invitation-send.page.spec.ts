@@ -24,6 +24,7 @@ const mockEvent: EventRow = {
   rsvp_deadline: '2026-11-15T23:59:59-05:00',
   theme_id: 'pastel',
   budget_cop: null,
+  team_id: null,
   created_by: 'usr-1',
   created_at: '2026-01-01T00:00:00-05:00',
   updated_at: '2026-01-01T00:00:00-05:00',
