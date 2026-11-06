@@ -1,0 +1,296 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button
+        [defaultHref]="'/eventos/' + id() + '/panel'"
+        text=""
+        aria-label="Volver al panel"
+      ></ion-back-button>
+    </ion-buttons>
+    <ion-title class="text-title">Tareas</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding tasks-content">
+  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  @if (loading()) {
+    <div class="loading-state" role="status" aria-live="polite">
+      <ion-spinner name="crescent" color="primary"></ion-spinner>
+      <p class="text-body">Cargando tareas...</p>
+    </div>
+  } @else if (error(); as errorMsg) {
+    <app-empty-state
+      [message]="errorMsg"
+      actionLabel="Reintentar"
+      (action)="retryLoad()"
+    />
+  } @else if (tasks().length === 0) {
+    @if (isOwner()) {
+      <app-empty-state
+        message="Todavía no hay tareas. Agrega la primera para repartir la preparación."
+        actionLabel="Nueva tarea"
+        (action)="openCreateModal()"
+      />
+    } @else {
+      <app-empty-state
+        message="Todavía no hay tareas."
+      />
+    }
+  } @else {
+    <div class="page-container">
+      @if (isOwner()) {
+        <div class="top-actions">
+          <ion-button
+            color="primary"
+            size="small"
+            class="top-btn"
+            (click)="openCreateModal()"
+          >
+            <ion-icon slot="start" name="add" aria-hidden="true"></ion-icon>
+            Nueva tarea
+          </ion-button>
+
+          @if (canManage()) {
+            <ion-button
+              fill="outline"
+              color="primary"
+              size="small"
+              class="top-btn"
+              [routerLink]="['/eventos', id(), 'perfiles']"
+            >
+              Perfiles
+            </ion-button>
+          }
+        </div>
+      }
+
+      @if (showFilter()) {
+        <div class="filter-bar">
+          <ion-select
+            [value]="selectedFilter()"
+            interface="popover"
+            (ionChange)="onFilterChange($event)"
+            aria-label="Filtrar por perfil"
+            class="profile-filter"
+          >
+            <ion-select-option value="all">Todas</ion-select-option>
+            @for (prof of filterProfiles(); track prof.id) {
+              <ion-select-option [value]="prof.id">{{ prof.name }}</ion-select-option>
+            }
+            <ion-select-option value="unassigned">Sin asignar</ion-select-option>
+          </ion-select>
+        </div>
+      }
+
+      @if (filteredTasks().length === 0) {
+        <div class="empty-filter-state">
+          <p class="empty-filter-text text-body">No hay tareas de este perfil.</p>
+        </div>
+      } @else {
+        <!-- Grupo 1: Vencidas -->
+        @if (groups().overdue.length > 0) {
+          <section class="tasks-group" aria-labelledby="overdue-heading">
+            <h2 id="overdue-heading" class="group-heading group-heading--danger text-section">
+              Vencidas
+            </h2>
+            <div class="tasks-list">
+              @for (task of groups().overdue; track task.id) {
+                <div
+                  class="task-row-container"
+                  [class.task-row-container--updating]="isUpdating(task.id)"
+                >
+                  <div
+                    role="checkbox"
+                    class="task-row"
+                    [attr.aria-checked]="task.done_at !== null"
+                    [attr.aria-disabled]="isUpdating(task.id)"
+                    tabindex="0"
+                    (click)="toggleTaskDone(task)"
+                    (keydown.enter)="toggleTaskDone(task)"
+                    (keydown.space)="onSpaceKey($event, task)"
+                  >
+                    <div class="task-checkbox-box" aria-hidden="true">
+                      <ion-icon
+                        [name]="task.done_at !== null ? 'checkbox' : 'square-outline'"
+                        class="task-checkbox-icon"
+                        [class.task-checkbox-icon--checked]="task.done_at !== null"
+                      ></ion-icon>
+                    </div>
+
+                    <div class="task-info">
+                      <span
+                        class="task-title text-name"
+                        [class.task-title--done]="task.done_at !== null"
+                      >
+                        {{ task.title }}
+                      </span>
+                      <div class="task-meta text-label">
+                        <span class="task-assignee">{{ getAssigneeName(task.assignee_profile_id) }}</span>
+                        <span class="task-meta-dot" aria-hidden="true">·</span>
+                        <span class="task-date task-date--overdue">
+                          {{ getTaskDateLabel(task) }}
+                        </span>
+                      </div>
+                    </div>
+
+                    @if (isOwner()) {
+                      <ion-button
+                        fill="clear"
+                        color="medium"
+                        class="task-edit-btn"
+                        [attr.aria-label]="'Editar tarea: ' + task.title"
+                        (click)="onEditTask($event, task)"
+                      >
+                        <ion-icon slot="icon-only" name="create-outline" aria-hidden="true"></ion-icon>
+                      </ion-button>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          </section>
+        }
+
+        <!-- Grupo 2: Próximas -->
+        @if (groups().upcoming.length > 0) {
+          <section class="tasks-group" aria-labelledby="upcoming-heading">
+            <h2 id="upcoming-heading" class="group-heading text-section">
+              Próximas
+            </h2>
+            <div class="tasks-list">
+              @for (task of groups().upcoming; track task.id) {
+                <div
+                  class="task-row-container"
+                  [class.task-row-container--updating]="isUpdating(task.id)"
+                >
+                  <div
+                    role="checkbox"
+                    class="task-row"
+                    [attr.aria-checked]="task.done_at !== null"
+                    [attr.aria-disabled]="isUpdating(task.id)"
+                    tabindex="0"
+                    (click)="toggleTaskDone(task)"
+                    (keydown.enter)="toggleTaskDone(task)"
+                    (keydown.space)="onSpaceKey($event, task)"
+                  >
+                    <div class="task-checkbox-box" aria-hidden="true">
+                      <ion-icon
+                        [name]="task.done_at !== null ? 'checkbox' : 'square-outline'"
+                        class="task-checkbox-icon"
+                        [class.task-checkbox-icon--checked]="task.done_at !== null"
+                      ></ion-icon>
+                    </div>
+
+                    <div class="task-info">
+                      <span
+                        class="task-title text-name"
+                        [class.task-title--done]="task.done_at !== null"
+                      >
+                        {{ task.title }}
+                      </span>
+                      <div class="task-meta text-label">
+                        <span class="task-assignee">{{ getAssigneeName(task.assignee_profile_id) }}</span>
+                        <span class="task-meta-dot" aria-hidden="true">·</span>
+                        <span class="task-date">
+                          {{ getTaskDateLabel(task) }}
+                        </span>
+                      </div>
+                    </div>
+
+                    @if (isOwner()) {
+                      <ion-button
+                        fill="clear"
+                        color="medium"
+                        class="task-edit-btn"
+                        [attr.aria-label]="'Editar tarea: ' + task.title"
+                        (click)="onEditTask($event, task)"
+                      >
+                        <ion-icon slot="icon-only" name="create-outline" aria-hidden="true"></ion-icon>
+                      </ion-button>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          </section>
+        }
+
+        <!-- Grupo 3: Hechas (N) -->
+        @if (groups().done.length > 0) {
+          <section class="tasks-group tasks-group--done">
+            <button
+              type="button"
+              class="done-toggle-btn"
+              [attr.aria-expanded]="showDone()"
+              (click)="toggleShowDone()"
+            >
+              <ion-icon
+                [name]="showDone() ? 'chevron-down-outline' : 'chevron-forward-outline'"
+                aria-hidden="true"
+                class="done-toggle-icon"
+              ></ion-icon>
+              <span class="group-heading text-section">Hechas ({{ groups().done.length }})</span>
+            </button>
+
+            @if (showDone()) {
+              <div class="tasks-list">
+                @for (task of groups().done; track task.id) {
+                  <div
+                    class="task-row-container"
+                    [class.task-row-container--updating]="isUpdating(task.id)"
+                  >
+                    <div
+                      role="checkbox"
+                      class="task-row"
+                      [attr.aria-checked]="task.done_at !== null"
+                      [attr.aria-disabled]="isUpdating(task.id)"
+                      tabindex="0"
+                      (click)="toggleTaskDone(task)"
+                      (keydown.enter)="toggleTaskDone(task)"
+                      (keydown.space)="onSpaceKey($event, task)"
+                    >
+                      <div class="task-checkbox-box" aria-hidden="true">
+                        <ion-icon
+                          name="checkbox"
+                          class="task-checkbox-icon task-checkbox-icon--checked"
+                        ></ion-icon>
+                      </div>
+
+                      <div class="task-info">
+                        <span class="task-title task-title--done text-name">
+                          {{ task.title }}
+                        </span>
+                        <div class="task-meta text-label">
+                          <span class="task-assignee">{{ getAssigneeName(task.assignee_profile_id) }}</span>
+                          <span class="task-meta-dot" aria-hidden="true">·</span>
+                          <span class="task-date">
+                            {{ getTaskDateLabel(task) }}
+                          </span>
+                        </div>
+                      </div>
+
+                      @if (isOwner()) {
+                        <ion-button
+                          fill="clear"
+                          color="medium"
+                          class="task-edit-btn"
+                          [attr.aria-label]="'Editar tarea: ' + task.title"
+                          (click)="onEditTask($event, task)"
+                        >
+                          <ion-icon slot="icon-only" name="create-outline" aria-hidden="true"></ion-icon>
+                        </ion-button>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </section>
+        }
+      }
+    </div>
+  }
+</ion-content>

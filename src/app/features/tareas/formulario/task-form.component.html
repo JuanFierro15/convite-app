@@ -1,0 +1,273 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar>
+    <ion-title class="text-section">
+      {{ isEditing() ? 'Editar tarea' : 'Nueva tarea' }}
+    </ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="cancel()" aria-label="Cerrar">
+        <ion-icon slot="icon-only" name="close-outline" aria-hidden="true"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding form-content">
+  <form [formGroup]="form" (ngSubmit)="save()" novalidate>
+    <!-- Título -->
+    <div class="form-field">
+      <span class="field-label text-name" id="task-title-label">Título</span>
+      <ion-input
+        aria-labelledby="task-title-label"
+        formControlName="title"
+        fill="outline"
+        placeholder="Ej. Comprar los recordatorios"
+        maxlength="120"
+      ></ion-input>
+      @if (titleError) {
+        <p class="field-error text-label" role="alert">{{ titleError }}</p>
+      }
+    </div>
+
+    <!-- Responsable -->
+    <div class="form-field">
+      @if (availableProfiles().length === 0) {
+        <p class="helper-notice text-label">
+          No hay perfiles disponibles. La tarea queda sin asignar.
+        </p>
+      } @else {
+        <span class="field-label text-name" id="task-assignee-profile-id-label">Responsable</span>
+        <ion-select
+          aria-labelledby="task-assignee-profile-id-label"
+          formControlName="assignee_profile_id"
+          fill="outline"
+          interface="popover"
+          placeholder="Sin asignar"
+        >
+          <ion-select-option value="">Sin asignar</ion-select-option>
+          @for (prof of availableProfiles(); track prof.id) {
+            <ion-select-option [value]="prof.id">{{ prof.name }}</ion-select-option>
+          }
+        </ion-select>
+      }
+    </div>
+
+    <!-- Fecha límite -->
+    <div class="form-field">
+      <span class="field-label text-name" id="task-due-date-label">Fecha límite</span>
+      <ion-input
+        aria-labelledby="task-due-date-label"
+        formControlName="due_date"
+        type="date"
+        fill="outline"
+      ></ion-input>
+      @if (dueDateError) {
+        <p class="field-error text-label" role="alert">{{ dueDateError }}</p>
+      }
+    </div>
+
+    <!-- Nota -->
+    <div class="form-field">
+      <span class="field-label text-name" id="task-note-label">Nota</span>
+      <ion-textarea
+        aria-labelledby="task-note-label"
+        formControlName="note"
+        fill="outline"
+        placeholder="Detalles o instrucciones adicionales"
+        [autoGrow]="true"
+        maxlength="500"
+      ></ion-textarea>
+      @if (noteError) {
+        <p class="field-error text-label" role="alert">{{ noteError }}</p>
+      }
+    </div>
+
+    <!-- Sección Gasto de esta tarea -->
+    <div class="expense-section">
+      <h3 class="text-section expense-section__title">Gasto de esta tarea</h3>
+
+      @if (loadingExpensesData()) {
+        <div class="expense-loading" role="status">
+          <ion-spinner name="crescent" color="primary"></ion-spinner>
+          <span class="text-label">Cargando opciones de gasto...</span>
+        </div>
+      } @else if (expenseDataError(); as expErr) {
+        <div class="expense-error text-label" role="alert">
+          {{ expErr }}
+        </div>
+      } @else if (link !== null && !unlinked()) {
+        <!-- Gasto actual vinculado -->
+        <div class="linked-expense-card">
+          <div class="linked-expense-details">
+            <span class="text-name">{{ link.description }}</span>
+            <span class="text-body">{{ formatMoney(link.amount_cop) }}</span>
+          </div>
+          <ion-button
+            type="button"
+            fill="outline"
+            color="medium"
+            size="small"
+            class="unlink-btn"
+            (click)="unlinkCurrentExpense()"
+          >
+            Quitar el gasto de esta tarea
+          </ion-button>
+        </div>
+      } @else {
+        <!-- Opciones de gasto: Sin gasto / Crear nuevo / Vincular -->
+        <ion-radio-group
+          [value]="expenseMode()"
+          (ionChange)="onExpenseModeChange($event)"
+          class="expense-radio-group"
+        >
+          <!-- Radio 1: Sin gasto -->
+          <ion-radio value="none" justify="start" class="expense-radio">
+            Sin gasto
+          </ion-radio>
+
+          <!-- Radio 2: Crear gasto nuevo -->
+          <div class="expense-radio-wrapper">
+            <ion-radio
+              value="new"
+              justify="start"
+              class="expense-radio"
+              [disabled]="categories().length === 0"
+            >
+              Crear gasto nuevo
+            </ion-radio>
+            @if (categories().length === 0) {
+              <p class="no-categories-text text-label">
+                Para crear un gasto, primero crea una categoría en Presupuesto.
+              </p>
+            }
+          </div>
+
+          <!-- Campos para Crear gasto nuevo -->
+          @if (expenseMode() === 'new' && categories().length > 0) {
+            <div class="new-expense-fields">
+              <div class="form-field subfield">
+                <span class="field-label text-name" id="task-expense-description-label">Descripción</span>
+                <ion-input
+                  aria-labelledby="task-expense-description-label"
+                  formControlName="expense_description"
+                  fill="outline"
+                  placeholder="Ej. Torta de 3 pisos"
+                  maxlength="120"
+                ></ion-input>
+                @if (expenseDescriptionError) {
+                  <p class="field-error text-label" role="alert">{{ expenseDescriptionError }}</p>
+                }
+              </div>
+
+              <div class="form-field subfield">
+                <span class="field-label text-name" id="task-expense-category-id-label">Categoría</span>
+                <ion-select
+                  aria-labelledby="task-expense-category-id-label"
+                  formControlName="expense_category_id"
+                  fill="outline"
+                  interface="popover"
+                  placeholder="Elige una categoría"
+                >
+                  @for (cat of categories(); track cat.id) {
+                    <ion-select-option [value]="cat.id">{{ cat.name }}</ion-select-option>
+                  }
+                </ion-select>
+                @if (expenseCategoryError) {
+                  <p class="field-error text-label" role="alert">{{ expenseCategoryError }}</p>
+                }
+              </div>
+
+              <div class="form-field subfield">
+                <span class="field-label text-name" id="task-expense-amount-cop-label">Monto</span>
+                <ion-input
+                  aria-labelledby="task-expense-amount-cop-label"
+                  formControlName="expense_amount_cop"
+                  type="text"
+                  inputmode="numeric"
+                  fill="outline"
+                  placeholder="Ej. 150.000"
+                ></ion-input>
+                @if (expenseAmountError) {
+                  <p class="field-error text-label" role="alert">{{ expenseAmountError }}</p>
+                }
+              </div>
+            </div>
+          }
+
+          <!-- Radio 3: Vincular un gasto existente -->
+          <div class="expense-radio-wrapper">
+            <ion-radio
+              value="link"
+              justify="start"
+              class="expense-radio"
+              [disabled]="freeExpenses().length === 0"
+            >
+              Vincular un gasto existente
+            </ion-radio>
+            @if (freeExpenses().length === 0) {
+              <p class="no-free-expenses-text text-label">
+                No hay gastos sin tarea para vincular.
+              </p>
+            }
+          </div>
+
+          <!-- Campos para Vincular gasto existente -->
+          @if (expenseMode() === 'link' && freeExpenses().length > 0) {
+            <div class="link-expense-fields">
+              <div class="form-field subfield">
+                <span class="field-label text-name" id="task-expense-linked-id-label">Gasto</span>
+                <ion-select
+                  aria-labelledby="task-expense-linked-id-label"
+                  formControlName="expense_linked_id"
+                  fill="outline"
+                  interface="popover"
+                  placeholder="Elige un gasto"
+                >
+                  @for (exp of freeExpenses(); track exp.id) {
+                    <ion-select-option [value]="exp.id">
+                      {{ exp.description }} · {{ formatMoney(exp.amount_cop) }}
+                    </ion-select-option>
+                  }
+                </ion-select>
+                @if (expenseLinkedError) {
+                  <p class="field-error text-label" role="alert">{{ expenseLinkedError }}</p>
+                }
+              </div>
+            </div>
+          }
+        </ion-radio-group>
+      }
+    </div>
+
+    @if (isEditing()) {
+      <div class="delete-action-wrapper">
+        <ion-button
+          expand="block"
+          fill="outline"
+          color="danger"
+          type="button"
+          class="delete-btn"
+          [disabled]="saving()"
+          (click)="onDelete()"
+        >
+          Borrar tarea
+        </ion-button>
+      </div>
+    }
+  </form>
+</ion-content>
+
+<ion-footer class="ion-no-border form-footer">
+  <ion-toolbar>
+    <div class="footer-actions">
+      <ion-button fill="outline" color="medium" (click)="cancel()" [disabled]="saving()">
+        Cancelar
+      </ion-button>
+      <ion-button color="primary" (click)="save()" [disabled]="saving()">
+        @if (saving()) {
+          <ion-spinner slot="start" name="crescent"></ion-spinner>
+        }
+        {{ isEditing() ? 'Guardar cambios' : 'Crear tarea' }}
+      </ion-button>
+    </div>
+  </ion-toolbar>
+</ion-footer>

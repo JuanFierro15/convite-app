@@ -1,0 +1,151 @@
+:host {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.form-content {
+  --padding-start: var(--space-md);
+  --padding-end: var(--space-md);
+  --padding-top: var(--space-md);
+  --padding-bottom: var(--space-lg);
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin-bottom: var(--space-md);
+}
+
+.field-label {
+  color: var(--ion-text-color);
+}
+
+.field-error {
+  margin: var(--space-xs) 0 0;
+  color: var(--ion-color-danger);
+  font-weight: 600;
+}
+
+.helper-notice {
+  margin: 0;
+  color: var(--ion-color-medium);
+  padding: var(--space-sm) 0;
+}
+
+.expense-section {
+  margin-top: var(--space-lg);
+  padding-top: var(--space-md);
+  border-top: 1px solid var(--ion-color-light-shade);
+}
+
+.expense-section__title {
+  margin: 0 0 var(--space-md);
+  color: var(--ion-text-color);
+}
+
+.expense-loading {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  color: var(--ion-color-medium);
+  padding: var(--space-sm) 0;
+}
+
+.expense-error {
+  margin: 0 0 var(--space-md);
+  padding: var(--space-sm) var(--space-md);
+  background-color: rgba(var(--ion-color-danger-rgb), 0.12);
+  color: var(--ion-color-danger-shade);
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+}
+
+.linked-expense-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md);
+  background-color: var(--ion-color-light);
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-md);
+}
+
+.linked-expense-details {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.unlink-btn {
+  margin: 0;
+  min-height: 44px;
+  align-self: flex-start;
+}
+
+.expense-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.expense-radio-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.expense-radio {
+  min-height: 44px;
+  --color-checked: var(--ion-color-primary);
+}
+
+.no-categories-text,
+.no-free-expenses-text {
+  margin: 0 0 var(--space-xs) 32px;
+  color: var(--ion-color-medium);
+}
+
+.new-expense-fields,
+.link-expense-fields {
+  margin: var(--space-sm) 0;
+}
+
+.subfield {
+  margin-bottom: var(--space-sm);
+
+  &:last-child {
+    margin-bottom: 0;
+  }
+}
+
+.delete-action-wrapper {
+  margin-top: var(--space-xl);
+  margin-bottom: var(--space-md);
+}
+
+.delete-btn {
+  margin: 0;
+  min-height: 44px;
+}
+
+.form-footer {
+  ion-toolbar {
+    --background: var(--ion-background-color);
+    --border-color: var(--ion-color-light-shade);
+    border-top: 1px solid var(--ion-color-light-shade);
+    padding: var(--space-xs) var(--space-md);
+  }
+}
+
+.footer-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-sm);
+
+  ion-button {
+    margin: 0;
+    min-height: 44px;
+  }
+}
