@@ -2,7 +2,10 @@ import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import { after, before, test } from 'node:test';
 import {
+  createAuthenticatedClient,
   createEmptyContext,
+  createTestUser,
+  getEnvConfig,
   setupTestContext,
   teardownTestContext,
 } from './helpers.mjs';
@@ -4868,6 +4871,2346 @@ test(
     } finally {
       if (validEnvelopeId) {
         await ctx.adminClient.from('gifts').delete().eq('id', validEnvelopeId);
+      }
+    }
+  }
+);
+
+test(
+  '47. eventA tiene team_id asignado, teamHelper crea evento con team_id nulo, team_id es inmutable y usuario con dos equipos crea evento con team_id nulo',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    let helperEventId = null;
+    let twoTeamsEventId = null;
+    let team1Id = null;
+    let team2Id = null;
+
+    try {
+      assert.equal(
+        ctx.budget.eventA.team_id,
+        ctx.team.id,
+        'Se esperaba que eventA tuviera team_id asignado al equipo ctx.team'
+      );
+
+      const helperEventName = `PRUEBA-${ctx.run}-47-HELPER`;
+      const now = Date.now();
+      const in30Days = new Date(now + 30 * 24 * 60 * 60 * 1000).toISOString();
+      const in20Days = new Date(now + 20 * 24 * 60 * 60 * 1000).toISOString();
+
+      const { data: helperEvent, error: helperEventError } =
+        await ctx.teamHelperClient
+          .from('events')
+          .insert({
+            name: helperEventName,
+            starts_at: in30Days,
+            rsvp_deadline: in20Days,
+            created_by: ctx.teamHelperUser.id,
+            team_id: ctx.team.id,
+          })
+          .select()
+          .single();
+
+      assert.equal(
+        helperEventError,
+        null,
+        'Se esperaba que el ayudante pudiera crear un evento sin error'
+      );
+      assert.ok(helperEvent?.id, 'Se esperaba id para el evento del ayudante');
+      helperEventId = helperEvent.id;
+      assert.equal(
+        helperEvent.team_id,
+        null,
+        'Se esperaba que el evento creado por el ayudante quedara con team_id nulo'
+      );
+
+      const { error: changeTeamError } = await ctx.teamOwnerAClient
+        .from('events')
+        .update({ team_id: ctx.budget.otherTeam.id })
+        .eq('id', ctx.budget.eventA.id);
+
+      assert.ok(
+        changeTeamError,
+        'Se esperaba un error al intentar modificar team_id como propietario'
+      );
+      assert.ok(
+        changeTeamError.message.includes('team_id_immutable'),
+        `Se esperaba el error team_id_immutable, pero se recibió: ${changeTeamError.message}`
+      );
+
+      const twoTeamsUser = await createTestUser(
+        ctx.adminClient,
+        ctx,
+        'dos-equipos-47'
+      );
+      const { url, publishableKey } = getEnvConfig();
+      const twoTeamsClient = await createAuthenticatedClient(
+        url,
+        publishableKey,
+        twoTeamsUser.email,
+        twoTeamsUser.password
+      );
+
+      const { data: team1, error: team1Err } = await ctx.adminClient
+        .from('teams')
+        .insert({ name: `PRUEBA-${ctx.run}-DOS-1` })
+        .select()
+        .single();
+      assert.equal(team1Err, null, 'Error al crear primer equipo');
+      team1Id = team1.id;
+
+      const { data: team2, error: team2Err } = await ctx.adminClient
+        .from('teams')
+        .insert({ name: `PRUEBA-${ctx.run}-DOS-2` })
+        .select()
+        .single();
+      assert.equal(team2Err, null, 'Error al crear segundo equipo');
+      team2Id = team2.id;
+
+      const { error: tmErr } = await ctx.adminClient
+        .from('team_members')
+        .insert([
+          { team_id: team1.id, user_id: twoTeamsUser.id, role: 'owner' },
+          { team_id: team2.id, user_id: twoTeamsUser.id, role: 'owner' },
+        ]);
+      assert.equal(tmErr, null, 'Error al asociar membresías de los equipos');
+
+      const { data: twoTeamsEvent, error: twoTeamsEventError } =
+        await twoTeamsClient
+          .from('events')
+          .insert({
+            name: `PRUEBA-${ctx.run}-DOS-EQUIPOS`,
+            starts_at: in30Days,
+            rsvp_deadline: in20Days,
+            created_by: twoTeamsUser.id,
+          })
+          .select()
+          .single();
+
+      assert.equal(
+        twoTeamsEventError,
+        null,
+        'Error al crear evento con usuario de dos equipos'
+      );
+      assert.ok(
+        twoTeamsEvent?.id,
+        'Se esperaba id para el evento de usuario con dos equipos'
+      );
+      twoTeamsEventId = twoTeamsEvent.id;
+      assert.equal(
+        twoTeamsEvent.team_id,
+        null,
+        'Se esperaba que el evento de usuario con dos equipos quedara con team_id nulo'
+      );
+    } finally {
+      if (helperEventId) {
+        await ctx.adminClient.from('events').delete().eq('id', helperEventId);
+      }
+      if (twoTeamsEventId) {
+        await ctx.adminClient.from('events').delete().eq('id', twoTeamsEventId);
+      }
+      if (team1Id) {
+        await ctx.adminClient.from('teams').delete().eq('id', team1Id);
+      }
+      if (team2Id) {
+        await ctx.adminClient.from('teams').delete().eq('id', team2Id);
+      }
+    }
+  }
+);
+
+test(
+  '48. El ayudante no ve categorias, gastos ni pagos y tareas no revelan gastos vinculados',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    let taskId = null;
+    let expenseId = null;
+    let paymentId = null;
+
+    try {
+      taskId = crypto.randomUUID();
+      const { error: taskErr } = await ctx.teamOwnerAClient
+        .from('tasks')
+        .insert({
+          id: taskId,
+          event_id: ctx.budget.eventA.id,
+          title: 'Tarea Prueba 48',
+          due_date: '2026-12-31',
+        });
+      assert.equal(taskErr, null, 'Se esperaba crear la tarea sin error');
+
+      expenseId = crypto.randomUUID();
+      const { error: expErr } = await ctx.teamOwnerAClient
+        .from('expenses')
+        .insert({
+          id: expenseId,
+          event_id: ctx.budget.eventA.id,
+          category_id: ctx.budget.categoryA.id,
+          task_id: taskId,
+          description: 'Gasto Prueba 48',
+          amount_cop: 150000,
+        });
+      assert.equal(expErr, null, 'Se esperaba crear el gasto vinculado sin error');
+
+      paymentId = crypto.randomUUID();
+      const { error: payErr } = await ctx.teamOwnerAClient
+        .from('expense_payments')
+        .insert({
+          id: paymentId,
+          expense_id: expenseId,
+          paid_by_profile_id: ctx.budget.profile.id,
+          amount_cop: 50000,
+        });
+      assert.equal(payErr, null, 'Se esperaba crear el pago sin error');
+
+      const { data: catRows, error: catErr } = await ctx.teamHelperClient
+        .from('expense_categories')
+        .select('*')
+        .eq('event_id', ctx.budget.eventA.id);
+      assert.equal(catErr, null);
+      assert.equal(
+        catRows?.length ?? 0,
+        0,
+        'Se esperaba que el ayudante recibiera 0 filas de expense_categories'
+      );
+
+      const { data: expRows, error: expErrList } = await ctx.teamHelperClient
+        .from('expenses')
+        .select('*')
+        .eq('event_id', ctx.budget.eventA.id);
+      assert.equal(expErrList, null);
+      assert.equal(
+        expRows?.length ?? 0,
+        0,
+        'Se esperaba que el ayudante recibiera 0 filas de expenses'
+      );
+
+      const { data: payRows, error: payErrList } = await ctx.teamHelperClient
+        .from('expense_payments')
+        .select('*')
+        .eq('event_id', ctx.budget.eventA.id);
+      assert.equal(payErrList, null);
+      assert.equal(
+        payRows?.length ?? 0,
+        0,
+        'Se esperaba que el ayudante recibiera 0 filas de expense_payments'
+      );
+
+      const { data: taskRows, error: joinErr } = await ctx.teamHelperClient
+        .from('tasks')
+        .select('*, expenses(id)')
+        .eq('id', taskId);
+      assert.equal(joinErr, null);
+      assert.equal(taskRows?.length, 1);
+
+      const task = taskRows[0];
+      assert.ok(
+        task.expenses === null ||
+          (Array.isArray(task.expenses) && task.expenses.length === 0),
+        'Se esperaba que la relacion expenses fuera vacia o nula para el ayudante'
+      );
+
+      const keysWithoutJoin = Object.keys(task).filter((k) => k !== 'expenses');
+      for (const key of keysWithoutJoin) {
+        assert.equal(
+          key.toLowerCase().includes('expense'),
+          false,
+          `La fila de tasks no debe contener campos de gastos: ${key}`
+        );
+      }
+    } finally {
+      if (paymentId) {
+        await ctx.adminClient.from('expense_payments').delete().eq('id', paymentId);
+      }
+      if (expenseId) {
+        await ctx.adminClient.from('expenses').delete().eq('id', expenseId);
+      }
+      if (taskId) {
+        await ctx.adminClient.from('tasks').delete().eq('id', taskId);
+      }
+    }
+  }
+);
+
+test(
+  '49. El ayudante lee perfiles y tareas de eventA y outsideTeamClient recibe 0 filas',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    let taskId = null;
+
+    try {
+      taskId = crypto.randomUUID();
+      const { error: taskErr } = await ctx.teamOwnerAClient
+        .from('tasks')
+        .insert({
+          id: taskId,
+          event_id: ctx.budget.eventA.id,
+          title: 'Tarea Prueba 49',
+          due_date: '2026-12-31',
+        });
+      assert.equal(taskErr, null, 'Error al crear tarea de prueba 49');
+
+      const { data: helperProfiles, error: helperProfErr } =
+        await ctx.teamHelperClient
+          .from('team_profiles')
+          .select('*')
+          .eq('team_id', ctx.team.id);
+      assert.equal(helperProfErr, null);
+      assert.ok(
+        helperProfiles?.length > 0,
+        'Se esperaba que el ayudante pudiera leer los perfiles del equipo'
+      );
+
+      const { data: helperTasks, error: helperTaskErr } =
+        await ctx.teamHelperClient
+          .from('tasks')
+          .select('*')
+          .eq('event_id', ctx.budget.eventA.id);
+      assert.equal(helperTaskErr, null);
+      assert.ok(
+        helperTasks?.some((t) => t.id === taskId),
+        'Se esperaba que el ayudante pudiera leer las tareas de eventA'
+      );
+
+      const { data: outsideProfiles, error: outsideProfErr } =
+        await ctx.outsideTeamClient
+          .from('team_profiles')
+          .select('*')
+          .eq('team_id', ctx.team.id);
+      assert.equal(outsideProfErr, null);
+      assert.equal(
+        outsideProfiles?.length ?? 0,
+        0,
+        'Se esperaba que outsideTeamClient recibiera 0 filas de team_profiles'
+      );
+
+      const { data: outsideTasks, error: outsideTaskErr } =
+        await ctx.outsideTeamClient
+          .from('tasks')
+          .select('*')
+          .eq('event_id', ctx.budget.eventA.id);
+      assert.equal(outsideTaskErr, null);
+      assert.equal(
+        outsideTasks?.length ?? 0,
+        0,
+        'Se esperaba que outsideTeamClient recibiera 0 filas de tasks'
+      );
+    } finally {
+      if (taskId) {
+        await ctx.adminClient.from('tasks').delete().eq('id', taskId);
+      }
+    }
+  }
+);
+
+test(
+  '50. El ayudante marca y desmarca tarea con set_task_done, pero no puede editar, crear con save_task ni borrar con delete_task',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    let taskId = null;
+
+    try {
+      taskId = crypto.randomUUID();
+      const { error: taskErr } = await ctx.teamOwnerAClient
+        .from('tasks')
+        .insert({
+          id: taskId,
+          event_id: ctx.budget.eventA.id,
+          title: 'Tarea Prueba 50',
+          due_date: '2026-12-31',
+        });
+      assert.equal(taskErr, null, 'Error al crear tarea de prueba 50');
+
+      const { data: doneData, error: doneErr } = await ctx.teamHelperClient.rpc(
+        'set_task_done',
+        {
+          p_task_id: taskId,
+          p_done: true,
+        }
+      );
+      assert.equal(doneErr, null, 'Error al marcar tarea como hecha por ayudante');
+      assert.ok(doneData?.done_at, 'Se esperaba done_at lleno al marcar');
+      assert.equal(
+        doneData?.done_by,
+        ctx.teamHelperUser.id,
+        'Se esperaba que done_by fuera el id del ayudante'
+      );
+
+      const { data: checkDone, error: checkDoneErr } = await ctx.adminClient
+        .from('tasks')
+        .select('done_at, done_by')
+        .eq('id', taskId)
+        .single();
+      assert.equal(checkDoneErr, null);
+      assert.ok(checkDone?.done_at);
+      assert.equal(checkDone?.done_by, ctx.teamHelperUser.id);
+
+      const { data: undoneData, error: undoneErr } =
+        await ctx.teamHelperClient.rpc('set_task_done', {
+          p_task_id: taskId,
+          p_done: false,
+        });
+      assert.equal(undoneErr, null, 'Error al desmarcar tarea por ayudante');
+      assert.equal(undoneData?.done_at, null);
+      assert.equal(undoneData?.done_by, null);
+
+      const { data: checkUndone, error: checkUndoneErr } = await ctx.adminClient
+        .from('tasks')
+        .select('done_at, done_by')
+        .eq('id', taskId)
+        .single();
+      assert.equal(checkUndoneErr, null);
+      assert.equal(checkUndone?.done_at, null);
+      assert.equal(checkUndone?.done_by, null);
+
+      await ctx.teamHelperClient
+        .from('tasks')
+        .update({
+          title: 'Titulo Alterado Por Helper',
+          assignee_profile_id: ctx.budget.profile.id,
+        })
+        .eq('id', taskId);
+
+      const { data: checkTaskDirect, error: checkTaskDirectErr } =
+        await ctx.adminClient
+          .from('tasks')
+          .select('title, assignee_profile_id')
+          .eq('id', taskId)
+          .single();
+      assert.equal(checkTaskDirectErr, null);
+      assert.equal(
+        checkTaskDirect?.title,
+        'Tarea Prueba 50',
+        'Se esperaba que el update directo del ayudante no modificara el titulo'
+      );
+      assert.equal(
+        checkTaskDirect?.assignee_profile_id,
+        null,
+        'Se esperaba que el update directo del ayudante no modificara el responsable'
+      );
+
+      const { error: helperSaveErr } = await ctx.teamHelperClient.rpc(
+        'save_task',
+        {
+          p_task_id: crypto.randomUUID(),
+          p_event_id: ctx.budget.eventA.id,
+          p_title: 'Tarea Helper 50',
+          p_note: null,
+          p_assignee_profile_id: null,
+          p_due_date: '2026-12-31',
+          p_expense_action: 'keep',
+        }
+      );
+      assert.ok(
+        helperSaveErr,
+        'Se esperaba un error al intentar crear una tarea con save_task como ayudante'
+      );
+
+      const { error: helperDeleteErr } = await ctx.teamHelperClient.rpc(
+        'delete_task',
+        {
+          p_task_id: taskId,
+          p_delete_expense: false,
+        }
+      );
+      assert.ok(
+        helperDeleteErr,
+        'Se esperaba un error al intentar borrar una tarea como ayudante'
+      );
+      assert.ok(
+        helperDeleteErr.message.includes('task_not_found'),
+        `Se esperaba error task_not_found, pero se recibió: ${helperDeleteErr.message}`
+      );
+
+      const { data: taskStillExists, error: checkStillExistsErr } =
+        await ctx.adminClient
+          .from('tasks')
+          .select('id')
+          .eq('id', taskId)
+          .single();
+      assert.equal(checkStillExistsErr, null);
+      assert.equal(
+        taskStillExists?.id,
+        taskId,
+        'Se esperaba que la tarea continuara existiendo tras el intento de borrado'
+      );
+
+      const { error: outsideMarkErr } = await ctx.outsideTeamClient.rpc(
+        'set_task_done',
+        {
+          p_task_id: taskId,
+          p_done: true,
+        }
+      );
+      assert.ok(
+        outsideMarkErr,
+        'Se esperaba error al marcar tarea por cliente fuera del equipo'
+      );
+      assert.ok(
+        outsideMarkErr.message.includes('task_not_found'),
+        `Se esperaba error task_not_found para cliente fuera del equipo, pero se recibió: ${outsideMarkErr.message}`
+      );
+    } finally {
+      if (taskId) {
+        await ctx.adminClient.from('tasks').delete().eq('id', taskId);
+      }
+    }
+  }
+);
+
+test(
+  '51. El propietario paga parte de un gasto de 1000 y al superar el monto recibe payment_exceeds_expense y el resto exacto funciona',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    let expenseId = null;
+    let pay1Id = null;
+    let pay2Id = null;
+
+    try {
+      expenseId = crypto.randomUUID();
+      const { error: expErr } = await ctx.teamOwnerAClient
+        .from('expenses')
+        .insert({
+          id: expenseId,
+          event_id: ctx.budget.eventA.id,
+          category_id: ctx.budget.categoryA.id,
+          description: 'Gasto Prueba 51',
+          amount_cop: 1000,
+        });
+      assert.equal(expErr, null, 'Error al crear el gasto de 1000');
+
+      pay1Id = crypto.randomUUID();
+      const { error: pay1Err } = await ctx.teamOwnerAClient
+        .from('expense_payments')
+        .insert({
+          id: pay1Id,
+          expense_id: expenseId,
+          paid_by_profile_id: ctx.budget.profile.id,
+          amount_cop: 400,
+        });
+      assert.equal(pay1Err, null, 'Error al registrar el primer pago de 400');
+
+      const { error: exceedErr } = await ctx.teamOwnerAClient
+        .from('expense_payments')
+        .insert({
+          id: crypto.randomUUID(),
+          expense_id: expenseId,
+          paid_by_profile_id: ctx.budget.profile.id,
+          amount_cop: 601,
+        });
+      assert.ok(
+        exceedErr,
+        'Se esperaba error al superar el monto del gasto con el pago'
+      );
+      assert.ok(
+        exceedErr.message.includes('payment_exceeds_expense'),
+        `Se esperaba error payment_exceeds_expense, pero se recibió: ${exceedErr.message}`
+      );
+
+      pay2Id = crypto.randomUUID();
+      const { error: pay2Err } = await ctx.teamOwnerAClient
+        .from('expense_payments')
+        .insert({
+          id: pay2Id,
+          expense_id: expenseId,
+          paid_by_profile_id: ctx.budget.profile.id,
+          amount_cop: 600,
+        });
+      assert.equal(pay2Err, null, 'Error al registrar el segundo pago exacto de 600');
+
+      const { data: payments, error: checkPayErr } = await ctx.adminClient
+        .from('expense_payments')
+        .select('amount_cop')
+        .eq('expense_id', expenseId);
+      assert.equal(checkPayErr, null);
+      const totalPaid = (payments ?? []).reduce((acc, p) => acc + p.amount_cop, 0);
+      assert.equal(totalPaid, 1000, 'Se esperaba que la suma total pagada fuera 1000');
+    } finally {
+      if (pay1Id) {
+        await ctx.adminClient.from('expense_payments').delete().eq('id', pay1Id);
+      }
+      if (pay2Id) {
+        await ctx.adminClient.from('expense_payments').delete().eq('id', pay2Id);
+      }
+      if (expenseId) {
+        await ctx.adminClient.from('expenses').delete().eq('id', expenseId);
+      }
+    }
+  }
+);
+
+test(
+  '52. Con 600 pagados de 1000 bajar a 599 da amount_below_paid y bajar a 600 funciona',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    let expenseId = null;
+    let paymentId = null;
+
+    try {
+      expenseId = crypto.randomUUID();
+      const { error: expErr } = await ctx.teamOwnerAClient
+        .from('expenses')
+        .insert({
+          id: expenseId,
+          event_id: ctx.budget.eventA.id,
+          category_id: ctx.budget.categoryA.id,
+          description: 'Gasto Prueba 52',
+          amount_cop: 1000,
+        });
+      assert.equal(expErr, null, 'Error al crear gasto de 1000');
+
+      paymentId = crypto.randomUUID();
+      const { error: payErr } = await ctx.teamOwnerAClient
+        .from('expense_payments')
+        .insert({
+          id: paymentId,
+          expense_id: expenseId,
+          paid_by_profile_id: ctx.budget.profile.id,
+          amount_cop: 600,
+        });
+      assert.equal(payErr, null, 'Error al registrar pago de 600');
+
+      const { error: belowErr } = await ctx.teamOwnerAClient
+        .from('expenses')
+        .update({ amount_cop: 599 })
+        .eq('id', expenseId);
+      assert.ok(
+        belowErr,
+        'Se esperaba error al reducir monto por debajo de lo pagado'
+      );
+      assert.ok(
+        belowErr.message.includes('amount_below_paid'),
+        `Se esperaba error amount_below_paid, pero se recibió: ${belowErr.message}`
+      );
+
+      const { error: exactErr } = await ctx.teamOwnerAClient
+        .from('expenses')
+        .update({ amount_cop: 600 })
+        .eq('id', expenseId);
+      assert.equal(
+        exactErr,
+        null,
+        'Se esperaba poder actualizar el monto a exactamente lo pagado (600)'
+      );
+
+      const { data: updatedExp, error: checkExpErr } = await ctx.adminClient
+        .from('expenses')
+        .select('amount_cop')
+        .eq('id', expenseId)
+        .single();
+      assert.equal(checkExpErr, null);
+      assert.equal(updatedExp?.amount_cop, 600);
+    } finally {
+      if (paymentId) {
+        await ctx.adminClient.from('expense_payments').delete().eq('id', paymentId);
+      }
+      if (expenseId) {
+        await ctx.adminClient.from('expenses').delete().eq('id', expenseId);
+      }
+    }
+  }
+);
+
+test(
+  '53. Dos pagos de 600 a un gasto de 1000 con Promise.allSettled a la vez dejan un solo exito y suma de 600',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    let expenseId = null;
+
+    try {
+      expenseId = crypto.randomUUID();
+      const { error: expErr } = await ctx.teamOwnerAClient
+        .from('expenses')
+        .insert({
+          id: expenseId,
+          event_id: ctx.budget.eventA.id,
+          category_id: ctx.budget.categoryA.id,
+          description: 'Gasto Prueba 53 Concurrente',
+          amount_cop: 1000,
+        });
+      assert.equal(expErr, null, 'Error al crear gasto de 1000');
+
+      const p1 = ctx.teamOwnerAClient.from('expense_payments').insert({
+        id: crypto.randomUUID(),
+        expense_id: expenseId,
+        paid_by_profile_id: ctx.budget.profile.id,
+        amount_cop: 600,
+      });
+      const p2 = ctx.teamOwnerAClient.from('expense_payments').insert({
+        id: crypto.randomUUID(),
+        expense_id: expenseId,
+        paid_by_profile_id: ctx.budget.profile.id,
+        amount_cop: 600,
+      });
+
+      const [res1, res2] = await Promise.allSettled([p1, p2]);
+      const results = [res1.value, res2.value];
+
+      const successes = results.filter((r) => !r.error);
+      const failures = results.filter((r) => r.error);
+
+      assert.equal(
+        successes.length,
+        1,
+        'Se esperaba que exactamente uno de los pagos concurrentes tuviera exito'
+      );
+      assert.equal(
+        failures.length,
+        1,
+        'Se esperaba que exactamente uno de los pagos concurrentes fallara'
+      );
+      assert.ok(
+        failures[0].error.message.includes('payment_exceeds_expense'),
+        `Se esperaba error payment_exceeds_expense, pero se recibió: ${failures[0].error.message}`
+      );
+
+      const { data: payments, error: checkPayErr } = await ctx.adminClient
+        .from('expense_payments')
+        .select('amount_cop')
+        .eq('expense_id', expenseId);
+      assert.equal(checkPayErr, null);
+      const totalPaid = (payments ?? []).reduce((acc, p) => acc + p.amount_cop, 0);
+      assert.equal(
+        totalPaid,
+        600,
+        'Se esperaba que la suma guardada en expense_payments fuera exactamente 600'
+      );
+    } finally {
+      if (expenseId) {
+        await ctx.adminClient
+          .from('expense_payments')
+          .delete()
+          .eq('expense_id', expenseId);
+        await ctx.adminClient.from('expenses').delete().eq('id', expenseId);
+      }
+    }
+  }
+);
+
+test(
+  '54. Pago y save_task con archivedProfile dan profile_archived, con otherTeamProfile dan profile_wrong_team y editar tarea archivada despues funciona',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    let expenseId = null;
+    let tempProfileId = null;
+    let taskId = null;
+
+    try {
+      expenseId = crypto.randomUUID();
+      const { error: expErr } = await ctx.teamOwnerAClient
+        .from('expenses')
+        .insert({
+          id: expenseId,
+          event_id: ctx.budget.eventA.id,
+          category_id: ctx.budget.categoryA.id,
+          description: 'Gasto Prueba 54',
+          amount_cop: 50000,
+        });
+      assert.equal(expErr, null, 'Error al crear gasto para prueba 54');
+
+      const { error: payArchivedErr } = await ctx.teamOwnerAClient
+        .from('expense_payments')
+        .insert({
+          id: crypto.randomUUID(),
+          expense_id: expenseId,
+          paid_by_profile_id: ctx.budget.archivedProfile.id,
+          amount_cop: 10000,
+        });
+      assert.ok(payArchivedErr, 'Se esperaba error al pagar con perfil archivado');
+      assert.ok(
+        payArchivedErr.message.includes('profile_archived'),
+        `Se esperaba error profile_archived, pero se recibió: ${payArchivedErr.message}`
+      );
+
+      const { error: taskArchivedErr } = await ctx.teamOwnerAClient.rpc(
+        'save_task',
+        {
+          p_task_id: crypto.randomUUID(),
+          p_event_id: ctx.budget.eventA.id,
+          p_title: 'Tarea con perfil archivado',
+          p_note: null,
+          p_assignee_profile_id: ctx.budget.archivedProfile.id,
+          p_due_date: '2026-12-31',
+          p_expense_action: 'keep',
+        }
+      );
+      assert.ok(
+        taskArchivedErr,
+        'Se esperaba error al crear tarea con perfil archivado'
+      );
+      assert.ok(
+        taskArchivedErr.message.includes('profile_archived'),
+        `Se esperaba error profile_archived en save_task, pero se recibió: ${taskArchivedErr.message}`
+      );
+
+      const { error: payWrongTeamErr } = await ctx.teamOwnerAClient
+        .from('expense_payments')
+        .insert({
+          id: crypto.randomUUID(),
+          expense_id: expenseId,
+          paid_by_profile_id: ctx.budget.otherTeamProfile.id,
+          amount_cop: 10000,
+        });
+      assert.ok(
+        payWrongTeamErr,
+        'Se esperaba error al pagar con perfil de otro equipo'
+      );
+      assert.ok(
+        payWrongTeamErr.message.includes('profile_wrong_team'),
+        `Se esperaba error profile_wrong_team, pero se recibió: ${payWrongTeamErr.message}`
+      );
+
+      const { error: taskWrongTeamErr } = await ctx.teamOwnerAClient.rpc(
+        'save_task',
+        {
+          p_task_id: crypto.randomUUID(),
+          p_event_id: ctx.budget.eventA.id,
+          p_title: 'Tarea con perfil de otro equipo',
+          p_note: null,
+          p_assignee_profile_id: ctx.budget.otherTeamProfile.id,
+          p_due_date: '2026-12-31',
+          p_expense_action: 'keep',
+        }
+      );
+      assert.ok(
+        taskWrongTeamErr,
+        'Se esperaba error al crear tarea con perfil de otro equipo'
+      );
+      assert.ok(
+        taskWrongTeamErr.message.includes('profile_wrong_team'),
+        `Se esperaba error profile_wrong_team en save_task, pero se recibió: ${taskWrongTeamErr.message}`
+      );
+
+      const { data: tempProfile, error: tempProfErr } =
+        await ctx.teamOwnerAClient
+          .from('team_profiles')
+          .insert({
+            team_id: ctx.team.id,
+            name: `Perfil Temporal 54 ${Date.now()}`,
+          })
+          .select()
+          .single();
+      assert.equal(tempProfErr, null, 'Error al crear perfil temporal');
+      tempProfileId = tempProfile.id;
+
+      taskId = crypto.randomUUID();
+      const { error: initialSaveErr } = await ctx.teamOwnerAClient.rpc(
+        'save_task',
+        {
+          p_task_id: taskId,
+          p_event_id: ctx.budget.eventA.id,
+          p_title: 'Tarea Inicial 54',
+          p_note: null,
+          p_assignee_profile_id: tempProfileId,
+          p_due_date: '2026-12-31',
+          p_expense_action: 'keep',
+        }
+      );
+      assert.equal(
+        initialSaveErr,
+        null,
+        'Error al crear tarea asignada a perfil temporal'
+      );
+
+      const { error: archiveErr } = await ctx.teamOwnerAClient
+        .from('team_profiles')
+        .update({ archived_at: new Date().toISOString() })
+        .eq('id', tempProfileId);
+      assert.equal(archiveErr, null, 'Error al archivar el perfil temporal');
+
+      const { data: updatedTask, error: editTaskErr } =
+        await ctx.teamOwnerAClient.rpc('save_task', {
+          p_task_id: taskId,
+          p_event_id: ctx.budget.eventA.id,
+          p_title: 'Tarea Modificada 54',
+          p_note: 'Nota editada',
+          p_assignee_profile_id: tempProfileId,
+          p_due_date: '2026-12-31',
+          p_expense_action: 'keep',
+        });
+      assert.equal(
+        editTaskErr,
+        null,
+        'Se esperaba poder editar la tarea cuyo perfil se archivo posteriormente sin cambiar de perfil'
+      );
+      assert.equal(updatedTask?.title, 'Tarea Modificada 54');
+    } finally {
+      if (taskId) {
+        await ctx.adminClient.from('tasks').delete().eq('id', taskId);
+      }
+      if (tempProfileId) {
+        await ctx.adminClient
+          .from('team_profiles')
+          .delete()
+          .eq('id', tempProfileId);
+      }
+      if (expenseId) {
+        await ctx.adminClient
+          .from('expense_payments')
+          .delete()
+          .eq('expense_id', expenseId);
+        await ctx.adminClient.from('expenses').delete().eq('id', expenseId);
+      }
+    }
+  }
+);
+
+test(
+  '55. Vincular a una tarea de eventA un gasto de eventB falla con expenses_task_same_event por update directo y por save_task link',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    let taskIdA = null;
+    let expenseIdB = null;
+
+    try {
+      taskIdA = crypto.randomUUID();
+      const { error: taskErr } = await ctx.teamOwnerAClient
+        .from('tasks')
+        .insert({
+          id: taskIdA,
+          event_id: ctx.budget.eventA.id,
+          title: 'Tarea 55 en Evento A',
+          due_date: '2026-12-31',
+        });
+      assert.equal(taskErr, null, 'Error al crear tarea en eventA');
+
+      expenseIdB = crypto.randomUUID();
+      const { error: expErr } = await ctx.teamOwnerAClient
+        .from('expenses')
+        .insert({
+          id: expenseIdB,
+          event_id: ctx.budget.eventB.id,
+          category_id: ctx.budget.categoryB.id,
+          description: 'Gasto 55 en Evento B',
+          amount_cop: 80000,
+        });
+      assert.equal(expErr, null, 'Error al crear gasto en eventB');
+
+      const { error: directUpdateErr } = await ctx.teamOwnerAClient
+        .from('expenses')
+        .update({ task_id: taskIdA })
+        .eq('id', expenseIdB);
+      assert.ok(
+        directUpdateErr,
+        'Se esperaba error al vincular gasto de eventB con tarea de eventA mediante update directo'
+      );
+      assert.ok(
+        directUpdateErr.message.includes('expenses_task_same_event'),
+        `Se esperaba error expenses_task_same_event en update directo, pero se recibió: ${directUpdateErr.message}`
+      );
+
+      const { error: saveLinkErr } = await ctx.teamOwnerAClient.rpc(
+        'save_task',
+        {
+          p_task_id: taskIdA,
+          p_event_id: ctx.budget.eventA.id,
+          p_title: 'Tarea 55 en Evento A',
+          p_note: null,
+          p_assignee_profile_id: null,
+          p_due_date: '2026-12-31',
+          p_expense_action: 'link',
+          p_expense: { id: expenseIdB },
+        }
+      );
+      assert.ok(
+        saveLinkErr,
+        'Se esperaba error al vincular gasto de eventB con tarea de eventA mediante save_task link'
+      );
+      assert.ok(
+        saveLinkErr.message.includes('expenses_task_same_event'),
+        `Se esperaba error expenses_task_same_event en save_task link, pero se recibió: ${saveLinkErr.message}`
+      );
+    } finally {
+      if (expenseIdB) {
+        await ctx.adminClient.from('expenses').delete().eq('id', expenseIdB);
+      }
+      if (taskIdA) {
+        await ctx.adminClient.from('tasks').delete().eq('id', taskIdA);
+      }
+    }
+  }
+);
+
+test(
+  '56. save_task link con gasto ya vinculado da expense_already_linked, segundo gasto con mismo task_id da expenses_task_id_key y save_task new con id existente no mueve ni crea',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    let task1Id = null;
+    let expense1Id = null;
+    let task2Id = null;
+    let task3Id = null;
+    let expense2Id = null;
+
+    try {
+      task1Id = crypto.randomUUID();
+      const { error: task1Err } = await ctx.teamOwnerAClient
+        .from('tasks')
+        .insert({
+          id: task1Id,
+          event_id: ctx.budget.eventA.id,
+          title: 'Tarea 1 Prueba 56',
+          due_date: '2026-12-31',
+        });
+      assert.equal(task1Err, null, 'Error al crear tarea 1');
+
+      expense1Id = crypto.randomUUID();
+      const { error: exp1Err } = await ctx.teamOwnerAClient
+        .from('expenses')
+        .insert({
+          id: expense1Id,
+          event_id: ctx.budget.eventA.id,
+          category_id: ctx.budget.categoryA.id,
+          task_id: task1Id,
+          description: 'Gasto 1 Vinculado',
+          amount_cop: 50000,
+        });
+      assert.equal(exp1Err, null, 'Error al crear gasto 1 vinculado a tarea 1');
+
+      task2Id = crypto.randomUUID();
+      const { error: task2Err } = await ctx.teamOwnerAClient
+        .from('tasks')
+        .insert({
+          id: task2Id,
+          event_id: ctx.budget.eventA.id,
+          title: 'Tarea 2 Prueba 56',
+          due_date: '2026-12-31',
+        });
+      assert.equal(task2Err, null, 'Error al crear tarea 2');
+
+      const { error: linkAlreadyLinkedErr } = await ctx.teamOwnerAClient.rpc(
+        'save_task',
+        {
+          p_task_id: task2Id,
+          p_event_id: ctx.budget.eventA.id,
+          p_title: 'Tarea 2 Prueba 56',
+          p_note: null,
+          p_assignee_profile_id: null,
+          p_due_date: '2026-12-31',
+          p_expense_action: 'link',
+          p_expense: { id: expense1Id },
+        }
+      );
+      assert.ok(
+        linkAlreadyLinkedErr,
+        'Se esperaba error al vincular un gasto ya vinculado con save_task link'
+      );
+      assert.ok(
+        linkAlreadyLinkedErr.message.includes('expense_already_linked'),
+        `Se esperaba error expense_already_linked, pero se recibió: ${linkAlreadyLinkedErr.message}`
+      );
+
+      expense2Id = crypto.randomUUID();
+      const { error: insertSecondErr } = await ctx.teamOwnerAClient
+        .from('expenses')
+        .insert({
+          id: expense2Id,
+          event_id: ctx.budget.eventA.id,
+          category_id: ctx.budget.categoryA.id,
+          task_id: task1Id,
+          description: 'Segundo Gasto para Tarea 1',
+          amount_cop: 60000,
+        });
+      assert.ok(
+        insertSecondErr,
+        'Se esperaba error al insertar segundo gasto con mismo task_id'
+      );
+      assert.ok(
+        insertSecondErr.message.includes('expenses_task_id_key'),
+        `Se esperaba error expenses_task_id_key, pero se recibió: ${insertSecondErr.message}`
+      );
+
+      task3Id = crypto.randomUUID();
+      const { error: saveNewDuplicateErr } = await ctx.teamOwnerAClient.rpc(
+        'save_task',
+        {
+          p_task_id: task3Id,
+          p_event_id: ctx.budget.eventA.id,
+          p_title: 'Tarea 3 Nueva',
+          p_note: null,
+          p_assignee_profile_id: null,
+          p_due_date: '2026-12-31',
+          p_expense_action: 'new',
+          p_expense: {
+            id: expense1Id,
+            category_id: ctx.budget.categoryA.id,
+            description: 'Gasto Duplicado New',
+            amount_cop: 70000,
+          },
+        }
+      );
+      assert.ok(
+        saveNewDuplicateErr,
+        'Se esperaba error al usar save_task new con id de gasto existente de otra tarea'
+      );
+      assert.ok(
+        saveNewDuplicateErr.message.includes('expense_already_linked'),
+        `Se esperaba error expense_already_linked en save_task new, pero se recibió: ${saveNewDuplicateErr.message}`
+      );
+
+      const { data: checkTask3, error: checkTask3Err } = await ctx.adminClient
+        .from('tasks')
+        .select('id')
+        .eq('id', task3Id);
+      assert.equal(checkTask3Err, null);
+      assert.equal(
+        checkTask3?.length ?? 0,
+        0,
+        'Se esperaba que la tarea 3 no fuera creada tras fallar save_task'
+      );
+
+      const { data: checkExp1, error: checkExp1Err } = await ctx.adminClient
+        .from('expenses')
+        .select('task_id')
+        .eq('id', expense1Id)
+        .single();
+      assert.equal(checkExp1Err, null);
+      assert.equal(
+        checkExp1?.task_id,
+        task1Id,
+        'Se esperaba que el gasto 1 mantuviera su vinculo original con la tarea 1'
+      );
+    } finally {
+      if (expense2Id) {
+        await ctx.adminClient.from('expenses').delete().eq('id', expense2Id);
+      }
+      if (expense1Id) {
+        await ctx.adminClient.from('expenses').delete().eq('id', expense1Id);
+      }
+      if (task1Id) {
+        await ctx.adminClient.from('tasks').delete().eq('id', task1Id);
+      }
+      if (task2Id) {
+        await ctx.adminClient.from('tasks').delete().eq('id', task2Id);
+      }
+      if (task3Id) {
+        await ctx.adminClient.from('tasks').delete().eq('id', task3Id);
+      }
+    }
+  }
+);
+
+test(
+  '57. Borrar categoria con gastos o perfil en uso da error y elementos sin uso si se borran',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    let catWithExpId = null;
+    let expenseId = null;
+    let profInTaskId = null;
+    let taskId = null;
+    let profInPayId = null;
+    let paymentId = null;
+    let unusedProfId = null;
+    let unusedCatId = null;
+
+    try {
+      const { data: catWithExp, error: catWithExpErr } =
+        await ctx.teamOwnerAClient
+          .from('expense_categories')
+          .insert({
+            event_id: ctx.budget.eventA.id,
+            name: `Cat Con Gasto ${Date.now()}`,
+          })
+          .select()
+          .single();
+      assert.equal(catWithExpErr, null);
+      catWithExpId = catWithExp.id;
+
+      expenseId = crypto.randomUUID();
+      const { error: expErr } = await ctx.teamOwnerAClient
+        .from('expenses')
+        .insert({
+          id: expenseId,
+          event_id: ctx.budget.eventA.id,
+          category_id: catWithExpId,
+          description: 'Gasto Vinculado a Categoria',
+          amount_cop: 25000,
+        });
+      assert.equal(expErr, null);
+
+      const { error: delCatErr } = await ctx.teamOwnerAClient
+        .from('expense_categories')
+        .delete()
+        .eq('id', catWithExpId);
+      assert.ok(delCatErr, 'Se esperaba error al borrar categoria con gastos');
+      assert.ok(
+        delCatErr.message.includes('expenses_category_same_event'),
+        `Se esperaba error expenses_category_same_event, pero se recibió: ${delCatErr.message}`
+      );
+
+      const { data: profInTask, error: profInTaskErr } =
+        await ctx.teamOwnerAClient
+          .from('team_profiles')
+          .insert({
+            team_id: ctx.team.id,
+            name: `Perfil En Tarea ${Date.now()}`,
+          })
+          .select()
+          .single();
+      assert.equal(profInTaskErr, null);
+      profInTaskId = profInTask.id;
+
+      taskId = crypto.randomUUID();
+      const { error: taskErr } = await ctx.teamOwnerAClient
+        .from('tasks')
+        .insert({
+          id: taskId,
+          event_id: ctx.budget.eventA.id,
+          title: 'Tarea con Perfil 57',
+          assignee_profile_id: profInTaskId,
+          due_date: '2026-12-31',
+        });
+      assert.equal(taskErr, null);
+
+      const { error: delProfTaskErr } = await ctx.teamOwnerAClient
+        .from('team_profiles')
+        .delete()
+        .eq('id', profInTaskId);
+      assert.ok(delProfTaskErr, 'Se esperaba error al borrar perfil usado en tarea');
+      assert.ok(
+        delProfTaskErr.message.toLowerCase().includes('foreign key'),
+        `Se esperaba error de foreign key, pero se recibió: ${delProfTaskErr.message}`
+      );
+
+      const { data: profInPay, error: profInPayErr } =
+        await ctx.teamOwnerAClient
+          .from('team_profiles')
+          .insert({
+            team_id: ctx.team.id,
+            name: `Perfil En Pago ${Date.now()}`,
+          })
+          .select()
+          .single();
+      assert.equal(profInPayErr, null);
+      profInPayId = profInPay.id;
+
+      paymentId = crypto.randomUUID();
+      const { error: payErr } = await ctx.teamOwnerAClient
+        .from('expense_payments')
+        .insert({
+          id: paymentId,
+          expense_id: expenseId,
+          paid_by_profile_id: profInPayId,
+          amount_cop: 5000,
+        });
+      assert.equal(payErr, null);
+
+      const { error: delProfPayErr } = await ctx.teamOwnerAClient
+        .from('team_profiles')
+        .delete()
+        .eq('id', profInPayId);
+      assert.ok(delProfPayErr, 'Se esperaba error al borrar perfil usado en pago');
+      assert.ok(
+        delProfPayErr.message.toLowerCase().includes('foreign key'),
+        `Se esperaba error de foreign key, pero se recibió: ${delProfPayErr.message}`
+      );
+
+      const { data: unusedProf, error: unusedProfErr } =
+        await ctx.teamOwnerAClient
+          .from('team_profiles')
+          .insert({
+            team_id: ctx.team.id,
+            name: `Perfil Sin Uso ${Date.now()}`,
+          })
+          .select()
+          .single();
+      assert.equal(unusedProfErr, null);
+      unusedProfId = unusedProf.id;
+
+      const { error: delUnusedProfErr } = await ctx.teamOwnerAClient
+        .from('team_profiles')
+        .delete()
+        .eq('id', unusedProfId);
+      assert.equal(
+        delUnusedProfErr,
+        null,
+        'Se esperaba poder borrar un perfil sin usar sin error'
+      );
+
+      const { data: checkUnusedProf } = await ctx.adminClient
+        .from('team_profiles')
+        .select('id')
+        .eq('id', unusedProfId);
+      assert.equal(checkUnusedProf?.length ?? 0, 0);
+
+      const { data: unusedCat, error: unusedCatErr } =
+        await ctx.teamOwnerAClient
+          .from('expense_categories')
+          .insert({
+            event_id: ctx.budget.eventA.id,
+            name: `Cat Sin Uso ${Date.now()}`,
+          })
+          .select()
+          .single();
+      assert.equal(unusedCatErr, null);
+      unusedCatId = unusedCat.id;
+
+      const { error: delUnusedCatErr } = await ctx.teamOwnerAClient
+        .from('expense_categories')
+        .delete()
+        .eq('id', unusedCatId);
+      assert.equal(
+        delUnusedCatErr,
+        null,
+        'Se esperaba poder borrar una categoria sin gastos sin error'
+      );
+
+      const { data: checkUnusedCat } = await ctx.adminClient
+        .from('expense_categories')
+        .select('id')
+        .eq('id', unusedCatId);
+      assert.equal(checkUnusedCat?.length ?? 0, 0);
+    } finally {
+      if (paymentId) {
+        await ctx.adminClient.from('expense_payments').delete().eq('id', paymentId);
+      }
+      if (expenseId) {
+        await ctx.adminClient.from('expenses').delete().eq('id', expenseId);
+      }
+      if (catWithExpId) {
+        await ctx.adminClient
+          .from('expense_categories')
+          .delete()
+          .eq('id', catWithExpId);
+      }
+      if (taskId) {
+        await ctx.adminClient.from('tasks').delete().eq('id', taskId);
+      }
+      if (profInTaskId) {
+        await ctx.adminClient
+          .from('team_profiles')
+          .delete()
+          .eq('id', profInTaskId);
+      }
+      if (profInPayId) {
+        await ctx.adminClient
+          .from('team_profiles')
+          .delete()
+          .eq('id', profInPayId);
+      }
+      if (unusedProfId) {
+        await ctx.adminClient
+          .from('team_profiles')
+          .delete()
+          .eq('id', unusedProfId);
+      }
+      if (unusedCatId) {
+        await ctx.adminClient
+          .from('expense_categories')
+          .delete()
+          .eq('id', unusedCatId);
+      }
+    }
+  }
+);
+
+test(
+  '58. Pago con paid_on 2999-01-01 da payment_future_date y pago sin paid_on toma fecha actual de Bogota',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    let expenseId = null;
+    let paymentId = null;
+
+    try {
+      expenseId = crypto.randomUUID();
+      const { error: expErr } = await ctx.teamOwnerAClient
+        .from('expenses')
+        .insert({
+          id: expenseId,
+          event_id: ctx.budget.eventA.id,
+          category_id: ctx.budget.categoryA.id,
+          description: 'Gasto Prueba 58',
+          amount_cop: 50000,
+        });
+      assert.equal(expErr, null, 'Error al crear gasto para prueba 58');
+
+      const { error: futureErr } = await ctx.teamOwnerAClient
+        .from('expense_payments')
+        .insert({
+          id: crypto.randomUUID(),
+          expense_id: expenseId,
+          paid_by_profile_id: ctx.budget.profile.id,
+          amount_cop: 10000,
+          paid_on: '2999-01-01',
+        });
+      assert.ok(futureErr, 'Se esperaba error al registrar pago con fecha futura');
+      assert.ok(
+        futureErr.message.includes('payment_future_date'),
+        `Se esperaba error payment_future_date, pero se recibió: ${futureErr.message}`
+      );
+
+      paymentId = crypto.randomUUID();
+      const { data: defaultPay, error: defaultPayErr } =
+        await ctx.teamOwnerAClient
+          .from('expense_payments')
+          .insert({
+            id: paymentId,
+            expense_id: expenseId,
+            paid_by_profile_id: ctx.budget.profile.id,
+            amount_cop: 10000,
+          })
+          .select()
+          .single();
+      assert.equal(defaultPayErr, null, 'Error al registrar pago sin paid_on');
+      assert.ok(defaultPay?.paid_on, 'Se esperaba que paid_on tuviera valor');
+
+      const expectedDate = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'America/Bogota',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(new Date());
+
+      assert.equal(
+        defaultPay.paid_on,
+        expectedDate,
+        `Se esperaba la fecha actual en Bogota (${expectedDate}), pero se obtuvo: ${defaultPay.paid_on}`
+      );
+    } finally {
+      if (paymentId) {
+        await ctx.adminClient.from('expense_payments').delete().eq('id', paymentId);
+      }
+      if (expenseId) {
+        await ctx.adminClient.from('expenses').delete().eq('id', expenseId);
+      }
+    }
+  }
+);
+
+test(
+  '59. update de event_id da event_id_immutable en expense_categories, expenses, tasks y con admin en expense_payments',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    let categoryId = null;
+    let taskId = null;
+    let expenseId = null;
+    let paymentId = null;
+
+    try {
+      const { data: cat, error: catErr } = await ctx.teamOwnerAClient
+        .from('expense_categories')
+        .insert({
+          event_id: ctx.budget.eventA.id,
+          name: `Cat Inmutable ${Date.now()}`,
+        })
+        .select()
+        .single();
+      assert.equal(catErr, null);
+      categoryId = cat.id;
+
+      taskId = crypto.randomUUID();
+      const { error: taskErr } = await ctx.teamOwnerAClient
+        .from('tasks')
+        .insert({
+          id: taskId,
+          event_id: ctx.budget.eventA.id,
+          title: 'Tarea Inmutable 59',
+          due_date: '2026-12-31',
+        });
+      assert.equal(taskErr, null);
+
+      expenseId = crypto.randomUUID();
+      const { error: expErr } = await ctx.teamOwnerAClient
+        .from('expenses')
+        .insert({
+          id: expenseId,
+          event_id: ctx.budget.eventA.id,
+          category_id: categoryId,
+          task_id: taskId,
+          description: 'Gasto Inmutable 59',
+          amount_cop: 40000,
+        });
+      assert.equal(expErr, null);
+
+      paymentId = crypto.randomUUID();
+      const { error: payErr } = await ctx.teamOwnerAClient
+        .from('expense_payments')
+        .insert({
+          id: paymentId,
+          expense_id: expenseId,
+          paid_by_profile_id: ctx.budget.profile.id,
+          amount_cop: 10000,
+        });
+      assert.equal(payErr, null);
+
+      const { error: catUpdateErr } = await ctx.teamOwnerAClient
+        .from('expense_categories')
+        .update({ event_id: ctx.budget.eventB.id })
+        .eq('id', categoryId);
+      assert.ok(catUpdateErr, 'Se esperaba error al cambiar event_id en expense_categories');
+      assert.ok(
+        catUpdateErr.message.includes('event_id_immutable'),
+        `Se esperaba event_id_immutable en expense_categories, pero se recibió: ${catUpdateErr.message}`
+      );
+
+      const { error: expUpdateErr } = await ctx.teamOwnerAClient
+        .from('expenses')
+        .update({ event_id: ctx.budget.eventB.id })
+        .eq('id', expenseId);
+      assert.ok(expUpdateErr, 'Se esperaba error al cambiar event_id en expenses');
+      assert.ok(
+        expUpdateErr.message.includes('event_id_immutable'),
+        `Se esperaba event_id_immutable en expenses, pero se recibió: ${expUpdateErr.message}`
+      );
+
+      const { error: taskUpdateErr } = await ctx.teamOwnerAClient
+        .from('tasks')
+        .update({ event_id: ctx.budget.eventB.id })
+        .eq('id', taskId);
+      assert.ok(taskUpdateErr, 'Se esperaba error al cambiar event_id en tasks');
+      assert.ok(
+        taskUpdateErr.message.includes('event_id_immutable'),
+        `Se esperaba event_id_immutable en tasks, pero se recibió: ${taskUpdateErr.message}`
+      );
+
+      const { error: payUpdateErr } = await ctx.adminClient
+        .from('expense_payments')
+        .update({ event_id: ctx.budget.eventB.id })
+        .eq('id', paymentId);
+      assert.ok(
+        payUpdateErr,
+        'Se esperaba error al cambiar event_id en expense_payments con adminClient'
+      );
+      assert.ok(
+        payUpdateErr.message.includes('event_id_immutable'),
+        `Se esperaba event_id_immutable en expense_payments, pero se recibió: ${payUpdateErr.message}`
+      );
+    } finally {
+      if (paymentId) {
+        await ctx.adminClient.from('expense_payments').delete().eq('id', paymentId);
+      }
+      if (expenseId) {
+        await ctx.adminClient.from('expenses').delete().eq('id', expenseId);
+      }
+      if (taskId) {
+        await ctx.adminClient.from('tasks').delete().eq('id', taskId);
+      }
+      if (categoryId) {
+        await ctx.adminClient
+          .from('expense_categories')
+          .delete()
+          .eq('id', categoryId);
+      }
+    }
+  }
+);
+
+test(
+  '60. Borrar gasto vinculado conserva la tarea y comportamiento de delete_task con p_delete_expense segun pagos',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    let task1Id = null;
+    let expense1Id = null;
+    let task2Id = null;
+    let expense2Id = null;
+    let task3Id = null;
+    let expense3Id = null;
+    let payment3Id = null;
+    let task4Id = null;
+    let expense4Id = null;
+
+    try {
+      task1Id = crypto.randomUUID();
+      await ctx.teamOwnerAClient.from('tasks').insert({
+        id: task1Id,
+        event_id: ctx.budget.eventA.id,
+        title: 'Tarea Caso 1',
+        due_date: '2026-12-31',
+      });
+      expense1Id = crypto.randomUUID();
+      await ctx.teamOwnerAClient.from('expenses').insert({
+        id: expense1Id,
+        event_id: ctx.budget.eventA.id,
+        category_id: ctx.budget.categoryA.id,
+        task_id: task1Id,
+        description: 'Gasto Caso 1',
+        amount_cop: 20000,
+      });
+
+      const { error: delExp1Err } = await ctx.teamOwnerAClient
+        .from('expenses')
+        .delete()
+        .eq('id', expense1Id);
+      assert.equal(delExp1Err, null);
+
+      const { data: checkTask1, error: checkTask1Err } = await ctx.adminClient
+        .from('tasks')
+        .select('id')
+        .eq('id', task1Id)
+        .single();
+      assert.equal(checkTask1Err, null);
+      assert.equal(
+        checkTask1?.id,
+        task1Id,
+        'Se esperaba que la tarea se conservara tras borrar directamente el gasto vinculado'
+      );
+
+      task2Id = crypto.randomUUID();
+      await ctx.teamOwnerAClient.from('tasks').insert({
+        id: task2Id,
+        event_id: ctx.budget.eventA.id,
+        title: 'Tarea Caso 2',
+        due_date: '2026-12-31',
+      });
+      expense2Id = crypto.randomUUID();
+      await ctx.teamOwnerAClient.from('expenses').insert({
+        id: expense2Id,
+        event_id: ctx.budget.eventA.id,
+        category_id: ctx.budget.categoryA.id,
+        task_id: task2Id,
+        description: 'Gasto Caso 2 Sin Pagos',
+        amount_cop: 30000,
+      });
+
+      const { data: delTask2Res, error: delTask2Err } =
+        await ctx.teamOwnerAClient.rpc('delete_task', {
+          p_task_id: task2Id,
+          p_delete_expense: true,
+        });
+      assert.equal(delTask2Err, null);
+      assert.equal(
+        delTask2Res?.deleted_expense,
+        true,
+        'Se esperaba deleted_expense: true al borrar tarea con gasto sin pagos'
+      );
+
+      const { data: checkTask2 } = await ctx.adminClient
+        .from('tasks')
+        .select('id')
+        .eq('id', task2Id);
+      assert.equal(checkTask2?.length ?? 0, 0);
+
+      const { data: checkExp2 } = await ctx.adminClient
+        .from('expenses')
+        .select('id')
+        .eq('id', expense2Id);
+      assert.equal(checkExp2?.length ?? 0, 0);
+
+      task3Id = crypto.randomUUID();
+      await ctx.teamOwnerAClient.from('tasks').insert({
+        id: task3Id,
+        event_id: ctx.budget.eventA.id,
+        title: 'Tarea Caso 3',
+        due_date: '2026-12-31',
+      });
+      expense3Id = crypto.randomUUID();
+      await ctx.teamOwnerAClient.from('expenses').insert({
+        id: expense3Id,
+        event_id: ctx.budget.eventA.id,
+        category_id: ctx.budget.categoryA.id,
+        task_id: task3Id,
+        description: 'Gasto Caso 3 Con Pagos',
+        amount_cop: 50000,
+      });
+      payment3Id = crypto.randomUUID();
+      await ctx.teamOwnerAClient.from('expense_payments').insert({
+        id: payment3Id,
+        expense_id: expense3Id,
+        paid_by_profile_id: ctx.budget.profile.id,
+        amount_cop: 20000,
+      });
+
+      const { data: delTask3Res, error: delTask3Err } =
+        await ctx.teamOwnerAClient.rpc('delete_task', {
+          p_task_id: task3Id,
+          p_delete_expense: true,
+        });
+      assert.equal(delTask3Err, null);
+      assert.equal(
+        delTask3Res?.deleted_expense,
+        false,
+        'Se esperaba deleted_expense: false al intentar borrar gasto con pagos'
+      );
+
+      const { data: checkTask3 } = await ctx.adminClient
+        .from('tasks')
+        .select('id')
+        .eq('id', task3Id);
+      assert.equal(checkTask3?.length ?? 0, 0, 'La tarea 3 debe ser borrada');
+
+      const { data: checkExp3, error: checkExp3Err } = await ctx.adminClient
+        .from('expenses')
+        .select('id, task_id')
+        .eq('id', expense3Id)
+        .single();
+      assert.equal(checkExp3Err, null);
+      assert.equal(
+        checkExp3?.task_id,
+        null,
+        'El gasto 3 debe conservarse con task_id nulo'
+      );
+
+      task4Id = crypto.randomUUID();
+      await ctx.teamOwnerAClient.from('tasks').insert({
+        id: task4Id,
+        event_id: ctx.budget.eventA.id,
+        title: 'Tarea Caso 4',
+        due_date: '2026-12-31',
+      });
+      expense4Id = crypto.randomUUID();
+      await ctx.teamOwnerAClient.from('expenses').insert({
+        id: expense4Id,
+        event_id: ctx.budget.eventA.id,
+        category_id: ctx.budget.categoryA.id,
+        task_id: task4Id,
+        description: 'Gasto Caso 4 Sin Pagos',
+        amount_cop: 35000,
+      });
+
+      const { data: delTask4Res, error: delTask4Err } =
+        await ctx.teamOwnerAClient.rpc('delete_task', {
+          p_task_id: task4Id,
+          p_delete_expense: false,
+        });
+      assert.equal(delTask4Err, null);
+      assert.equal(
+        delTask4Res?.deleted_expense,
+        false,
+        'Se esperaba deleted_expense: false al no solicitar borrado de gasto'
+      );
+
+      const { data: checkTask4 } = await ctx.adminClient
+        .from('tasks')
+        .select('id')
+        .eq('id', task4Id);
+      assert.equal(checkTask4?.length ?? 0, 0, 'La tarea 4 debe ser borrada');
+
+      const { data: checkExp4, error: checkExp4Err } = await ctx.adminClient
+        .from('expenses')
+        .select('id, task_id')
+        .eq('id', expense4Id)
+        .single();
+      assert.equal(checkExp4Err, null);
+      assert.equal(
+        checkExp4?.task_id,
+        null,
+        'El gasto 4 debe conservarse con task_id nulo'
+      );
+    } finally {
+      if (payment3Id) {
+        await ctx.adminClient.from('expense_payments').delete().eq('id', payment3Id);
+      }
+      if (expense1Id) {
+        await ctx.adminClient.from('expenses').delete().eq('id', expense1Id);
+      }
+      if (expense2Id) {
+        await ctx.adminClient.from('expenses').delete().eq('id', expense2Id);
+      }
+      if (expense3Id) {
+        await ctx.adminClient.from('expenses').delete().eq('id', expense3Id);
+      }
+      if (expense4Id) {
+        await ctx.adminClient.from('expenses').delete().eq('id', expense4Id);
+      }
+      if (task1Id) {
+        await ctx.adminClient.from('tasks').delete().eq('id', task1Id);
+      }
+      if (task2Id) {
+        await ctx.adminClient.from('tasks').delete().eq('id', task2Id);
+      }
+      if (task3Id) {
+        await ctx.adminClient.from('tasks').delete().eq('id', task3Id);
+      }
+      if (task4Id) {
+        await ctx.adminClient.from('tasks').delete().eq('id', task4Id);
+      }
+    }
+  }
+);
+
+test(
+  '61. Un evento nuevo con categoria, gasto, pago y tarea vinculada se borra sin error y no deja filas huerfanas',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    let newEventId = null;
+
+    try {
+      const now = Date.now();
+      const in30Days = new Date(now + 30 * 24 * 60 * 60 * 1000).toISOString();
+      const in20Days = new Date(now + 20 * 24 * 60 * 60 * 1000).toISOString();
+
+      const { data: newEvent, error: newEventErr } = await ctx.teamOwnerAClient
+        .from('events')
+        .insert({
+          name: `PRUEBA-${ctx.run}-61-BORRADO`,
+          starts_at: in30Days,
+          rsvp_deadline: in20Days,
+          created_by: ctx.teamOwnerAUser.id,
+        })
+        .select()
+        .single();
+      assert.equal(newEventErr, null, 'Error al crear evento nuevo');
+      newEventId = newEvent.id;
+
+      const { data: cat, error: catErr } = await ctx.teamOwnerAClient
+        .from('expense_categories')
+        .insert({
+          event_id: newEventId,
+          name: 'Cat 61',
+        })
+        .select()
+        .single();
+      assert.equal(catErr, null, 'Error al crear categoria en evento 61');
+
+      const taskId = crypto.randomUUID();
+      const { error: taskErr } = await ctx.teamOwnerAClient
+        .from('tasks')
+        .insert({
+          id: taskId,
+          event_id: newEventId,
+          title: 'Tarea 61',
+          due_date: '2026-12-31',
+        });
+      assert.equal(taskErr, null, 'Error al crear tarea en evento 61');
+
+      const expenseId = crypto.randomUUID();
+      const { error: expErr } = await ctx.teamOwnerAClient
+        .from('expenses')
+        .insert({
+          id: expenseId,
+          event_id: newEventId,
+          category_id: cat.id,
+          task_id: taskId,
+          description: 'Gasto 61',
+          amount_cop: 50000,
+        });
+      assert.equal(expErr, null, 'Error al crear gasto en evento 61');
+
+      const paymentId = crypto.randomUUID();
+      const { error: payErr } = await ctx.teamOwnerAClient
+        .from('expense_payments')
+        .insert({
+          id: paymentId,
+          expense_id: expenseId,
+          paid_by_profile_id: ctx.budget.profile.id,
+          amount_cop: 20000,
+        });
+      assert.equal(payErr, null, 'Error al registrar pago en evento 61');
+
+      const { error: delEventErr } = await ctx.teamOwnerAClient
+        .from('events')
+        .delete()
+        .eq('id', newEventId);
+      assert.equal(
+        delEventErr,
+        null,
+        'Se esperaba poder borrar el evento con el cliente del propietario sin error'
+      );
+
+      const tables = [
+        'expense_categories',
+        'expenses',
+        'expense_payments',
+        'tasks',
+      ];
+      for (const table of tables) {
+        const { data: rows, error: checkErr } = await ctx.adminClient
+          .from(table)
+          .select('id')
+          .eq('event_id', newEventId);
+        assert.equal(checkErr, null);
+        assert.equal(
+          rows?.length ?? 0,
+          0,
+          `No deben quedar filas en la tabla ${table} para el evento borrado`
+        );
+      }
+      newEventId = null;
+    } finally {
+      if (newEventId) {
+        await ctx.adminClient.from('events').delete().eq('id', newEventId);
+      }
+    }
+  }
+);
+
+test(
+  '62. update directo de done_at da permission denied y save_task new con mismos id es idempotente dejando un solo gasto',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    let taskId = null;
+    let idemTaskId = null;
+    let idemExpenseId = null;
+
+    try {
+      taskId = crypto.randomUUID();
+      const { error: taskErr } = await ctx.teamOwnerAClient
+        .from('tasks')
+        .insert({
+          id: taskId,
+          event_id: ctx.budget.eventA.id,
+          title: 'Tarea Prueba 62',
+          due_date: '2026-12-31',
+        });
+      assert.equal(taskErr, null, 'Error al crear tarea para prueba 62');
+
+      const { error: directDoneErr } = await ctx.teamOwnerAClient
+        .from('tasks')
+        .update({ done_at: new Date().toISOString() })
+        .eq('id', taskId);
+      assert.ok(
+        directDoneErr,
+        'Se esperaba un error de permisos al intentar actualizar done_at directamente'
+      );
+      assert.ok(
+        directDoneErr.message.toLowerCase().includes('permission denied'),
+        `Se esperaba error de permission denied, pero se recibió: ${directDoneErr.message}`
+      );
+
+      idemTaskId = crypto.randomUUID();
+      idemExpenseId = crypto.randomUUID();
+      const expensePayload = {
+        id: idemExpenseId,
+        category_id: ctx.budget.categoryA.id,
+        description: 'Gasto Idempotente 62',
+        amount_cop: 75000,
+      };
+
+      const { error: save1Err } = await ctx.teamOwnerAClient.rpc('save_task', {
+        p_task_id: idemTaskId,
+        p_event_id: ctx.budget.eventA.id,
+        p_title: 'Tarea Idempotente 62 Primera Vez',
+        p_note: 'Primera nota',
+        p_assignee_profile_id: null,
+        p_due_date: '2026-12-31',
+        p_expense_action: 'new',
+        p_expense: expensePayload,
+      });
+      assert.equal(save1Err, null, 'Error en primera llamada a save_task new');
+
+      const { error: save2Err } = await ctx.teamOwnerAClient.rpc('save_task', {
+        p_task_id: idemTaskId,
+        p_event_id: ctx.budget.eventA.id,
+        p_title: 'Tarea Idempotente 62 Segunda Vez',
+        p_note: 'Segunda nota',
+        p_assignee_profile_id: null,
+        p_due_date: '2026-12-31',
+        p_expense_action: 'new',
+        p_expense: expensePayload,
+      });
+      assert.equal(save2Err, null, 'Error en segunda llamada a save_task new repetida');
+
+      const { data: expRows, error: checkExpErr } = await ctx.adminClient
+        .from('expenses')
+        .select('*')
+        .eq('id', idemExpenseId);
+      assert.equal(checkExpErr, null);
+      assert.equal(
+        expRows?.length,
+        1,
+        'Se esperaba que quedara exactamente un gasto con ese id'
+      );
+      assert.equal(
+        expRows[0].task_id,
+        idemTaskId,
+        'El gasto debe estar vinculado a la tarea'
+      );
+    } finally {
+      if (idemExpenseId) {
+        await ctx.adminClient.from('expenses').delete().eq('id', idemExpenseId);
+      }
+      if (idemTaskId) {
+        await ctx.adminClient.from('tasks').delete().eq('id', idemTaskId);
+      }
+      if (taskId) {
+        await ctx.adminClient.from('tasks').delete().eq('id', taskId);
+      }
+    }
+  }
+);
+
+test(
+  '63. teamHelper y outsideTeamClient no gestionan perfiles, can_manage_profiles responde segun rol y anonClient no ejecuta rpc',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    let tempProfId = null;
+
+    try {
+      const { data: tempProf, error: tempProfErr } = await ctx.adminClient
+        .from('team_profiles')
+        .insert({
+          team_id: ctx.team.id,
+          name: `Perfil Temporal 63 ${Date.now()}`,
+        })
+        .select()
+        .single();
+      assert.equal(tempProfErr, null);
+      tempProfId = tempProf.id;
+
+      await ctx.teamHelperClient
+        .from('team_profiles')
+        .insert({ team_id: ctx.team.id, name: `Perfil Helper 63 ${Date.now()}` });
+
+      const { data: helperCreated } = await ctx.adminClient
+        .from('team_profiles')
+        .select('id')
+        .like('name', 'Perfil Helper 63%');
+      assert.equal(
+        helperCreated?.length ?? 0,
+        0,
+        'El ayudante no debe poder crear perfiles'
+      );
+
+      await ctx.teamHelperClient
+        .from('team_profiles')
+        .update({ name: 'Perfil Modificado Por Helper' })
+        .eq('id', tempProfId);
+
+      const { data: helperUnchanged } = await ctx.adminClient
+        .from('team_profiles')
+        .select('name')
+        .eq('id', tempProfId)
+        .single();
+      assert.equal(
+        helperUnchanged?.name,
+        tempProf.name,
+        'El ayudante no debe poder renombrar perfiles'
+      );
+
+      await ctx.teamHelperClient
+        .from('team_profiles')
+        .delete()
+        .eq('id', tempProfId);
+
+      const { data: helperStillThere } = await ctx.adminClient
+        .from('team_profiles')
+        .select('id')
+        .eq('id', tempProfId);
+      assert.equal(
+        helperStillThere?.length,
+        1,
+        'El ayudante no debe poder borrar perfiles'
+      );
+
+      await ctx.outsideTeamClient
+        .from('team_profiles')
+        .insert({ team_id: ctx.team.id, name: `Perfil Outside 63 ${Date.now()}` });
+
+      const { data: outsideCreated } = await ctx.adminClient
+        .from('team_profiles')
+        .select('id')
+        .like('name', 'Perfil Outside 63%');
+      assert.equal(
+        outsideCreated?.length ?? 0,
+        0,
+        'Un cliente fuera del equipo no debe poder crear perfiles'
+      );
+
+      await ctx.outsideTeamClient
+        .from('team_profiles')
+        .update({ name: 'Perfil Modificado Por Outside' })
+        .eq('id', tempProfId);
+
+      const { data: outsideUnchanged } = await ctx.adminClient
+        .from('team_profiles')
+        .select('name')
+        .eq('id', tempProfId)
+        .single();
+      assert.equal(
+        outsideUnchanged?.name,
+        tempProf.name,
+        'Un cliente fuera del equipo no debe poder renombrar perfiles'
+      );
+
+      await ctx.outsideTeamClient
+        .from('team_profiles')
+        .delete()
+        .eq('id', tempProfId);
+
+      const { data: outsideStillThere } = await ctx.adminClient
+        .from('team_profiles')
+        .select('id')
+        .eq('id', tempProfId);
+      assert.equal(
+        outsideStillThere?.length,
+        1,
+        'Un cliente fuera del equipo no debe poder borrar perfiles'
+      );
+
+      const { data: canOwner, error: errOwner } =
+        await ctx.teamOwnerAClient.rpc('can_manage_profiles', {
+          p_event_id: ctx.budget.eventA.id,
+        });
+      assert.equal(errOwner, null);
+      assert.equal(
+        canOwner,
+        true,
+        'Se esperaba que can_manage_profiles fuera true para el propietario'
+      );
+
+      const { data: canHelper, error: errHelper } =
+        await ctx.teamHelperClient.rpc('can_manage_profiles', {
+          p_event_id: ctx.budget.eventA.id,
+        });
+      assert.equal(errHelper, null);
+      assert.equal(
+        canHelper,
+        false,
+        'Se esperaba que can_manage_profiles fuera false para el ayudante'
+      );
+
+      const { data: canOutside, error: errOutside } =
+        await ctx.outsideTeamClient.rpc('can_manage_profiles', {
+          p_event_id: ctx.budget.eventA.id,
+        });
+      assert.equal(errOutside, null);
+      assert.equal(
+        canOutside,
+        false,
+        'Se esperaba que can_manage_profiles fuera false para cliente fuera del equipo'
+      );
+
+      const { error: anonDoneErr } = await ctx.anonClient.rpc('set_task_done', {
+        p_task_id: crypto.randomUUID(),
+        p_done: true,
+      });
+      assert.ok(
+        anonDoneErr,
+        'Se esperaba error al intentar ejecutar set_task_done sin sesion'
+      );
+
+      const { error: anonCanErr } = await ctx.anonClient.rpc(
+        'can_manage_profiles',
+        {
+          p_event_id: ctx.budget.eventA.id,
+        }
+      );
+      assert.ok(
+        anonCanErr,
+        'Se esperaba error al intentar ejecutar can_manage_profiles sin sesion'
+      );
+    } finally {
+      if (tempProfId) {
+        await ctx.adminClient
+          .from('team_profiles')
+          .delete()
+          .eq('id', tempProfId);
+      }
+    }
+  }
+);
+
+test(
+  '64. Realtime notifica UPDATE en tasks a propietario y ayudante pero no emite avisos de presupuesto al canal espia',
+  { timeout: 60_000 },
+  async () => {
+    let ownerChannel = null;
+    let helperControlChannel = null;
+    let helperSpyChannel = null;
+    let testTaskId = null;
+    let expense64Id = null;
+    let payment64Id = null;
+
+    const waitForStatus = (channel, expectedStatuses, timeoutMs = 10_000) => {
+      return new Promise((resolve, reject) => {
+        let settled = false;
+        const timer = setTimeout(() => {
+          if (!settled) {
+            settled = true;
+            reject(
+              new Error(
+                `Timeout de ${timeoutMs}ms esperando estado ${expectedStatuses.join(' o ')} en canal ${channel.topic}`
+              )
+            );
+          }
+        }, timeoutMs);
+
+        channel.subscribe((status, err) => {
+          if (settled) return;
+          if (expectedStatuses.includes(status)) {
+            settled = true;
+            clearTimeout(timer);
+            resolve(status);
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            if (!expectedStatuses.includes(status)) {
+              settled = true;
+              clearTimeout(timer);
+              reject(
+                err || new Error(`Canal ${channel.topic} terminó en estado ${status}`)
+              );
+            }
+          }
+        });
+      });
+    };
+
+    try {
+      const { data: ownerSession } = await ctx.teamOwnerAClient.auth.getSession();
+      assert.ok(ownerSession?.session?.access_token, 'Se esperaba token de sesion para el propietario');
+      ctx.teamOwnerAClient.realtime.setAuth(ownerSession.session.access_token);
+
+      const { data: helperSession } = await ctx.teamHelperClient.auth.getSession();
+      assert.ok(helperSession?.session?.access_token, 'Se esperaba token de sesion para el ayudante');
+      ctx.teamHelperClient.realtime.setAuth(helperSession.session.access_token);
+
+      const ownerMessages = [];
+      ownerChannel = ctx.teamOwnerAClient.channel(`owner-tasks-${ctx.run}-${Date.now()}`);
+      ownerChannel.on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'tasks',
+          filter: `event_id=eq.${ctx.budget.eventA.id}`,
+        },
+        (payload) => {
+          ownerMessages.push(payload);
+        }
+      );
+
+      const helperControlMessages = [];
+      helperControlChannel = ctx.teamHelperClient.channel(`helper-control-${ctx.run}-${Date.now()}`);
+      helperControlChannel.on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'tasks',
+          filter: `event_id=eq.${ctx.budget.eventA.id}`,
+        },
+        (payload) => {
+          helperControlMessages.push(payload);
+        }
+      );
+
+      const helperSpyMessages = [];
+      helperSpyChannel = ctx.teamHelperClient.channel(`helper-spy-${ctx.run}-${Date.now()}`);
+      helperSpyChannel
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'expenses',
+          },
+          (payload) => {
+            helperSpyMessages.push(payload);
+          }
+        )
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'expense_payments',
+          },
+          (payload) => {
+            helperSpyMessages.push(payload);
+          }
+        );
+
+      await Promise.all([
+        waitForStatus(ownerChannel, ['SUBSCRIBED'], 10_000),
+        waitForStatus(helperControlChannel, ['SUBSCRIBED'], 10_000),
+        waitForStatus(helperSpyChannel, ['SUBSCRIBED', 'CHANNEL_ERROR'], 10_000),
+      ]);
+
+      testTaskId = crypto.randomUUID();
+      const { error: createTaskErr } = await ctx.teamOwnerAClient
+        .from('tasks')
+        .insert({
+          id: testTaskId,
+          event_id: ctx.budget.eventA.id,
+          title: 'Tarea Realtime 64',
+          due_date: '2026-12-31',
+        });
+      assert.equal(createTaskErr, null, 'Error al crear tarea para prueba de realtime');
+
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+
+      const { error: markErr } = await ctx.teamHelperClient.rpc('set_task_done', {
+        p_task_id: testTaskId,
+        p_done: true,
+      });
+      assert.equal(markErr, null, 'Error al marcar tarea como hecha en realtime');
+
+      const deadline = Date.now() + 10_000;
+      let receivedOwner = false;
+      let receivedHelper = false;
+
+      while (Date.now() < deadline) {
+        receivedOwner = ownerMessages.some(
+          (msg) => msg.new?.id === testTaskId || msg.old?.id === testTaskId
+        );
+        receivedHelper = helperControlMessages.some(
+          (msg) => msg.new?.id === testTaskId || msg.old?.id === testTaskId
+        );
+
+        if (receivedOwner && receivedHelper) {
+          break;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 200));
+      }
+
+      assert.ok(
+        receivedOwner,
+        'Se esperaba que el canal del propietario recibiera el aviso UPDATE de la tarea'
+      );
+      assert.ok(
+        receivedHelper,
+        'Se esperaba que el canal de control del ayudante recibiera el aviso UPDATE de la tarea'
+      );
+
+      expense64Id = crypto.randomUUID();
+      const { error: exp64Err } = await ctx.teamOwnerAClient
+        .from('expenses')
+        .insert({
+          id: expense64Id,
+          event_id: ctx.budget.eventA.id,
+          category_id: ctx.budget.categoryA.id,
+          description: 'Gasto 64 Realtime',
+          amount_cop: 25000,
+        });
+      assert.equal(exp64Err, null, 'Error al crear gasto en prueba 64');
+
+      payment64Id = crypto.randomUUID();
+      const { error: pay64Err } = await ctx.teamOwnerAClient
+        .from('expense_payments')
+        .insert({
+          id: payment64Id,
+          expense_id: expense64Id,
+          paid_by_profile_id: ctx.budget.profile.id,
+          amount_cop: 25000,
+        });
+      assert.equal(pay64Err, null, 'Error al registrar pago en prueba 64');
+
+      const { error: delPay64Err } = await ctx.teamOwnerAClient
+        .from('expense_payments')
+        .delete()
+        .eq('id', payment64Id);
+      assert.equal(delPay64Err, null, 'Error al borrar pago en prueba 64');
+      payment64Id = null;
+
+      const { error: delExp64Err } = await ctx.teamOwnerAClient
+        .from('expenses')
+        .delete()
+        .eq('id', expense64Id);
+      assert.equal(delExp64Err, null, 'Error al borrar gasto en prueba 64');
+      expense64Id = null;
+
+      await new Promise((resolve) => setTimeout(resolve, 4000));
+
+      assert.equal(
+        helperSpyMessages.length,
+        0,
+        `Se esperaba que el canal espia tuviera 0 avisos de expenses/expense_payments, pero recibio ${helperSpyMessages.length}`
+      );
+    } finally {
+      if (ownerChannel) {
+        await ctx.teamOwnerAClient.removeChannel(ownerChannel);
+      }
+      if (helperControlChannel) {
+        await ctx.teamHelperClient.removeChannel(helperControlChannel);
+      }
+      if (helperSpyChannel) {
+        await ctx.teamHelperClient.removeChannel(helperSpyChannel);
+      }
+      if (payment64Id) {
+        await ctx.adminClient.from('expense_payments').delete().eq('id', payment64Id);
+      }
+      if (expense64Id) {
+        await ctx.adminClient.from('expenses').delete().eq('id', expense64Id);
+      }
+      if (testTaskId) {
+        await ctx.adminClient.from('tasks').delete().eq('id', testTaskId);
       }
     }
   }

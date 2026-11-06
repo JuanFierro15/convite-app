@@ -60,6 +60,7 @@ export function createEmptyContext() {
     run: Date.now().toString(36),
     adminClient: null,
     anonClient: null,
+    budget: null,
     ownerXClient: null,
     ownerYClient: null,
     helperXClient: null,
@@ -175,7 +176,7 @@ export async function cleanupPreviousRuns(adminClient) {
   }
 }
 
-async function createTestUser(adminClient, ctx, rolePrefix) {
+export async function createTestUser(adminClient, ctx, rolePrefix) {
   const email = `${rolePrefix}-${ctx.run}@convite.test`;
   const password = crypto.randomUUID();
 
@@ -788,10 +789,149 @@ export async function setupTestContext(ctx) {
         `No se pudieron registrar los miembros del equipo de prueba: ${teamMembersError.message}`
       );
     }
+
+    await setupBudgetFixture(ctx);
   } catch (err) {
     await teardownTestContext(ctx);
     throw err;
   }
+}
+
+export async function setupBudgetFixture(ctx) {
+  const now = Date.now();
+  const in30Days = new Date(now + 30 * DAY_MS).toISOString();
+  const in20Days = new Date(now + 20 * DAY_MS).toISOString();
+
+  const { data: eventA, error: eventAError } = await ctx.adminClient
+    .from('events')
+    .insert({
+      name: `PRUEBA-${ctx.run}-PRESUPUESTO`,
+      starts_at: in30Days,
+      rsvp_deadline: in20Days,
+      created_by: ctx.teamOwnerAUser.id,
+    })
+    .select()
+    .single();
+  if (eventAError || !eventA) {
+    throw new Error(
+      `No se pudo crear el evento de presupuesto A: ${eventAError?.message ?? 'sin datos'}`
+    );
+  }
+  ctx.createdEventIds.push(eventA.id);
+
+  const { data: eventB, error: eventBError } = await ctx.adminClient
+    .from('events')
+    .insert({
+      name: `PRUEBA-${ctx.run}-PRESUPUESTO-B`,
+      starts_at: in30Days,
+      rsvp_deadline: in20Days,
+      created_by: ctx.teamOwnerAUser.id,
+    })
+    .select()
+    .single();
+  if (eventBError || !eventB) {
+    throw new Error(
+      `No se pudo crear el evento de presupuesto B: ${eventBError?.message ?? 'sin datos'}`
+    );
+  }
+  ctx.createdEventIds.push(eventB.id);
+
+  const { data: profile, error: profileError } = await ctx.adminClient
+    .from('team_profiles')
+    .insert({
+      team_id: ctx.team.id,
+      name: 'Perfil Uno',
+    })
+    .select()
+    .single();
+  if (profileError || !profile) {
+    throw new Error(
+      `No se pudo crear el perfil activo: ${profileError?.message ?? 'sin datos'}`
+    );
+  }
+
+  const { data: archivedProfile, error: archivedProfileError } =
+    await ctx.adminClient
+      .from('team_profiles')
+      .insert({
+        team_id: ctx.team.id,
+        name: 'Perfil Archivado',
+        archived_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+  if (archivedProfileError || !archivedProfile) {
+    throw new Error(
+      `No se pudo crear el perfil archivado: ${archivedProfileError?.message ?? 'sin datos'}`
+    );
+  }
+
+  const { data: otherTeam, error: otherTeamError } = await ctx.adminClient
+    .from('teams')
+    .insert({
+      name: `PRUEBA-${ctx.run}-EQUIPO-OTRO`,
+    })
+    .select()
+    .single();
+  if (otherTeamError || !otherTeam) {
+    throw new Error(
+      `No se pudo crear el otro equipo: ${otherTeamError?.message ?? 'sin datos'}`
+    );
+  }
+
+  const { data: otherTeamProfile, error: otherTeamProfileError } =
+    await ctx.adminClient
+      .from('team_profiles')
+      .insert({
+        team_id: otherTeam.id,
+        name: 'Perfil Ajeno',
+      })
+      .select()
+      .single();
+  if (otherTeamProfileError || !otherTeamProfile) {
+    throw new Error(
+      `No se pudo crear el perfil ajeno: ${otherTeamProfileError?.message ?? 'sin datos'}`
+    );
+  }
+
+  const { data: categoryA, error: categoryAError } = await ctx.adminClient
+    .from('expense_categories')
+    .insert({
+      event_id: eventA.id,
+      name: 'Lugar',
+    })
+    .select()
+    .single();
+  if (categoryAError || !categoryA) {
+    throw new Error(
+      `No se pudo crear la categoria A: ${categoryAError?.message ?? 'sin datos'}`
+    );
+  }
+
+  const { data: categoryB, error: categoryBError } = await ctx.adminClient
+    .from('expense_categories')
+    .insert({
+      event_id: eventB.id,
+      name: 'Lugar',
+    })
+    .select()
+    .single();
+  if (categoryBError || !categoryB) {
+    throw new Error(
+      `No se pudo crear la categoria B: ${categoryBError?.message ?? 'sin datos'}`
+    );
+  }
+
+  ctx.budget = {
+    eventA,
+    eventB,
+    profile,
+    archivedProfile,
+    otherTeam,
+    otherTeamProfile,
+    categoryA,
+    categoryB,
+  };
 }
 
 export async function teardownTestContext(ctx) {
