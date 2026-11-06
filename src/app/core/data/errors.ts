@@ -101,11 +101,61 @@ export function toUserError(error: unknown, fallback?: string): Error {
     );
   }
 
+  if (combined.includes('payment_exceeds_expense')) {
+    return new Error('El pago supera lo que falta por pagar.');
+  }
+
+  if (combined.includes('payment_future_date')) {
+    return new Error('La fecha del pago no puede ser futura.');
+  }
+
+  if (combined.includes('amount_below_paid')) {
+    return new Error('El monto no puede ser menor que lo que ya se pagó.');
+  }
+
+  if (combined.includes('profile_archived')) {
+    return new Error('Ese perfil está archivado. Elige otro.');
+  }
+
+  if (combined.includes('profile_wrong_team') || combined.includes('profile_not_found')) {
+    return new Error('Ese perfil no está disponible para este evento.');
+  }
+
+  if (combined.includes('expenses_category_same_event')) {
+    return new Error('Esta categoría tiene gastos. Muévelos a otra categoría antes de borrarla.');
+  }
+
+  if (combined.includes('expense_categories_name_key')) {
+    return new Error('Ya hay una categoría con ese nombre.');
+  }
+
+  if (combined.includes('team_profiles_active_name_key')) {
+    return new Error('Ya hay un perfil activo con ese nombre.');
+  }
+
+  if (
+    combined.includes('tasks_assignee_profile_id_fkey') ||
+    combined.includes('expense_payments_paid_by_profile_id_fkey')
+  ) {
+    return new Error('Este perfil ya se usó. Puedes archivarlo.');
+  }
+
+  if (combined.includes('expense_already_linked') || combined.includes('expenses_task_id_key')) {
+    return new Error('Ese gasto ya está vinculado a otra tarea.');
+  }
+
+  if (combined.includes('task_not_found')) {
+    return new Error('Esta tarea ya no existe.');
+  }
+
   if (
     combined.includes('invitation_event_mismatch') ||
     combined.includes('guest_not_in_invitation') ||
     combined.includes('individual_requires_one_guest') ||
-    combined.includes('invalid_kind')
+    combined.includes('invalid_kind') ||
+    combined.includes('invalid_expense_action') ||
+    combined.includes('expense_not_found') ||
+    combined.includes('event_id_immutable')
   ) {
     return new Error(DEFAULT_USER_ERROR_MESSAGE);
   }

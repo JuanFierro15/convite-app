@@ -1,5 +1,6 @@
 import {
   AuthService,
+  BudgetRepository,
   CONNECTION_ERROR_MESSAGE,
   EventContextService,
   EventsRepository,
@@ -11,6 +12,7 @@ import {
   LOAD_ERROR_MESSAGE,
   RealtimeService,
   SupabaseService,
+  TeamProfilesRepository,
   ThemeService,
   authGuard,
   guestErrorMessage,
@@ -30,6 +32,8 @@ describe('core exports and error translation', () => {
     expect(EventsRepository).toBeDefined();
     expect(InvitationsRepository).toBeDefined();
     expect(GiftsRepository).toBeDefined();
+    expect(BudgetRepository).toBeDefined();
+    expect(TeamProfilesRepository).toBeDefined();
     expect(GuestApiService).toBeDefined();
     expect(RealtimeService).toBeDefined();
     expect(ThemeService).toBeDefined();
@@ -122,6 +126,63 @@ describe('core exports and error translation', () => {
       });
       expect(err.message).toBe(
         'Un regalo repetible necesita un límite de 2 familias o más; los demás tipos no llevan límite.',
+      );
+    });
+
+    it('translates budget and profile constraint errors to user messages', () => {
+      expect(toUserError({ message: 'payment_exceeds_expense' }).message).toBe(
+        'El pago supera lo que falta por pagar.',
+      );
+      expect(toUserError({ message: 'payment_future_date' }).message).toBe(
+        'La fecha del pago no puede ser futura.',
+      );
+      expect(toUserError({ message: 'amount_below_paid' }).message).toBe(
+        'El monto no puede ser menor que lo que ya se pagó.',
+      );
+      expect(toUserError({ message: 'profile_archived' }).message).toBe(
+        'Ese perfil está archivado. Elige otro.',
+      );
+      expect(toUserError({ message: 'profile_wrong_team' }).message).toBe(
+        'Ese perfil no está disponible para este evento.',
+      );
+      expect(toUserError({ message: 'profile_not_found' }).message).toBe(
+        'Ese perfil no está disponible para este evento.',
+      );
+      expect(toUserError({ message: 'expenses_category_same_event' }).message).toBe(
+        'Esta categoría tiene gastos. Muévelos a otra categoría antes de borrarla.',
+      );
+      expect(toUserError({ message: 'duplicate key value violates unique constraint "expense_categories_name_key"' }).message).toBe(
+        'Ya hay una categoría con ese nombre.',
+      );
+      expect(toUserError({ message: 'duplicate key value violates unique constraint "team_profiles_active_name_key"' }).message).toBe(
+        'Ya hay un perfil activo con ese nombre.',
+      );
+      expect(toUserError({ message: 'violates foreign key constraint "tasks_assignee_profile_id_fkey"' }).message).toBe(
+        'Este perfil ya se usó. Puedes archivarlo.',
+      );
+      expect(toUserError({ message: 'violates foreign key constraint "expense_payments_paid_by_profile_id_fkey"' }).message).toBe(
+        'Este perfil ya se usó. Puedes archivarlo.',
+      );
+      expect(toUserError({ message: 'expense_already_linked' }).message).toBe(
+        'Ese gasto ya está vinculado a otra tarea.',
+      );
+      expect(toUserError({ message: 'violates unique constraint "expenses_task_id_key"' }).message).toBe(
+        'Ese gasto ya está vinculado a otra tarea.',
+      );
+      expect(toUserError({ message: 'task_not_found' }).message).toBe(
+        'Esta tarea ya no existe.',
+      );
+    });
+
+    it('translates internal task/expense errors to generic save message', () => {
+      expect(toUserError({ message: 'invalid_expense_action' }).message).toBe(
+        'No pudimos guardar el cambio. Inténtalo de nuevo.',
+      );
+      expect(toUserError({ message: 'expense_not_found' }).message).toBe(
+        'No pudimos guardar el cambio. Inténtalo de nuevo.',
+      );
+      expect(toUserError({ message: 'event_id_immutable' }).message).toBe(
+        'No pudimos guardar el cambio. Inténtalo de nuevo.',
       );
     });
 
