@@ -187,6 +187,16 @@
       flex-direction: row;
       align-items: center;
       min-height: auto;
+
+      .access-card__summary {
+        margin-top: 0;
+      }
+    }
+
+    &:has(.access-card__summary):not(&--row) {
+      .access-card__title {
+        margin-top: auto;
+      }
     }
   }
 
@@ -225,6 +235,18 @@
       flex: 1;
     }
   }
+
+  &__text-block {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xxs, 2px);
+  }
+
+  &__summary {
+    color: var(--ion-color-medium);
+    display: block;
+    margin-top: calc(var(--space-xs) - var(--space-md));
+  }
 }
 
 .helper-actions {
@@ -236,6 +258,7 @@
     margin: 0;
   }
 
+  &__task-card,
   &__qr-card {
     margin: 0;
   }

@@ -72,6 +72,34 @@ export const routes: Routes = [
       import('./features/regalos/lista/gift-list.page').then((m) => m.GiftListPage),
   },
   {
+    path: 'eventos/:id/presupuesto',
+    canActivate: [authGuard, roleGuard],
+    loadComponent: () =>
+      import('./features/presupuesto/lista/budget.page').then((m) => m.BudgetPage),
+  },
+  {
+    path: 'eventos/:id/presupuesto/categorias',
+    canActivate: [authGuard, roleGuard],
+    loadComponent: () =>
+      import('./features/presupuesto/categorias/categories.page').then((m) => m.CategoriesPage),
+  },
+  {
+    path: 'eventos/:id/presupuesto/gastos/:expenseId',
+    canActivate: [authGuard, roleGuard],
+    loadComponent: () =>
+      import('./features/presupuesto/gasto/expense-detail.page').then((m) => m.ExpenseDetailPage),
+  },
+  {
+    path: 'eventos/:id/perfiles',
+    canActivate: [authGuard, roleGuard],
+    loadComponent: () => import('./features/perfiles/profiles.page').then((m) => m.ProfilesPage),
+  },
+  {
+    path: 'eventos/:id/tareas',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/tareas/lista/tasks.page').then((m) => m.TasksPage),
+  },
+  {
     path: 'i/:code',
     loadComponent: () =>
       import('./features/invitado/invitacion/guest-invitation.page').then(

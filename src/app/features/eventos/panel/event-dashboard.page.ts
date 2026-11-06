@@ -44,14 +44,19 @@ import {
 import {
   ArrivalCounts,
   ArrivalSessionService,
+  BudgetRepository,
   EventContextService,
   EventsRepository,
   RealtimeService,
   RsvpCounts,
   TABLES_ENABLED,
+  TasksRepository,
   ThemeService,
+  budgetCardText,
   daysUntil,
   formatTime,
+  tasksCardText,
+  toBogotaDateInput,
 } from '../../../core';
 import { EmptyStateComponent } from '../../../shared';
 
@@ -96,6 +101,8 @@ function formatDayMonthBogota(iso: string): string {
 export class EventDashboardPage implements ViewWillEnter, ViewWillLeave {
   private readonly eventContext = inject(EventContextService);
   private readonly eventsRepo = inject(EventsRepository);
+  private readonly budgetRepo = inject(BudgetRepository);
+  private readonly tasksRepo = inject(TasksRepository);
   private readonly arrivalSession = inject(ArrivalSessionService);
   private readonly realtime = inject(RealtimeService);
   private readonly themeService = inject(ThemeService);
@@ -122,6 +129,8 @@ export class EventDashboardPage implements ViewWillEnter, ViewWillLeave {
     arrivedUnconfirmed: 0,
     arrivedTotal: 0,
   });
+  readonly budgetSummaryText = signal<string | null>(null);
+  readonly tasksSummaryText = signal<string | null>(null);
   private readonly initialLoading = signal<boolean>(true);
 
   readonly loading = computed<boolean>(
@@ -187,6 +196,8 @@ export class EventDashboardPage implements ViewWillEnter, ViewWillLeave {
     const eventId = this.id();
     if (this.eventContext.event()?.id !== eventId) {
       this.eventContext.clear();
+      this.budgetSummaryText.set(null);
+      this.tasksSummaryText.set(null);
       this.counts.set({ accepted: 0, pending: 0, declined: 0, total: 0 });
       this.arrivals.set({
         confirmed: 0,
@@ -202,7 +213,7 @@ export class EventDashboardPage implements ViewWillEnter, ViewWillLeave {
     this.stopRealtime?.();
     this.stopRealtime = this.realtime.watch(
       eventId,
-      ['events', 'guests'],
+      ['events', 'guests', 'tasks'],
       () => {
         void this.loadDashboard(this.id(), false);
       },
@@ -244,6 +255,26 @@ export class EventDashboardPage implements ViewWillEnter, ViewWillLeave {
             ? reason.message
             : 'No pudimos cargar el resumen del evento.';
         await this.showErrorToast(message);
+      }
+
+      try {
+        const tasks = await this.tasksRepo.list(eventId);
+        this.tasksSummaryText.set(
+          tasksCardText(tasks, toBogotaDateInput(new Date())),
+        );
+      } catch {
+        this.tasksSummaryText.set(null);
+      }
+
+      if (this.isOwner()) {
+        try {
+          const total = await this.budgetRepo.committedTotal(eventId);
+          this.budgetSummaryText.set(
+            budgetCardText(this.event()?.budget_cop ?? null, total),
+          );
+        } catch {
+          this.budgetSummaryText.set(null);
+        }
       }
     } finally {
       if (isInitial) {

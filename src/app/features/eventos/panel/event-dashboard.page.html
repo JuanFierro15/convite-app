@@ -188,34 +188,40 @@
 
               <ion-col size="6">
                 <ion-card
-                  class="access-card access-card--disabled"
-                  aria-disabled="true"
+                  class="access-card"
+                  [button]="true"
+                  [routerLink]="['/eventos', id(), 'presupuesto']"
                 >
                   <ion-card-content class="access-card__content">
                     <div class="access-card__top">
-                      <div class="access-card__icon-box access-card__icon-box--disabled">
+                      <div class="access-card__icon-box">
                         <ion-icon name="wallet-outline" aria-hidden="true"></ion-icon>
                       </div>
-                      <span class="badge-soft-medium text-label">Pronto</span>
                     </div>
                     <span class="text-name access-card__title">Presupuesto y gastos</span>
+                    @if (budgetSummaryText()) {
+                      <span class="text-label access-card__summary">{{ budgetSummaryText() }}</span>
+                    }
                   </ion-card-content>
                 </ion-card>
               </ion-col>
 
               <ion-col size="6">
                 <ion-card
-                  class="access-card access-card--disabled"
-                  aria-disabled="true"
+                  class="access-card"
+                  [button]="true"
+                  [routerLink]="['/eventos', id(), 'tareas']"
                 >
                   <ion-card-content class="access-card__content">
                     <div class="access-card__top">
-                      <div class="access-card__icon-box access-card__icon-box--disabled">
+                      <div class="access-card__icon-box">
                         <ion-icon name="checkbox-outline" aria-hidden="true"></ion-icon>
                       </div>
-                      <span class="badge-soft-medium text-label">Pronto</span>
                     </div>
                     <span class="text-name access-card__title">Tareas</span>
+                    @if (tasksSummaryText()) {
+                      <span class="text-label access-card__summary">{{ tasksSummaryText() }}</span>
+                    }
                   </ion-card-content>
                 </ion-card>
               </ion-col>
@@ -249,6 +255,24 @@
               <ion-icon slot="start" name="mail-outline" aria-hidden="true"></ion-icon>
               Gestionar invitaciones
             </ion-button>
+
+            <ion-card
+              class="access-card helper-actions__task-card"
+              [button]="true"
+              [routerLink]="['/eventos', id(), 'tareas']"
+            >
+              <ion-card-content class="access-card__content access-card__content--row">
+                <div class="access-card__icon-box">
+                  <ion-icon name="checkbox-outline" aria-hidden="true"></ion-icon>
+                </div>
+                <div class="access-card__text-block access-card__title--grow">
+                  <span class="text-name access-card__title">Tareas</span>
+                  @if (tasksSummaryText()) {
+                    <span class="text-label access-card__summary">{{ tasksSummaryText() }}</span>
+                  }
+                </div>
+              </ion-card-content>
+            </ion-card>
 
             <ion-card
               class="access-card helper-actions__qr-card"
