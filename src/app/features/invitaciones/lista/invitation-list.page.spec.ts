@@ -423,19 +423,19 @@ describe('InvitationListPage', () => {
       });
     }
 
-    it('con 25 invitaciones muestra 10 cards, existe paginación con "Página 1 de 3" y botón anterior deshabilitado', () => {
+    it('con 25 invitaciones muestra 6 cards, existe paginación con "Página 1 de 5" y botón anterior deshabilitado', () => {
       component.invitations.set(buildFakeInvitations(25));
       component.loading.set(false);
       fixture.detectChanges();
 
       const cards = fixture.nativeElement.querySelectorAll('ion-card.invitation-card');
-      expect(cards.length).toBe(10);
+      expect(cards.length).toBe(6);
 
       const pagination = fixture.nativeElement.querySelector('nav.pagination');
       expect(pagination).not.toBeNull();
 
       const status = fixture.nativeElement.querySelector('.pagination__status');
-      expect(status?.textContent?.trim()).toBe('Página 1 de 3');
+      expect(status?.textContent?.trim()).toBe('Página 1 de 5');
 
       const prevButton = fixture.nativeElement.querySelector(
         'ion-button[aria-label="Página anterior"]',
@@ -443,7 +443,7 @@ describe('InvitationListPage', () => {
       expect(prevButton?.disabled ?? prevButton?.hasAttribute('disabled')).toBe(true);
     });
 
-    it('goToNextPage muestra las invitaciones 11 a 20 con estado "Página 2 de 3"', () => {
+    it('goToNextPage muestra las invitaciones 7 a 12 con estado "Página 2 de 5"', () => {
       component.invitations.set(buildFakeInvitations(25));
       component.loading.set(false);
       fixture.detectChanges();
@@ -452,25 +452,24 @@ describe('InvitationListPage', () => {
       fixture.detectChanges();
 
       const cards = fixture.nativeElement.querySelectorAll('ion-card.invitation-card');
-      expect(cards.length).toBe(10);
-      expect(cards[0].querySelector('.group-name')?.textContent?.trim()).toBe('Familia Ejemplo 11');
+      expect(cards.length).toBe(6);
+      expect(cards[0].querySelector('.group-name')?.textContent?.trim()).toBe('Familia Ejemplo 7');
 
       const status = fixture.nativeElement.querySelector('.pagination__status');
-      expect(status?.textContent?.trim()).toBe('Página 2 de 3');
+      expect(status?.textContent?.trim()).toBe('Página 2 de 5');
     });
 
-    it('en la página 3 se ven 5 cards y el botón siguiente está deshabilitado', () => {
+    it('en la página 5 se ve 1 card y el botón siguiente está deshabilitado', () => {
       component.invitations.set(buildFakeInvitations(25));
       component.loading.set(false);
       fixture.detectChanges();
 
-      component.goToNextPage();
-      component.goToNextPage();
+      for (let i = 0; i < 4; i++) component.goToNextPage();
       fixture.detectChanges();
 
       const cards = fixture.nativeElement.querySelectorAll('ion-card.invitation-card');
-      expect(cards.length).toBe(5);
-      expect(cards[0].querySelector('.group-name')?.textContent?.trim()).toBe('Familia Ejemplo 21');
+      expect(cards.length).toBe(1);
+      expect(cards[0].querySelector('.group-name')?.textContent?.trim()).toBe('Familia Ejemplo 25');
 
       const nextButton = fixture.nativeElement.querySelector(
         'ion-button[aria-label="Página siguiente"]',
@@ -496,8 +495,8 @@ describe('InvitationListPage', () => {
       expect(component.currentPage()).toBe(1);
     });
 
-    it('con 10 invitaciones o menos no existe nav.pagination', () => {
-      component.invitations.set(buildFakeInvitations(10));
+    it('con 6 invitaciones o menos no existe nav.pagination', () => {
+      component.invitations.set(buildFakeInvitations(6));
       component.loading.set(false);
       fixture.detectChanges();
 
@@ -505,7 +504,7 @@ describe('InvitationListPage', () => {
       expect(pagination).toBeNull();
     });
 
-    it('si estando en la página 3 la lista baja a 12 invitaciones, se ve la página 2 con 2 cards', () => {
+    it('si estando en la página 3 la lista baja a 8 invitaciones, se ve la página 2 con 2 cards', () => {
       component.invitations.set(buildFakeInvitations(25));
       component.loading.set(false);
       fixture.detectChanges();
@@ -514,12 +513,12 @@ describe('InvitationListPage', () => {
       component.goToNextPage();
       expect(component.currentPage()).toBe(3);
 
-      component.invitations.set(buildFakeInvitations(12));
+      component.invitations.set(buildFakeInvitations(8));
       fixture.detectChanges();
 
       const cards = fixture.nativeElement.querySelectorAll('ion-card.invitation-card');
       expect(cards.length).toBe(2);
-      expect(cards[0].querySelector('.group-name')?.textContent?.trim()).toBe('Familia Ejemplo 11');
+      expect(cards[0].querySelector('.group-name')?.textContent?.trim()).toBe('Familia Ejemplo 7');
 
       const status = fixture.nativeElement.querySelector('.pagination__status');
       expect(status?.textContent?.trim()).toBe('Página 2 de 2');

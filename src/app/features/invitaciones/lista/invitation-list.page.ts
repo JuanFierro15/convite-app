@@ -60,7 +60,7 @@ import { createDiscardGuard } from '../formulario/discard-guard';
 import { InvitationFormComponent } from '../formulario/invitation-form.component';
 import { InvitationActionsService } from '../invitation-actions.service';
 
-export const INVITATIONS_PAGE_SIZE = 10;
+export const INVITATIONS_PAGE_SIZE = 6;
 
 export type InvitationFilter = 'all' | InvitationStatus;
 
