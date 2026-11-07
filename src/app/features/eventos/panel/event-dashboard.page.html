@@ -125,47 +125,6 @@
         </p>
       </section>
 
-      <section class="dashboard-section" aria-labelledby="recent-rsvp-title">
-        <h2 id="recent-rsvp-title" class="text-section dashboard-section__title">
-          Respuestas recientes
-        </h2>
-        <ion-card class="recent-rsvp-card">
-          @if (recentRsvpLoading() && recentRsvpEntries().length === 0 && !recentRsvpError()) {
-            <div class="recent-rsvp-card__loading" role="status" aria-live="polite">
-              <ion-spinner name="crescent" color="primary"></ion-spinner>
-            </div>
-          } @else if (recentRsvpError()) {
-            <div class="recent-rsvp-card__state">
-              <p class="text-body">No pudimos cargar las respuestas.</p>
-              <ion-button fill="clear" (click)="retryRecentRsvp()">
-                Reintentar
-              </ion-button>
-            </div>
-          } @else if (recentRsvpTotal() === 0) {
-            <div class="recent-rsvp-card__state">
-              <p class="text-body">Todavía nadie ha respondido.</p>
-            </div>
-          } @else {
-            <ion-list lines="full">
-              @for (entry of recentRsvpEntries(); track entry.id) {
-                <app-rsvp-log-item
-                  [entry]="entry"
-                  [now]="now()"
-                  [link]="['/eventos', id(), 'invitaciones', entry.invitation_id]"
-                />
-              }
-            </ion-list>
-            <ion-button
-              fill="clear"
-              expand="block"
-              [routerLink]="['/eventos', id(), 'respuestas']"
-            >
-              Ver todas ({{ recentRsvpTotal() }})
-            </ion-button>
-          }
-        </ion-card>
-      </section>
-
       <section class="dashboard-section" aria-labelledby="access-section-title">
         <h2 id="access-section-title" class="text-section dashboard-section__title">
           Accesos rápidos
@@ -331,6 +290,47 @@
             </ion-card>
           </div>
         }
+      </section>
+
+      <section class="dashboard-section" aria-labelledby="recent-rsvp-title">
+        <h2 id="recent-rsvp-title" class="text-section dashboard-section__title">
+          Respuestas recientes
+        </h2>
+        <ion-card class="recent-rsvp-card">
+          @if (recentRsvpLoading() && recentRsvpEntries().length === 0 && !recentRsvpError()) {
+            <div class="recent-rsvp-card__loading" role="status" aria-live="polite">
+              <ion-spinner name="crescent" color="primary"></ion-spinner>
+            </div>
+          } @else if (recentRsvpError()) {
+            <div class="recent-rsvp-card__state">
+              <p class="text-body">No pudimos cargar las respuestas.</p>
+              <ion-button fill="clear" (click)="retryRecentRsvp()">
+                Reintentar
+              </ion-button>
+            </div>
+          } @else if (recentRsvpTotal() === 0) {
+            <div class="recent-rsvp-card__state">
+              <p class="text-body">Todavía nadie ha respondido.</p>
+            </div>
+          } @else {
+            <ion-list lines="full">
+              @for (entry of recentRsvpEntries(); track entry.id) {
+                <app-rsvp-log-item
+                  [entry]="entry"
+                  [now]="now()"
+                  [link]="['/eventos', id(), 'invitaciones', entry.invitation_id]"
+                />
+              }
+            </ion-list>
+            <ion-button
+              fill="clear"
+              expand="block"
+              [routerLink]="['/eventos', id(), 'respuestas']"
+            >
+              Ver todas ({{ recentRsvpTotal() }})
+            </ion-button>
+          }
+        </ion-card>
       </section>
     </div>
   }
