@@ -12,6 +12,7 @@ export * from './money';
 export * from './pagination';
 export * from './phone';
 export * from './qr';
+export * from './rsvp-log-texts';
 export * from './task-groups';
 export * from './text';
 export * from './uuid';

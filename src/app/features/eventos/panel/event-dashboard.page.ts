@@ -19,6 +19,7 @@ import {
   IonGrid,
   IonHeader,
   IonIcon,
+  IonList,
   IonRow,
   IonSpinner,
   IonTitle,
@@ -49,6 +50,8 @@ import {
   EventsRepository,
   RealtimeService,
   RsvpCounts,
+  RsvpLogEntry,
+  RsvpLogRepository,
   TABLES_ENABLED,
   TasksRepository,
   ThemeService,
@@ -58,7 +61,7 @@ import {
   tasksCardText,
   toBogotaDateInput,
 } from '../../../core';
-import { EmptyStateComponent } from '../../../shared';
+import { EmptyStateComponent, RsvpLogItemComponent } from '../../../shared';
 
 const DAY_MONTH_FORMATTER = new Intl.DateTimeFormat('es-CO', {
   day: 'numeric',
@@ -95,7 +98,9 @@ function formatDayMonthBogota(iso: string): string {
     IonGrid,
     IonRow,
     IonCol,
+    IonList,
     EmptyStateComponent,
+    RsvpLogItemComponent,
   ],
 })
 export class EventDashboardPage implements ViewWillEnter, ViewWillLeave {
@@ -104,6 +109,7 @@ export class EventDashboardPage implements ViewWillEnter, ViewWillLeave {
   private readonly budgetRepo = inject(BudgetRepository);
   private readonly tasksRepo = inject(TasksRepository);
   private readonly arrivalSession = inject(ArrivalSessionService);
+  private readonly rsvpLogRepo = inject(RsvpLogRepository);
   private readonly realtime = inject(RealtimeService);
   private readonly themeService = inject(ThemeService);
   private readonly router = inject(Router);
@@ -131,6 +137,12 @@ export class EventDashboardPage implements ViewWillEnter, ViewWillLeave {
   });
   readonly budgetSummaryText = signal<string | null>(null);
   readonly tasksSummaryText = signal<string | null>(null);
+  readonly recentRsvpEntries = signal<RsvpLogEntry[]>([]);
+  readonly recentRsvpTotal = signal<number>(0);
+  readonly recentRsvpLoading = signal<boolean>(true);
+  readonly recentRsvpError = signal<boolean>(false);
+  readonly now = signal<Date>(new Date());
+  private nowTimer: ReturnType<typeof setInterval> | null = null;
   private readonly initialLoading = signal<boolean>(true);
 
   readonly loading = computed<boolean>(
@@ -190,6 +202,10 @@ export class EventDashboardPage implements ViewWillEnter, ViewWillLeave {
       checkboxOutline,
       qrCodeOutline,
     });
+
+    this.destroyRef.onDestroy(() => {
+      this.stopNowTimer();
+    });
   }
 
   ionViewWillEnter(): void {
@@ -205,7 +221,12 @@ export class EventDashboardPage implements ViewWillEnter, ViewWillLeave {
         arrivedUnconfirmed: 0,
         arrivedTotal: 0,
       });
+      this.recentRsvpEntries.set([]);
+      this.recentRsvpTotal.set(0);
+      this.recentRsvpLoading.set(true);
+      this.recentRsvpError.set(false);
     }
+    this.startNowTimer();
     this.initialLoading.set(true);
     void this.loadDashboard(eventId, true);
     void this.arrivalSession.prefetch(eventId);
@@ -213,7 +234,7 @@ export class EventDashboardPage implements ViewWillEnter, ViewWillLeave {
     this.stopRealtime?.();
     this.stopRealtime = this.realtime.watch(
       eventId,
-      ['events', 'guests', 'tasks'],
+      ['events', 'guests', 'tasks', 'rsvp_log'],
       () => {
         void this.loadDashboard(this.id(), false);
       },
@@ -224,6 +245,7 @@ export class EventDashboardPage implements ViewWillEnter, ViewWillLeave {
   ionViewWillLeave(): void {
     this.stopRealtime?.();
     this.stopRealtime = null;
+    this.stopNowTimer();
   }
 
   async goBackToEvents(): Promise<void> {
@@ -235,10 +257,45 @@ export class EventDashboardPage implements ViewWillEnter, ViewWillLeave {
     await this.loadDashboard(this.id(), true);
   }
 
+  async retryRecentRsvp(): Promise<void> {
+    this.recentRsvpLoading.set(true);
+    this.recentRsvpError.set(false);
+    await this.loadRecentRsvp(this.id());
+  }
+
+  private startNowTimer(): void {
+    this.stopNowTimer();
+    this.now.set(new Date());
+    this.nowTimer = setInterval(() => {
+      this.now.set(new Date());
+    }, 60_000);
+  }
+
+  private stopNowTimer(): void {
+    if (this.nowTimer !== null) {
+      clearInterval(this.nowTimer);
+      this.nowTimer = null;
+    }
+  }
+
+  private async loadRecentRsvp(eventId: string): Promise<void> {
+    try {
+      const page = await this.rsvpLogRepo.list(eventId, { limit: 5, offset: 0 });
+      this.recentRsvpEntries.set(page.items);
+      this.recentRsvpTotal.set(page.total);
+      this.recentRsvpError.set(false);
+    } catch {
+      this.recentRsvpError.set(true);
+    } finally {
+      this.recentRsvpLoading.set(false);
+    }
+  }
+
   private async loadDashboard(
     eventId: string,
     isInitial: boolean,
   ): Promise<void> {
+    void this.loadRecentRsvp(eventId);
     try {
       const [, attendanceResult] = await Promise.allSettled([
         this.eventContext.load(eventId, { force: isInitial }),

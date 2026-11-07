@@ -1,0 +1,44 @@
+.page-container {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: var(--space-md);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+}
+
+.totals-label {
+  margin: 0;
+  padding-inline: var(--space-xs);
+  color: var(--ion-color-medium);
+}
+
+.rsvp-list-card {
+  margin: 0;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-card);
+  background: var(--ion-card-background);
+
+  ion-list {
+    padding: 0;
+    background: transparent;
+  }
+}
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-xl) var(--space-md);
+  gap: var(--space-sm);
+
+  .loading-text {
+    margin: 0;
+    color: var(--ion-color-medium);
+  }
+}
+
+.state-container {
+  padding: var(--space-lg) var(--space-md);
+}

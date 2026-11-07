@@ -1,0 +1,59 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button
+        [defaultHref]="'/eventos/' + id() + '/panel'"
+        text=""
+        aria-label="Volver al panel"
+      ></ion-back-button>
+    </ion-buttons>
+    <ion-title>Respuestas</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="content-list">
+  @if (loading() && entries().length === 0 && !error()) {
+    <div class="loading-state" role="status" aria-live="polite">
+      <ion-spinner name="crescent" color="primary"></ion-spinner>
+      <p class="text-body loading-text">Cargando respuestas...</p>
+    </div>
+  } @else if (error(); as errorMsg) {
+    <div class="state-container">
+      <app-empty-state
+        [message]="errorMsg"
+        actionLabel="Reintentar"
+        (action)="retryLoad()"
+      />
+    </div>
+  } @else if (total() === 0) {
+    <div class="state-container">
+      <app-empty-state
+        message="Todavía nadie ha respondido."
+      />
+    </div>
+  } @else {
+    <div #listStart class="page-container">
+      <p class="text-label totals-label">{{ totalText() }}</p>
+
+      <ion-card class="rsvp-list-card">
+        <ion-list lines="full">
+          @for (entry of entries(); track entry.id) {
+            <app-rsvp-log-item
+              [entry]="entry"
+              [now]="now()"
+              [link]="['/eventos', id(), 'invitaciones', entry.invitation_id]"
+            />
+          }
+        </ion-list>
+      </ion-card>
+
+      <app-pagination
+        label="Paginación de respuestas"
+        [page]="page()"
+        [totalPages]="totalPages()"
+        (previous)="goToPreviousPage()"
+        (next)="goToNextPage()"
+      />
+    </div>
+  }
+</ion-content>

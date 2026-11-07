@@ -7,7 +7,8 @@ export type RealtimeTable =
   | 'guests'
   | 'gifts'
   | 'gift_reservations'
-  | 'tasks';
+  | 'tasks'
+  | 'rsvp_log';
 
 const DEBOUNCE_MS = 300;
 let channelCounter = 0;

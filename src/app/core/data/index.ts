@@ -4,5 +4,6 @@ export * from './events.repository';
 export * from './gifts.repository';
 export * from './guest-api.service';
 export * from './invitations.repository';
+export * from './rsvp-log.repository';
 export * from './tasks.repository';
 export * from './team-profiles.repository';

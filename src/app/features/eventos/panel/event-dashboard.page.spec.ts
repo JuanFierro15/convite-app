@@ -11,6 +11,8 @@ import {
   EventRow,
   EventsRepository,
   RealtimeService,
+  RsvpLogEntry,
+  RsvpLogRepository,
   TaskRow,
   TasksRepository,
   formatCop,
@@ -89,6 +91,9 @@ describe('EventDashboardPage - Arrivals & Attendance', () => {
   let mockTasksRepo: {
     list: ReturnType<typeof vi.fn>;
   };
+  let mockRsvpLogRepo: {
+    list: ReturnType<typeof vi.fn>;
+  };
   let mockRealtime: {
     watch: ReturnType<typeof vi.fn>;
   };
@@ -114,6 +119,9 @@ describe('EventDashboardPage - Arrivals & Attendance', () => {
     mockTasksRepo = {
       list: vi.fn().mockResolvedValue([]),
     };
+    mockRsvpLogRepo = {
+      list: vi.fn().mockResolvedValue({ total: 0, items: [] }),
+    };
     mockRealtime = {
       watch: vi.fn().mockReturnValue(() => {}),
     };
@@ -126,6 +134,7 @@ describe('EventDashboardPage - Arrivals & Attendance', () => {
         { provide: EventsRepository, useValue: mockEventsRepo },
         { provide: BudgetRepository, useValue: mockBudgetRepo },
         { provide: TasksRepository, useValue: mockTasksRepo },
+        { provide: RsvpLogRepository, useValue: mockRsvpLogRepo },
         { provide: ArrivalSessionService, useValue: mockArrivalSession },
         { provide: RealtimeService, useValue: mockRealtime },
       ],
@@ -438,11 +447,11 @@ describe('EventDashboardPage - Arrivals & Attendance', () => {
     expect(toastSpy).not.toHaveBeenCalled();
   });
 
-  it('includes tasks in realtime watch', () => {
+  it('includes tasks and rsvp_log in realtime watch', () => {
     component.ionViewWillEnter();
     expect(mockRealtime.watch).toHaveBeenCalledWith(
       'event-123',
-      ['events', 'guests', 'tasks'],
+      ['events', 'guests', 'tasks', 'rsvp_log'],
       expect.any(Function),
       expect.anything(),
     );
@@ -500,5 +509,109 @@ describe('EventDashboardPage - Arrivals & Attendance', () => {
     expect(mockEventContext.clear).toHaveBeenCalled();
     expect(component.budgetSummaryText()).toBeNull();
     expect(component.tasksSummaryText()).toBeNull();
+  });
+
+  describe('Recent RSVP Section', () => {
+    function makeMockRsvpEntry(id: string, name: string): RsvpLogEntry {
+      return {
+        id,
+        invitation_id: `inv-${id}`,
+        guest_id: `guest-${id}`,
+        guest_name: name,
+        group_name: `Grupo ${name}`,
+        invitation_kind: 'group',
+        previous_rsvp: 'pending',
+        rsvp: 'accepted',
+        source: 'guest',
+        actor_name: null,
+        created_at: '2026-11-07T14:50:00-05:00',
+      };
+    }
+
+    it('renders up to 5 recent rsvps and "Ver todas (N)" button pointing to /eventos/{id}/respuestas', async () => {
+      const items = [
+        makeMockRsvpEntry('1', 'Persona 1'),
+        makeMockRsvpEntry('2', 'Persona 2'),
+        makeMockRsvpEntry('3', 'Persona 3'),
+        makeMockRsvpEntry('4', 'Persona 4'),
+        makeMockRsvpEntry('5', 'Persona 5'),
+      ];
+      mockRsvpLogRepo.list.mockResolvedValue({ total: 12, items });
+
+      component.ionViewWillEnter();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(mockRsvpLogRepo.list).toHaveBeenCalledWith('event-123', { limit: 5, offset: 0 });
+
+      const itemElements = fixture.debugElement.queryAll(By.css('app-rsvp-log-item'));
+      expect(itemElements).toHaveLength(5);
+
+      const viewAllBtn = fixture.debugElement.query(
+        By.css('.recent-rsvp-card ion-button[expand="block"]'),
+      );
+      expect(viewAllBtn).toBeTruthy();
+      expect(viewAllBtn.nativeElement.textContent).toContain('Ver todas (12)');
+      const routerLinkInstance = viewAllBtn.injector.get(RouterLink);
+      expect(routerLinkInstance.urlTree?.toString()).toBe('/eventos/event-123/respuestas');
+    });
+
+    it('renders empty message when total === 0 and does not render "Ver todas"', async () => {
+      mockRsvpLogRepo.list.mockResolvedValue({ total: 0, items: [] });
+
+      component.ionViewWillEnter();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const itemElements = fixture.debugElement.queryAll(By.css('app-rsvp-log-item'));
+      expect(itemElements).toHaveLength(0);
+
+      const emptyText = fixture.debugElement.query(By.css('.recent-rsvp-card p.text-body'));
+      expect(emptyText?.nativeElement.textContent).toContain('Todavía nadie ha respondido.');
+
+      const viewAllBtn = fixture.debugElement.query(
+        By.css('.recent-rsvp-card ion-button[expand="block"]'),
+      );
+      expect(viewAllBtn).toBeNull();
+    });
+
+    it('displays error and "Reintentar" button without breaking the rest of dashboard when rsvp load fails', async () => {
+      mockRsvpLogRepo.list.mockRejectedValue(new Error('Connection failed'));
+
+      component.ionViewWillEnter();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const errorText = fixture.debugElement.query(By.css('.recent-rsvp-card p.text-body'));
+      expect(errorText?.nativeElement.textContent).toContain('No pudimos cargar las respuestas.');
+
+      const retryBtn = fixture.debugElement.query(By.css('.recent-rsvp-card ion-button'));
+      expect(retryBtn?.nativeElement.textContent).toContain('Reintentar');
+
+      expect(fixture.nativeElement.textContent).toContain('Resumen de asistencia');
+      expect(component.counts().total).toBe(40);
+
+      mockRsvpLogRepo.list.mockResolvedValue({
+        total: 1,
+        items: [makeMockRsvpEntry('1', 'Persona 1')],
+      });
+      await component.retryRecentRsvp();
+      fixture.detectChanges();
+
+      expect(mockRsvpLogRepo.list).toHaveBeenCalledTimes(2);
+      expect(component.recentRsvpEntries()).toHaveLength(1);
+    });
+
+    it('clears previous event recent rsvps when changing event on enter', () => {
+      component.recentRsvpEntries.set([makeMockRsvpEntry('1', 'Persona 1')]);
+      component.recentRsvpTotal.set(1);
+      mockEventContext.event.set(mockEvent);
+
+      fixture.componentRef.setInput('id', 'event-999');
+      component.ionViewWillEnter();
+
+      expect(component.recentRsvpEntries()).toEqual([]);
+      expect(component.recentRsvpTotal()).toBe(0);
+    });
   });
 });

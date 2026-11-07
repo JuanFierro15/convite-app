@@ -66,6 +66,12 @@ export const routes: Routes = [
       ),
   },
   {
+    path: 'eventos/:id/respuestas',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/respuestas/lista/rsvp-log.page').then((m) => m.RsvpLogPage),
+  },
+  {
     path: 'eventos/:id/regalos',
     canActivate: [authGuard, roleGuard],
     loadComponent: () =>

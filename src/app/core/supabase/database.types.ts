@@ -435,6 +435,64 @@ export type Database = {
           },
         ]
       }
+      rsvp_log: {
+        Row: {
+          actor_id: string | null
+          created_at: string
+          event_id: string
+          guest_id: string
+          id: string
+          invitation_id: string
+          previous_rsvp: string | null
+          rsvp: string
+          source: string
+        }
+        Insert: {
+          actor_id?: string | null
+          created_at?: string
+          event_id: string
+          guest_id: string
+          id?: string
+          invitation_id: string
+          previous_rsvp?: string | null
+          rsvp: string
+          source: string
+        }
+        Update: {
+          actor_id?: string | null
+          created_at?: string
+          event_id?: string
+          guest_id?: string
+          id?: string
+          invitation_id?: string
+          previous_rsvp?: string | null
+          rsvp?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "rsvp_log_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rsvp_log_guest_id_fkey"
+            columns: ["guest_id"]
+            isOneToOne: false
+            referencedRelation: "guests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "rsvp_log_invitation_id_fkey"
+            columns: ["invitation_id"]
+            isOneToOne: false
+            referencedRelation: "invitations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tasks: {
         Row: {
           assignee_profile_id: string | null
@@ -583,6 +641,10 @@ export type Database = {
       }
       get_gifts: { Args: { p_code: string }; Returns: Json }
       get_invitation: { Args: { p_code: string }; Returns: Json }
+      list_rsvp_log: {
+        Args: { p_event_id: string; p_limit?: number; p_offset?: number }
+        Returns: Json
+      }
       record_arrivals: {
         Args: { p_arrivals: Json; p_event_id: string }
         Returns: Json

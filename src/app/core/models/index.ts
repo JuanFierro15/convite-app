@@ -3,6 +3,7 @@ export * from './events';
 export * from './gifts';
 export * from './guest';
 export * from './invitations';
+export * from './rsvp-log';
 export * from './tasks';
 export * from './team-profiles';
 export type { TaskExpenseLink } from './tasks';
