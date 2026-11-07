@@ -2,10 +2,12 @@ import {
   ChangeDetectionStrategy,
   Component,
   DestroyRef,
+  ElementRef,
   computed,
   inject,
   input,
   signal,
+  viewChild,
 } from '@angular/core';
 import { Router, RouterLink } from '@angular/router';
 import {
@@ -51,15 +53,18 @@ import {
   filterTasks,
   formatCop,
   groupTasks,
+  paginate,
   shouldAskToRegisterPayment,
   taskDoneLabel,
   taskDueLabel,
   toBogotaDateInput,
 } from '../../../core';
-import { EmptyStateComponent } from '../../../shared';
+import { EmptyStateComponent, PaginationComponent } from '../../../shared';
 import { createDiscardGuard } from '../../invitaciones/formulario/discard-guard';
 import { openPaymentForm } from '../../presupuesto/formularios/payment-form.component';
 import { TaskFormComponent } from '../formulario/task-form.component';
+
+export const TASKS_PAGE_SIZE = 10;
 
 @Component({
   selector: 'app-tasks',
@@ -83,6 +88,7 @@ import { TaskFormComponent } from '../formulario/task-form.component';
     IonSelectOption,
     IonSpinner,
     EmptyStateComponent,
+    PaginationComponent,
   ],
 })
 export class TasksPage implements ViewWillEnter, ViewWillLeave {
@@ -111,6 +117,11 @@ export class TasksPage implements ViewWillEnter, ViewWillLeave {
   readonly selectedFilter = signal<TaskProfileFilter>('all');
   readonly showDone = signal<boolean>(false);
   readonly updatingTaskIds = signal<Set<string>>(new Set());
+  readonly currentPage = signal<number>(1);
+  readonly expandedTaskIds = signal<Set<string>>(new Set());
+
+  readonly content = viewChild(IonContent);
+  readonly taskListStart = viewChild<ElementRef<HTMLDivElement>>('taskListStart');
 
   private stopRealtime: (() => void) | null = null;
   private hasLoadedOnce = false;
@@ -152,6 +163,26 @@ export class TasksPage implements ViewWillEnter, ViewWillLeave {
     return groupTasks(this.filteredTasks(), this.today());
   });
 
+  readonly pagedPending = computed(() => {
+    const pending = [...this.groups().overdue, ...this.groups().upcoming];
+    return paginate(pending, this.currentPage(), TASKS_PAGE_SIZE);
+  });
+
+  readonly pagedGroups = computed(() => {
+    const overdueSet = new Set(this.groups().overdue.map((t) => t.id));
+    const pagedItems = this.pagedPending().items;
+    const overdue: TaskRow[] = [];
+    const upcoming: TaskRow[] = [];
+    for (const task of pagedItems) {
+      if (overdueSet.has(task.id)) {
+        overdue.push(task);
+      } else {
+        upcoming.push(task);
+      }
+    }
+    return { overdue, upcoming };
+  });
+
   constructor() {
     addIcons({
       add,
@@ -173,6 +204,8 @@ export class TasksPage implements ViewWillEnter, ViewWillLeave {
       this.profiles.set([]);
       this.links.set([]);
       this.canManage.set(false);
+      this.currentPage.set(1);
+      this.expandedTaskIds.set(new Set());
     }
 
     void this.initialize(eventId);
@@ -268,6 +301,17 @@ export class TasksPage implements ViewWillEnter, ViewWillLeave {
 
       this.hasLoadedOnce = true;
       this.error.set(null);
+      this.currentPage.set(this.pagedPending().page);
+      const existingTaskIds = new Set(this.tasks().map((t) => t.id));
+      this.expandedTaskIds.update((current) => {
+        const next = new Set<string>();
+        for (const taskId of current) {
+          if (existingTaskIds.has(taskId)) {
+            next.add(taskId);
+          }
+        }
+        return next;
+      });
     } catch (err) {
       const message =
         err instanceof Error && err.message ? err.message : 'No pudimos cargar las tareas.';
@@ -286,10 +330,75 @@ export class TasksPage implements ViewWillEnter, ViewWillLeave {
   onFilterChange(event: CustomEvent): void {
     const value = event.detail.value as TaskProfileFilter;
     this.selectedFilter.set(value);
+    this.currentPage.set(1);
   }
 
   toggleShowDone(): void {
     this.showDone.update((v) => !v);
+  }
+
+  toggleExpanded(taskId: string): void {
+    this.expandedTaskIds.update((current) => {
+      const next = new Set(current);
+      if (next.has(taskId)) {
+        next.delete(taskId);
+      } else {
+        next.add(taskId);
+      }
+      return next;
+    });
+  }
+
+  goToPreviousPage(): void {
+    const current = this.pagedPending().page;
+    if (current > 1) {
+      this.currentPage.set(current - 1);
+      this.scrollToTaskListStart();
+    }
+  }
+
+  goToNextPage(): void {
+    const { page, totalPages } = this.pagedPending();
+    if (page < totalPages) {
+      this.currentPage.set(page + 1);
+      this.scrollToTaskListStart();
+    }
+  }
+
+  private scrollToTaskListStart(): void {
+    if (typeof requestAnimationFrame === 'undefined') {
+      return;
+    }
+    requestAnimationFrame(async () => {
+      try {
+        const content = this.content();
+        const anchor = this.taskListStart()?.nativeElement;
+        if (!content || !anchor || typeof content.getScrollElement !== 'function') {
+          return;
+        }
+        const scrollEl = await content.getScrollElement();
+        if (
+          !scrollEl ||
+          typeof scrollEl.getBoundingClientRect !== 'function' ||
+          typeof anchor.getBoundingClientRect !== 'function'
+        ) {
+          return;
+        }
+        const anchorRect = anchor.getBoundingClientRect();
+        const scrollRect = scrollEl.getBoundingClientRect();
+        const y = Math.max(0, anchorRect.top - scrollRect.top + (scrollEl.scrollTop ?? 0) - 16);
+        const prefersReducedMotion =
+          typeof window !== 'undefined' &&
+          typeof window.matchMedia === 'function' &&
+          window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const duration = prefersReducedMotion ? 0 : 300;
+        if (typeof content.scrollToPoint === 'function') {
+          await content.scrollToPoint(0, y, duration);
+        }
+      } catch {
+        // En entornos sin soporte de scroll no hace nada.
+      }
+    });
   }
 
   isUpdating(taskId: string): boolean {
@@ -309,11 +418,6 @@ export class TasksPage implements ViewWillEnter, ViewWillLeave {
       return taskDoneLabel(task.done_at);
     }
     return taskDueLabel(task.due_date, this.today());
-  }
-
-  onSpaceKey(event: Event, task: TaskRow): void {
-    event.preventDefault();
-    void this.toggleTaskDone(task);
   }
 
   async toggleTaskDone(task: TaskRow): Promise<void> {
@@ -336,6 +440,7 @@ export class TasksPage implements ViewWillEnter, ViewWillLeave {
           : t,
       ),
     );
+    this.currentPage.set(this.pagedPending().page);
 
     this.updatingTaskIds.update((set) => new Set(set).add(task.id));
 
@@ -353,6 +458,7 @@ export class TasksPage implements ViewWillEnter, ViewWillLeave {
             : t,
         ),
       );
+      this.currentPage.set(this.pagedPending().page);
 
       // Al marcar con éxito como propietario: verificar si pregunta pago
       if (willBeDone && this.isOwner()) {
@@ -370,6 +476,7 @@ export class TasksPage implements ViewWillEnter, ViewWillLeave {
     } catch (err) {
       // Revertir optimismo
       this.tasks.set(originalTasks);
+      this.currentPage.set(this.pagedPending().page);
       const message =
         err instanceof Error && err.message ? err.message : 'Error al actualizar la tarea';
       await this.showToast(message, 'danger');

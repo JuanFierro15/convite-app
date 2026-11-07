@@ -7,7 +7,6 @@
   --padding-start: var(--space-md);
   --padding-end: var(--space-md);
   --padding-top: var(--space-sm);
-  --padding-bottom: var(--space-xl);
 }
 
 .loading-state {
@@ -112,6 +111,12 @@
   }
 }
 
+.task-list-anchor {
+  height: 0;
+  margin: 0;
+  padding: 0;
+}
+
 .tasks-list {
   display: flex;
   flex-direction: column;
@@ -133,26 +138,33 @@
   display: flex;
   align-items: center;
   min-height: 52px;
-  padding: var(--space-sm) var(--space-md);
+  padding: var(--space-xs) var(--space-md);
   gap: var(--space-sm);
+}
+
+.task-checkbox-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
   cursor: pointer;
-  user-select: none;
   -webkit-tap-highlight-color: transparent;
+
+  &:disabled {
+    cursor: default;
+  }
 
   &:focus-visible {
     outline: 2px solid var(--ion-color-primary);
     outline-offset: 2px;
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-sm);
   }
-}
-
-.task-checkbox-box {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 24px;
-  height: 24px;
-  flex-shrink: 0;
 }
 
 .task-checkbox-icon {
@@ -164,12 +176,60 @@
   }
 }
 
-.task-info {
+.task-info-btn {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-xs);
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 44px;
+  padding: var(--space-xs) 0;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  -webkit-tap-highlight-color: transparent;
+
+  &:focus-visible {
+    outline: 2px solid var(--ion-color-primary);
+    outline-offset: 2px;
+    border-radius: var(--radius-sm);
+  }
+}
+
+.task-info-content {
   display: flex;
   flex-direction: column;
   gap: 2px;
-  flex: 1;
+  flex: 1 1 0;
   min-width: 0;
+}
+
+.task-expand-icon {
+  font-size: 1.125rem;
+  color: var(--ion-color-medium);
+  flex-shrink: 0;
+}
+
+.task-detail {
+  padding: 0 var(--space-md) var(--space-sm) calc(var(--space-md) + 44px + var(--space-sm));
+  line-height: 1.4;
+
+  &__text {
+    margin: 0;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+    color: var(--ion-text-color);
+  }
+
+  &__empty {
+    margin: 0;
+    font-style: italic;
+    color: var(--ion-color-medium-shade);
+  }
 }
 
 .task-title {

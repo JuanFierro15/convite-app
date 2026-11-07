@@ -496,4 +496,268 @@ describe('TasksPage', () => {
     component.ionViewWillLeave();
     expect(mockStopRealtime).toHaveBeenCalled();
   });
+
+  it('tocar .task-info-btn no llama a toggleTaskDone y muestra la descripción; otra vez la oculta; aria-expanded cambia', async () => {
+    const taskWithNote: TaskRow = {
+      ...mockTasks[0],
+      note: 'Esta es la descripción detallada de la tarea.',
+    };
+    mockTasksRepo.list.mockResolvedValue([taskWithNote]);
+
+    component.today.set('2026-11-05');
+    component.ionViewWillEnter();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const toggleSpy = vi.spyOn(component, 'toggleTaskDone');
+    const infoBtn = fixture.debugElement.query(By.css('.task-info-btn'));
+    expect(infoBtn).not.toBeNull();
+    expect(infoBtn.attributes['aria-expanded']).toBe('false');
+    expect(fixture.debugElement.query(By.css('.task-detail'))).toBeNull();
+
+    // Primer click: despliega
+    infoBtn.nativeElement.click();
+    fixture.detectChanges();
+
+    expect(toggleSpy).not.toHaveBeenCalled();
+    expect(infoBtn.attributes['aria-expanded']).toBe('true');
+    const detail = fixture.debugElement.query(By.css('.task-detail'));
+    expect(detail).not.toBeNull();
+    expect(detail.nativeElement.textContent).toContain('Esta es la descripción detallada de la tarea.');
+
+    // Segundo click: oculta
+    infoBtn.nativeElement.click();
+    fixture.detectChanges();
+
+    expect(toggleSpy).not.toHaveBeenCalled();
+    expect(infoBtn.attributes['aria-expanded']).toBe('false');
+    expect(fixture.debugElement.query(By.css('.task-detail'))).toBeNull();
+  });
+
+  it('una tarea con note: null muestra "Sin descripción."', async () => {
+    const taskWithoutNote: TaskRow = {
+      ...mockTasks[0],
+      note: null,
+    };
+    mockTasksRepo.list.mockResolvedValue([taskWithoutNote]);
+
+    component.today.set('2026-11-05');
+    component.ionViewWillEnter();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const infoBtn = fixture.debugElement.query(By.css('.task-info-btn'));
+    infoBtn.nativeElement.click();
+    fixture.detectChanges();
+
+    const detail = fixture.debugElement.query(By.css('.task-detail'));
+    expect(detail).not.toBeNull();
+    expect(detail.nativeElement.textContent).toContain('Sin descripción.');
+  });
+
+  it('tocar .task-checkbox-btn llama a toggleTaskDone una sola vez y no despliega la descripción', async () => {
+    component.today.set('2026-11-05');
+    component.ionViewWillEnter();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const toggleSpy = vi.spyOn(component, 'toggleTaskDone');
+    const checkboxBtn = fixture.debugElement.query(By.css('.task-checkbox-btn'));
+    expect(checkboxBtn).not.toBeNull();
+
+    checkboxBtn.nativeElement.click();
+    fixture.detectChanges();
+
+    expect(toggleSpy).toHaveBeenCalledTimes(1);
+    expect(component.expandedTaskIds().size).toBe(0);
+    expect(fixture.debugElement.query(By.css('.task-detail'))).toBeNull();
+  });
+
+  it('un ayudante también puede desplegar la descripción', async () => {
+    mockEventContext.isOwner.set(false);
+    mockEventContext.role.set('helper');
+
+    const taskWithNote: TaskRow = {
+      ...mockTasks[0],
+      note: 'Instrucciones para ayudantes.',
+    };
+    mockTasksRepo.list.mockResolvedValue([taskWithNote]);
+
+    component.today.set('2026-11-05');
+    component.ionViewWillEnter();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    const infoBtn = fixture.debugElement.query(By.css('.task-info-btn'));
+    expect(infoBtn).not.toBeNull();
+
+    infoBtn.nativeElement.click();
+    fixture.detectChanges();
+
+    const detail = fixture.debugElement.query(By.css('.task-detail'));
+    expect(detail).not.toBeNull();
+    expect(detail.nativeElement.textContent).toContain('Instrucciones para ayudantes.');
+  });
+
+  it('con 12 tareas pendientes (3 vencidas y 9 próximas): página 1 muestra 10 filas con ambos títulos, página 2 muestra 2 filas y solo Próximas, con "Página 1 de 2"', async () => {
+    const overdueTasks: TaskRow[] = Array.from({ length: 3 }, (_, i) => ({
+      id: `task-ov-${i + 1}`,
+      event_id: 'evt-1',
+      title: `Tarea vencida ${i + 1}`,
+      note: null,
+      assignee_profile_id: null,
+      due_date: '2026-11-01',
+      done_at: null,
+      done_by: null,
+      created_at: '2026-10-01T00:00:00Z',
+      updated_at: '2026-10-01T00:00:00Z',
+    }));
+
+    const upcomingTasks: TaskRow[] = Array.from({ length: 9 }, (_, i) => ({
+      id: `task-up-${i + 1}`,
+      event_id: 'evt-1',
+      title: `Tarea próxima ${i + 1}`,
+      note: null,
+      assignee_profile_id: null,
+      due_date: '2026-11-20',
+      done_at: null,
+      done_by: null,
+      created_at: '2026-10-01T00:00:00Z',
+      updated_at: '2026-10-01T00:00:00Z',
+    }));
+
+    mockTasksRepo.list.mockResolvedValue([...overdueTasks, ...upcomingTasks]);
+
+    component.today.set('2026-11-05');
+    component.ionViewWillEnter();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    // Página 1: 3 vencidas + 7 próximas = 10 filas pendientes
+    const page1Status = fixture.debugElement.query(By.css('.pagination__status'));
+    expect(page1Status).not.toBeNull();
+    expect(page1Status.nativeElement.textContent.trim()).toBe('Página 1 de 2');
+
+    const overdueHeadingP1 = fixture.debugElement.query(By.css('#overdue-heading'));
+    const upcomingHeadingP1 = fixture.debugElement.query(By.css('#upcoming-heading'));
+    expect(overdueHeadingP1).not.toBeNull();
+    expect(upcomingHeadingP1).not.toBeNull();
+
+    let overdueRows = fixture.debugElement.queryAll(
+      By.css('section[aria-labelledby="overdue-heading"] .task-row'),
+    );
+    let upcomingRows = fixture.debugElement.queryAll(
+      By.css('section[aria-labelledby="upcoming-heading"] .task-row'),
+    );
+    expect(overdueRows.length).toBe(3);
+    expect(upcomingRows.length).toBe(7);
+
+    // Navegamos a Página 2: 2 próximas restantes
+    component.goToNextPage();
+    fixture.detectChanges();
+
+    expect(page1Status.nativeElement.textContent.trim()).toBe('Página 2 de 2');
+
+    const overdueHeadingP2 = fixture.debugElement.query(By.css('#overdue-heading'));
+    const upcomingHeadingP2 = fixture.debugElement.query(By.css('#upcoming-heading'));
+    expect(overdueHeadingP2).toBeNull();
+    expect(upcomingHeadingP2).not.toBeNull();
+
+    upcomingRows = fixture.debugElement.queryAll(
+      By.css('section[aria-labelledby="upcoming-heading"] .task-row'),
+    );
+    expect(upcomingRows.length).toBe(2);
+  });
+
+  it('las tareas hechas aparecen fuera de la paginación en todas las páginas', async () => {
+    const overdueTasks: TaskRow[] = Array.from({ length: 3 }, (_, i) => ({
+      id: `task-ov-${i + 1}`,
+      event_id: 'evt-1',
+      title: `Tarea vencida ${i + 1}`,
+      note: null,
+      assignee_profile_id: null,
+      due_date: '2026-11-01',
+      done_at: null,
+      done_by: null,
+      created_at: '2026-10-01T00:00:00Z',
+      updated_at: '2026-10-01T00:00:00Z',
+    }));
+
+    const upcomingTasks: TaskRow[] = Array.from({ length: 9 }, (_, i) => ({
+      id: `task-up-${i + 1}`,
+      event_id: 'evt-1',
+      title: `Tarea próxima ${i + 1}`,
+      note: null,
+      assignee_profile_id: null,
+      due_date: '2026-11-20',
+      done_at: null,
+      done_by: null,
+      created_at: '2026-10-01T00:00:00Z',
+      updated_at: '2026-10-01T00:00:00Z',
+    }));
+
+    const doneTask: TaskRow = {
+      id: 'task-done-always',
+      event_id: 'evt-1',
+      title: 'Tarea hecha de prueba',
+      note: null,
+      assignee_profile_id: null,
+      due_date: '2026-10-10',
+      done_at: '2026-10-10T10:00:00Z',
+      done_by: 'user-1',
+      created_at: '2026-10-01T00:00:00Z',
+      updated_at: '2026-10-10T00:00:00Z',
+    };
+
+    mockTasksRepo.list.mockResolvedValue([...overdueTasks, ...upcomingTasks, doneTask]);
+
+    component.today.set('2026-11-05');
+    component.ionViewWillEnter();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    // En página 1
+    component.showDone.set(true);
+    fixture.detectChanges();
+
+    let doneSection = fixture.debugElement.query(By.css('.tasks-group--done'));
+    expect(doneSection).not.toBeNull();
+    expect(doneSection.nativeElement.textContent).toContain('Tarea hecha de prueba');
+
+    // En página 2
+    component.goToNextPage();
+    fixture.detectChanges();
+
+    doneSection = fixture.debugElement.query(By.css('.tasks-group--done'));
+    expect(doneSection).not.toBeNull();
+    expect(doneSection.nativeElement.textContent).toContain('Tarea hecha de prueba');
+  });
+
+  it('cambiar el filtro vuelve a la página 1', async () => {
+    const upcomingTasks: TaskRow[] = Array.from({ length: 15 }, (_, i) => ({
+      id: `task-up-${i + 1}`,
+      event_id: 'evt-1',
+      title: `Tarea próxima ${i + 1}`,
+      note: null,
+      assignee_profile_id: i === 0 ? 'prof-1' : 'prof-2',
+      due_date: '2026-11-20',
+      done_at: null,
+      done_by: null,
+      created_at: '2026-10-01T00:00:00Z',
+      updated_at: '2026-10-01T00:00:00Z',
+    }));
+
+    mockTasksRepo.list.mockResolvedValue(upcomingTasks);
+
+    component.today.set('2026-11-05');
+    component.ionViewWillEnter();
+    await fixture.whenStable();
+    fixture.detectChanges();
+
+    component.goToNextPage();
+    expect(component.currentPage()).toBe(2);
+
+    component.onFilterChange(new CustomEvent('ionChange', { detail: { value: 'prof-1' } }));
+    expect(component.currentPage()).toBe(1);
+  });
 });

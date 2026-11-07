@@ -11,7 +11,7 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding tasks-content">
+<ion-content class="ion-padding tasks-content content-list">
   <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
     <ion-refresher-content></ion-refresher-content>
   </ion-refresher>
@@ -90,51 +90,67 @@
           <p class="empty-filter-text text-body">No hay tareas de este perfil.</p>
         </div>
       } @else {
+        <div #taskListStart class="task-list-anchor"></div>
+
         <!-- Grupo 1: Vencidas -->
-        @if (groups().overdue.length > 0) {
+        @if (pagedGroups().overdue.length > 0) {
           <section class="tasks-group" aria-labelledby="overdue-heading">
             <h2 id="overdue-heading" class="group-heading group-heading--danger text-section">
               Vencidas
             </h2>
             <div class="tasks-list">
-              @for (task of groups().overdue; track task.id) {
+              @for (task of pagedGroups().overdue; track task.id) {
                 <div
                   class="task-row-container"
                   [class.task-row-container--updating]="isUpdating(task.id)"
                 >
-                  <div
-                    role="checkbox"
-                    class="task-row"
-                    [attr.aria-checked]="task.done_at !== null"
-                    [attr.aria-disabled]="isUpdating(task.id)"
-                    tabindex="0"
-                    (click)="toggleTaskDone(task)"
-                    (keydown.enter)="toggleTaskDone(task)"
-                    (keydown.space)="onSpaceKey($event, task)"
-                  >
-                    <div class="task-checkbox-box" aria-hidden="true">
+                  <div class="task-row">
+                    <button
+                      type="button"
+                      role="checkbox"
+                      class="task-checkbox-btn"
+                      [attr.aria-checked]="task.done_at !== null"
+                      [attr.aria-disabled]="isUpdating(task.id)"
+                      [disabled]="isUpdating(task.id)"
+                      [attr.aria-label]="task.done_at !== null ? 'Marcar como pendiente: ' + task.title : 'Marcar como hecha: ' + task.title"
+                      (click)="toggleTaskDone(task)"
+                    >
                       <ion-icon
                         [name]="task.done_at !== null ? 'checkbox' : 'square-outline'"
                         class="task-checkbox-icon"
                         [class.task-checkbox-icon--checked]="task.done_at !== null"
+                        aria-hidden="true"
                       ></ion-icon>
-                    </div>
+                    </button>
 
-                    <div class="task-info">
-                      <span
-                        class="task-title text-name"
-                        [class.task-title--done]="task.done_at !== null"
-                      >
-                        {{ task.title }}
-                      </span>
-                      <div class="task-meta text-label">
-                        <span class="task-assignee">{{ getAssigneeName(task.assignee_profile_id) }}</span>
-                        <span class="task-meta-dot" aria-hidden="true">·</span>
-                        <span class="task-date task-date--overdue">
-                          {{ getTaskDateLabel(task) }}
+                    <button
+                      type="button"
+                      class="task-info-btn"
+                      [attr.aria-expanded]="expandedTaskIds().has(task.id)"
+                      [attr.aria-controls]="'task-detail-' + task.id"
+                      (click)="toggleExpanded(task.id)"
+                    >
+                      <div class="task-info-content">
+                        <span
+                          class="task-title text-name"
+                          [class.task-title--done]="task.done_at !== null"
+                        >
+                          {{ task.title }}
                         </span>
+                        <div class="task-meta text-label">
+                          <span class="task-assignee">{{ getAssigneeName(task.assignee_profile_id) }}</span>
+                          <span class="task-meta-dot" aria-hidden="true">·</span>
+                          <span class="task-date task-date--overdue">
+                            {{ getTaskDateLabel(task) }}
+                          </span>
+                        </div>
                       </div>
-                    </div>
+                      <ion-icon
+                        [name]="expandedTaskIds().has(task.id) ? 'chevron-down-outline' : 'chevron-forward-outline'"
+                        class="task-expand-icon"
+                        aria-hidden="true"
+                      ></ion-icon>
+                    </button>
 
                     @if (isOwner()) {
                       <ion-button
@@ -148,6 +164,16 @@
                       </ion-button>
                     }
                   </div>
+
+                  @if (expandedTaskIds().has(task.id)) {
+                    <div class="task-detail" [id]="'task-detail-' + task.id">
+                      @if (task.note && task.note.trim().length > 0) {
+                        <p class="task-detail__text text-body">{{ task.note.trim() }}</p>
+                      } @else {
+                        <p class="task-detail__empty text-body">Sin descripción.</p>
+                      }
+                    </div>
+                  }
                 </div>
               }
             </div>
@@ -155,50 +181,64 @@
         }
 
         <!-- Grupo 2: Próximas -->
-        @if (groups().upcoming.length > 0) {
+        @if (pagedGroups().upcoming.length > 0) {
           <section class="tasks-group" aria-labelledby="upcoming-heading">
             <h2 id="upcoming-heading" class="group-heading text-section">
               Próximas
             </h2>
             <div class="tasks-list">
-              @for (task of groups().upcoming; track task.id) {
+              @for (task of pagedGroups().upcoming; track task.id) {
                 <div
                   class="task-row-container"
                   [class.task-row-container--updating]="isUpdating(task.id)"
                 >
-                  <div
-                    role="checkbox"
-                    class="task-row"
-                    [attr.aria-checked]="task.done_at !== null"
-                    [attr.aria-disabled]="isUpdating(task.id)"
-                    tabindex="0"
-                    (click)="toggleTaskDone(task)"
-                    (keydown.enter)="toggleTaskDone(task)"
-                    (keydown.space)="onSpaceKey($event, task)"
-                  >
-                    <div class="task-checkbox-box" aria-hidden="true">
+                  <div class="task-row">
+                    <button
+                      type="button"
+                      role="checkbox"
+                      class="task-checkbox-btn"
+                      [attr.aria-checked]="task.done_at !== null"
+                      [attr.aria-disabled]="isUpdating(task.id)"
+                      [disabled]="isUpdating(task.id)"
+                      [attr.aria-label]="task.done_at !== null ? 'Marcar como pendiente: ' + task.title : 'Marcar como hecha: ' + task.title"
+                      (click)="toggleTaskDone(task)"
+                    >
                       <ion-icon
                         [name]="task.done_at !== null ? 'checkbox' : 'square-outline'"
                         class="task-checkbox-icon"
                         [class.task-checkbox-icon--checked]="task.done_at !== null"
+                        aria-hidden="true"
                       ></ion-icon>
-                    </div>
+                    </button>
 
-                    <div class="task-info">
-                      <span
-                        class="task-title text-name"
-                        [class.task-title--done]="task.done_at !== null"
-                      >
-                        {{ task.title }}
-                      </span>
-                      <div class="task-meta text-label">
-                        <span class="task-assignee">{{ getAssigneeName(task.assignee_profile_id) }}</span>
-                        <span class="task-meta-dot" aria-hidden="true">·</span>
-                        <span class="task-date">
-                          {{ getTaskDateLabel(task) }}
+                    <button
+                      type="button"
+                      class="task-info-btn"
+                      [attr.aria-expanded]="expandedTaskIds().has(task.id)"
+                      [attr.aria-controls]="'task-detail-' + task.id"
+                      (click)="toggleExpanded(task.id)"
+                    >
+                      <div class="task-info-content">
+                        <span
+                          class="task-title text-name"
+                          [class.task-title--done]="task.done_at !== null"
+                        >
+                          {{ task.title }}
                         </span>
+                        <div class="task-meta text-label">
+                          <span class="task-assignee">{{ getAssigneeName(task.assignee_profile_id) }}</span>
+                          <span class="task-meta-dot" aria-hidden="true">·</span>
+                          <span class="task-date">
+                            {{ getTaskDateLabel(task) }}
+                          </span>
+                        </div>
                       </div>
-                    </div>
+                      <ion-icon
+                        [name]="expandedTaskIds().has(task.id) ? 'chevron-down-outline' : 'chevron-forward-outline'"
+                        class="task-expand-icon"
+                        aria-hidden="true"
+                      ></ion-icon>
+                    </button>
 
                     @if (isOwner()) {
                       <ion-button
@@ -212,11 +252,29 @@
                       </ion-button>
                     }
                   </div>
+
+                  @if (expandedTaskIds().has(task.id)) {
+                    <div class="task-detail" [id]="'task-detail-' + task.id">
+                      @if (task.note && task.note.trim().length > 0) {
+                        <p class="task-detail__text text-body">{{ task.note.trim() }}</p>
+                      } @else {
+                        <p class="task-detail__empty text-body">Sin descripción.</p>
+                      }
+                    </div>
+                  }
                 </div>
               }
             </div>
           </section>
         }
+
+        <app-pagination
+          label="Paginación de tareas"
+          [page]="pagedPending().page"
+          [totalPages]="pagedPending().totalPages"
+          (previous)="goToPreviousPage()"
+          (next)="goToNextPage()"
+        />
 
         <!-- Grupo 3: Hechas (N) -->
         @if (groups().done.length > 0) {
@@ -242,35 +300,49 @@
                     class="task-row-container"
                     [class.task-row-container--updating]="isUpdating(task.id)"
                   >
-                    <div
-                      role="checkbox"
-                      class="task-row"
-                      [attr.aria-checked]="task.done_at !== null"
-                      [attr.aria-disabled]="isUpdating(task.id)"
-                      tabindex="0"
-                      (click)="toggleTaskDone(task)"
-                      (keydown.enter)="toggleTaskDone(task)"
-                      (keydown.space)="onSpaceKey($event, task)"
-                    >
-                      <div class="task-checkbox-box" aria-hidden="true">
+                    <div class="task-row">
+                      <button
+                        type="button"
+                        role="checkbox"
+                        class="task-checkbox-btn"
+                        [attr.aria-checked]="task.done_at !== null"
+                        [attr.aria-disabled]="isUpdating(task.id)"
+                        [disabled]="isUpdating(task.id)"
+                        [attr.aria-label]="task.done_at !== null ? 'Marcar como pendiente: ' + task.title : 'Marcar como hecha: ' + task.title"
+                        (click)="toggleTaskDone(task)"
+                      >
                         <ion-icon
                           name="checkbox"
                           class="task-checkbox-icon task-checkbox-icon--checked"
+                          aria-hidden="true"
                         ></ion-icon>
-                      </div>
+                      </button>
 
-                      <div class="task-info">
-                        <span class="task-title task-title--done text-name">
-                          {{ task.title }}
-                        </span>
-                        <div class="task-meta text-label">
-                          <span class="task-assignee">{{ getAssigneeName(task.assignee_profile_id) }}</span>
-                          <span class="task-meta-dot" aria-hidden="true">·</span>
-                          <span class="task-date">
-                            {{ getTaskDateLabel(task) }}
+                      <button
+                        type="button"
+                        class="task-info-btn"
+                        [attr.aria-expanded]="expandedTaskIds().has(task.id)"
+                        [attr.aria-controls]="'task-detail-' + task.id"
+                        (click)="toggleExpanded(task.id)"
+                      >
+                        <div class="task-info-content">
+                          <span class="task-title task-title--done text-name">
+                            {{ task.title }}
                           </span>
+                          <div class="task-meta text-label">
+                            <span class="task-assignee">{{ getAssigneeName(task.assignee_profile_id) }}</span>
+                            <span class="task-meta-dot" aria-hidden="true">·</span>
+                            <span class="task-date">
+                              {{ getTaskDateLabel(task) }}
+                            </span>
+                          </div>
                         </div>
-                      </div>
+                        <ion-icon
+                          [name]="expandedTaskIds().has(task.id) ? 'chevron-down-outline' : 'chevron-forward-outline'"
+                          class="task-expand-icon"
+                          aria-hidden="true"
+                        ></ion-icon>
+                      </button>
 
                       @if (isOwner()) {
                         <ion-button
@@ -284,6 +356,16 @@
                         </ion-button>
                       }
                     </div>
+
+                    @if (expandedTaskIds().has(task.id)) {
+                      <div class="task-detail" [id]="'task-detail-' + task.id">
+                        @if (task.note && task.note.trim().length > 0) {
+                          <p class="task-detail__text text-body">{{ task.note.trim() }}</p>
+                        } @else {
+                          <p class="task-detail__empty text-body">Sin descripción.</p>
+                        }
+                      </div>
+                    }
                   </div>
                 }
               </div>
