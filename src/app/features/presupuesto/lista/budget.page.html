@@ -11,7 +11,7 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding">
+<ion-content class="ion-padding content-list">
   <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
     <ion-refresher-content></ion-refresher-content>
   </ion-refresher>
@@ -245,35 +245,13 @@
             }
           </div>
 
-          @if (pagedExpenses().totalPages > 1) {
-            <nav class="pagination" aria-label="Paginación de gastos">
-              <ion-button
-                fill="outline"
-                size="small"
-                class="pagination__button"
-                [disabled]="pagedExpenses().page <= 1"
-                aria-label="Página anterior"
-                (click)="goToPreviousPage()"
-              >
-                <ion-icon slot="start" name="chevron-back-outline" aria-hidden="true"></ion-icon>
-                Anterior
-              </ion-button>
-              <span class="text-label pagination__status" aria-live="polite">
-                Página {{ pagedExpenses().page }} de {{ pagedExpenses().totalPages }}
-              </span>
-              <ion-button
-                fill="outline"
-                size="small"
-                class="pagination__button"
-                [disabled]="pagedExpenses().page >= pagedExpenses().totalPages"
-                aria-label="Página siguiente"
-                (click)="goToNextPage()"
-              >
-                Siguiente
-                <ion-icon slot="end" name="chevron-forward-outline" aria-hidden="true"></ion-icon>
-              </ion-button>
-            </nav>
-          }
+          <app-pagination
+            label="Paginación de gastos"
+            [page]="pagedExpenses().page"
+            [totalPages]="pagedExpenses().totalPages"
+            (previous)="goToPreviousPage()"
+            (next)="goToNextPage()"
+          />
         }
       </div>
     </div>

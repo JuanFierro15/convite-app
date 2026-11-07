@@ -92,3 +92,8 @@ skills-lock.json
 .wrangler
 .dev.vars*
 !.dev.vars.example
+
+# ODD (seguimiento local de features)
+/odd/
+/.atl/
+/.codegraph/

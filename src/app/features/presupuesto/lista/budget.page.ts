@@ -65,11 +65,11 @@ import {
   paginate,
   paidTotal,
 } from '../../../core';
-import { EmptyStateComponent } from '../../../shared';
+import { EmptyStateComponent, PaginationComponent } from '../../../shared';
 import { createDiscardGuard } from '../../invitaciones/formulario/discard-guard';
 import { ExpenseFormComponent } from '../formularios/expense-form.component';
 
-export const EXPENSES_PAGE_SIZE = 10;
+export const EXPENSES_PAGE_SIZE = 6;
 export type ExpenseFilter = 'all' | 'to_pay' | 'paid';
 
 export function showsTaskDoneMark(expense: ExpenseWithPayments): boolean {
@@ -107,6 +107,7 @@ export function showsTaskDoneMark(expense: ExpenseWithPayments): boolean {
     IonItem,
     IonSpinner,
     EmptyStateComponent,
+    PaginationComponent,
   ],
 })
 export class BudgetPage implements ViewWillEnter, ViewWillLeave {
@@ -427,8 +428,13 @@ export class BudgetPage implements ViewWillEnter, ViewWillLeave {
         const anchorRect = anchor.getBoundingClientRect();
         const scrollRect = scrollEl.getBoundingClientRect();
         const y = Math.max(0, anchorRect.top - scrollRect.top + (scrollEl.scrollTop ?? 0) - 16);
+        const prefersReducedMotion =
+          typeof window !== 'undefined' &&
+          typeof window.matchMedia === 'function' &&
+          window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const duration = prefersReducedMotion ? 0 : 300;
         if (typeof content.scrollToPoint === 'function') {
-          await content.scrollToPoint(0, y, 300);
+          await content.scrollToPoint(0, y, duration);
         }
       } catch {
         // En entornos sin soporte de scroll no hace nada.

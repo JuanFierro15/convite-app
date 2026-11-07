@@ -55,7 +55,7 @@ import {
   RealtimeService,
   paginate,
 } from '../../../core';
-import { EmptyStateComponent } from '../../../shared';
+import { EmptyStateComponent, PaginationComponent } from '../../../shared';
 import { GiftFormComponent } from '../formulario/gift-form.component';
 
 export const GIFTS_PAGE_SIZE = 6;
@@ -87,6 +87,7 @@ export type GiftGroup = 'repeatable' | 'free' | 'unique' | 'suggestion' | 'envel
     IonFabButton,
     IonSpinner,
     EmptyStateComponent,
+    PaginationComponent,
   ],
 })
 export class GiftListPage implements ViewWillEnter {
@@ -324,8 +325,13 @@ export class GiftListPage implements ViewWillEnter {
           0,
           anchorRect.top - scrollRect.top + (scrollEl.scrollTop ?? 0) - 16,
         );
+        const prefersReducedMotion =
+          typeof window !== 'undefined' &&
+          typeof window.matchMedia === 'function' &&
+          window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const duration = prefersReducedMotion ? 0 : 300;
         if (typeof content.scrollToPoint === 'function') {
-          await content.scrollToPoint(0, y, 300);
+          await content.scrollToPoint(0, y, duration);
         }
       } catch {
         // En jsdom u otros entornos sin soporte de scroll, no hace nada.

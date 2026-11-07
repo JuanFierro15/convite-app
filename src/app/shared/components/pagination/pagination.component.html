@@ -1,0 +1,29 @@
+@if (totalPages() > 1) {
+  <nav class="pagination" [attr.aria-label]="label()">
+    <ion-button
+      fill="outline"
+      size="small"
+      class="pagination__button"
+      [disabled]="page() <= 1"
+      aria-label="Página anterior"
+      (click)="previous.emit()"
+    >
+      <ion-icon slot="start" name="chevron-back-outline" aria-hidden="true"></ion-icon>
+      Anterior
+    </ion-button>
+    <span class="text-label pagination__status" aria-live="polite">
+      Página {{ page() }} de {{ totalPages() }}
+    </span>
+    <ion-button
+      fill="outline"
+      size="small"
+      class="pagination__button"
+      [disabled]="page() >= totalPages()"
+      aria-label="Página siguiente"
+      (click)="next.emit()"
+    >
+      Siguiente
+      <ion-icon slot="end" name="chevron-forward-outline" aria-hidden="true"></ion-icon>
+    </ion-button>
+  </nav>
+}

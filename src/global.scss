@@ -191,6 +191,13 @@ ion-content.content-with-fab {
   --padding-bottom: calc(var(--fab-clearance) + var(--ion-safe-area-bottom, 0px));
 }
 
+/*
+ * Las listas sin botón flotante necesitan aire y el área segura de la barra de Android.
+ */
+ion-content.content-list {
+  --padding-bottom: calc(var(--space-xl) + var(--ion-safe-area-bottom, 0px));
+}
+
 ion-fab.fab-vertical-bottom:not(.fab-edge) {
   bottom: calc(var(--space-md) + var(--ion-safe-area-bottom, 0px));
 }

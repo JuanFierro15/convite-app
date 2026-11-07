@@ -323,35 +323,13 @@
         }
       </div>
 
-      @if (pagedGifts().totalPages > 1) {
-        <nav class="pagination" aria-label="Paginación de regalos">
-          <ion-button
-            fill="outline"
-            size="small"
-            class="pagination__button"
-            [disabled]="pagedGifts().page <= 1"
-            aria-label="Página anterior"
-            (click)="goToPreviousPage()"
-          >
-            <ion-icon slot="start" name="chevron-back-outline" aria-hidden="true"></ion-icon>
-            Anterior
-          </ion-button>
-          <span class="text-label pagination__status" aria-live="polite">
-            Página {{ pagedGifts().page }} de {{ pagedGifts().totalPages }}
-          </span>
-          <ion-button
-            fill="outline"
-            size="small"
-            class="pagination__button"
-            [disabled]="pagedGifts().page >= pagedGifts().totalPages"
-            aria-label="Página siguiente"
-            (click)="goToNextPage()"
-          >
-            Siguiente
-            <ion-icon slot="end" name="chevron-forward-outline" aria-hidden="true"></ion-icon>
-          </ion-button>
-        </nav>
-      }
+      <app-pagination
+        label="Paginación de regalos"
+        [page]="pagedGifts().page"
+        [totalPages]="pagedGifts().totalPages"
+        (previous)="goToPreviousPage()"
+        (next)="goToNextPage()"
+      />
     }
   </div>
 

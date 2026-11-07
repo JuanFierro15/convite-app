@@ -6,7 +6,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
-  padding-bottom: var(--space-xl);
 }
 
 .loading-state {
@@ -345,24 +344,3 @@ ion-card-content .over-budget-text {
   max-width: 100%;
 }
 
-.pagination {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-sm);
-  margin-top: var(--space-sm);
-}
-
-.pagination__status {
-  order: -1;
-  flex-basis: 100%;
-  color: var(--ion-color-medium-shade);
-  text-align: center;
-}
-
-.pagination__button {
-  flex: 1 1 0;
-  min-width: 0;
-  min-height: 44px;
-  margin: 0;
-}

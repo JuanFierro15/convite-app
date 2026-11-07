@@ -330,7 +330,7 @@ describe('BudgetPage', () => {
     expect(filtered.map((e) => e.id)).toEqual(['exp-2', 'exp-3']);
   });
 
-  it('paginación de 10: divide la lista y permite navegar entre páginas', async () => {
+  it('paginación de 6: divide la lista y permite navegar entre páginas', async () => {
     const manyExpenses: ExpenseWithPayments[] = [];
     for (let i = 1; i <= 15; i++) {
       manyExpenses.push({
@@ -352,17 +352,48 @@ describe('BudgetPage', () => {
     await component.ionViewWillEnter();
     fixture.detectChanges();
 
-    expect(component.pagedExpenses().totalPages).toBe(2);
-    expect(component.pagedExpenses().items.length).toBe(10);
+    expect(component.pagedExpenses().totalPages).toBe(3);
+    expect(component.pagedExpenses().items.length).toBe(6);
     expect(component.pagedExpenses().page).toBe(1);
 
     component.goToNextPage();
     expect(component.currentPage()).toBe(2);
-    expect(component.pagedExpenses().items.length).toBe(5);
+    expect(component.pagedExpenses().items.length).toBe(6);
+
+    component.goToNextPage();
+    expect(component.currentPage()).toBe(3);
+    expect(component.pagedExpenses().items.length).toBe(3);
 
     component.goToPreviousPage();
-    expect(component.currentPage()).toBe(1);
-    expect(component.pagedExpenses().items.length).toBe(10);
+    expect(component.currentPage()).toBe(2);
+    expect(component.pagedExpenses().items.length).toBe(6);
+  });
+
+  it('con 7 gastos aparece "Página 1 de 2" y 6 cards', async () => {
+    const sevenExpenses: ExpenseWithPayments[] = Array.from({ length: 7 }, (_, i) => ({
+      id: `exp-${i + 1}`,
+      event_id: 'evt-1',
+      category_id: 'cat-1',
+      description: `Gasto ${i + 1}`,
+      amount_cop: 50000,
+      note: null,
+      task_id: null,
+      created_at: '2026-10-01T00:00:00Z',
+      updated_at: '2026-10-01T00:00:00Z',
+      payments: [],
+      task: null,
+    }));
+    mockBudgetRepo.listExpenses.mockResolvedValue(sevenExpenses);
+
+    await component.ionViewWillEnter();
+    fixture.detectChanges();
+
+    const statusEl = fixture.debugElement.query(By.css('.pagination__status'));
+    expect(statusEl).not.toBeNull();
+    expect(statusEl.nativeElement.textContent.trim()).toBe('Página 1 de 2');
+
+    const cards = fixture.debugElement.queryAll(By.css('.expense-card'));
+    expect(cards.length).toBe(6);
   });
 
   it('"Nuevo gasto" sin categorías no abre la hoja y muestra alerta', async () => {

@@ -55,7 +55,7 @@ import {
   paginate,
   rsvpCounts,
 } from '../../../core';
-import { EmptyStateComponent, StatusBadgeComponent } from '../../../shared';
+import { EmptyStateComponent, PaginationComponent, StatusBadgeComponent } from '../../../shared';
 import { createDiscardGuard } from '../formulario/discard-guard';
 import { InvitationFormComponent } from '../formulario/invitation-form.component';
 import { InvitationActionsService } from '../invitation-actions.service';
@@ -122,6 +122,7 @@ function formatInvitationSummary(guests: readonly GuestRow[]): string {
     IonFabButton,
     IonSpinner,
     EmptyStateComponent,
+    PaginationComponent,
     StatusBadgeComponent,
   ],
 })
