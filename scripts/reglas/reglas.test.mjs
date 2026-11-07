@@ -7216,3 +7216,372 @@ test(
   }
 );
 
+test(
+  '65. set_rsvp registra cambio en rsvp_log con source guest y repetir el mismo valor no agrega fila',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    const targetGuest = ctx.guestsA[0];
+    const { data: currentGuest, error: guestErr } = await ctx.adminClient
+      .from('guests')
+      .select('id, rsvp, invitation_id, event_id')
+      .eq('id', targetGuest.id)
+      .single();
+    assert.equal(guestErr, null, 'Error al consultar estado previo del invitado');
+
+    const previousRsvp = currentGuest.rsvp;
+    const newRsvp = previousRsvp === 'accepted' ? 'declined' : 'accepted';
+
+    const { count: countBefore, error: countBeforeErr } = await ctx.adminClient
+      .from('rsvp_log')
+      .select('*', { count: 'exact', head: true })
+      .eq('guest_id', targetGuest.id);
+    assert.equal(countBeforeErr, null, 'Error al contar filas previas en rsvp_log');
+
+    const { error: rsvpErr } = await ctx.anonClient.rpc('set_rsvp', {
+      p_code: ctx.invitationA.code,
+      p_guest_id: targetGuest.id,
+      p_rsvp: newRsvp,
+    });
+    assert.equal(rsvpErr, null, 'Error al invocar set_rsvp con anonClient');
+
+    const { data: logRows, error: logErr } = await ctx.adminClient
+      .from('rsvp_log')
+      .select('*')
+      .eq('guest_id', targetGuest.id)
+      .order('created_at', { ascending: false })
+      .order('id', { ascending: false })
+      .limit(1);
+    assert.equal(logErr, null, 'Error al consultar rsvp_log tras set_rsvp');
+    assert.equal(logRows?.length, 1, 'Se esperaba al menos una fila en rsvp_log');
+
+    const logRow = logRows[0];
+    assert.equal(logRow.source, 'guest', 'Se esperaba source = guest');
+    assert.equal(logRow.actor_id, null, 'Se esperaba actor_id nulo para respuesta de invitado');
+    assert.equal(logRow.previous_rsvp, previousRsvp, 'previous_rsvp no coincide');
+    assert.equal(logRow.rsvp, newRsvp, 'rsvp no coincide con el nuevo valor');
+    assert.equal(logRow.event_id, ctx.eventX.id, 'event_id no coincide');
+    assert.equal(logRow.invitation_id, ctx.invitationA.id, 'invitation_id no coincide');
+
+    const { count: countAfterFirst, error: countAfterFirstErr } = await ctx.adminClient
+      .from('rsvp_log')
+      .select('*', { count: 'exact', head: true })
+      .eq('guest_id', targetGuest.id);
+    assert.equal(countAfterFirstErr, null);
+    assert.equal(countAfterFirst, (countBefore ?? 0) + 1, 'Se esperaba exactamente una fila nueva');
+
+    const { error: repeatErr } = await ctx.anonClient.rpc('set_rsvp', {
+      p_code: ctx.invitationA.code,
+      p_guest_id: targetGuest.id,
+      p_rsvp: newRsvp,
+    });
+    assert.equal(repeatErr, null, 'Error al repetir set_rsvp con el mismo valor');
+
+    const { count: countAfterSecond, error: countAfterSecondErr } = await ctx.adminClient
+      .from('rsvp_log')
+      .select('*', { count: 'exact', head: true })
+      .eq('guest_id', targetGuest.id);
+    assert.equal(countAfterSecondErr, null);
+    assert.equal(
+      countAfterSecond,
+      countAfterFirst,
+      'Repetir set_rsvp con el mismo valor no debe agregar otra fila en rsvp_log'
+    );
+  }
+);
+
+test(
+  '66. update directo de rsvp registra source team y actor_id, list_rsvp_log devuelve la fila primero con total y helperX ve mismo total, y pending no agrega fila',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    let tempGuestId = null;
+
+    try {
+      const targetGuest = ctx.guestsA[1];
+      const { data: currentGuest, error: guestErr } = await ctx.adminClient
+        .from('guests')
+        .select('id, rsvp, full_name, invitation_id')
+        .eq('id', targetGuest.id)
+        .single();
+      assert.equal(guestErr, null, 'Error al consultar invitado');
+
+      const previousRsvp = currentGuest.rsvp;
+      const newRsvp = previousRsvp === 'accepted' ? 'declined' : 'accepted';
+
+      const { error: updateErr } = await ctx.ownerXClient
+        .from('guests')
+        .update({ rsvp: newRsvp })
+        .eq('id', targetGuest.id);
+      assert.equal(updateErr, null, 'Error al actualizar guests.rsvp directamente con ownerXClient');
+
+      const { data: latestLog, error: latestLogErr } = await ctx.adminClient
+        .from('rsvp_log')
+        .select('*')
+        .eq('guest_id', targetGuest.id)
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false })
+        .limit(1)
+        .single();
+      assert.equal(latestLogErr, null, 'Error al consultar fila creada en rsvp_log');
+      assert.equal(latestLog.source, 'team', 'Se esperaba source = team para update directo');
+      assert.equal(latestLog.actor_id, ctx.ownerXUser.id, 'Se esperaba actor_id = ownerXUser.id');
+      assert.equal(latestLog.rsvp, newRsvp, 'Se esperaba rsvp igual al nuevo valor');
+      assert.equal(latestLog.previous_rsvp, previousRsvp, 'Se esperaba previous_rsvp igual al valor previo');
+
+      const { count: totalRowsInEventX, error: countErr } = await ctx.adminClient
+        .from('rsvp_log')
+        .select('*', { count: 'exact', head: true })
+        .eq('event_id', ctx.eventX.id);
+      assert.equal(countErr, null, 'Error al contar filas de eventX con adminClient');
+
+      const { data: listData, error: listErr } = await ctx.ownerXClient.rpc('list_rsvp_log', {
+        p_event_id: ctx.eventX.id,
+        p_limit: 1,
+      });
+      assert.equal(listErr, null, 'Error al llamar list_rsvp_log con ownerXClient');
+      assert.equal(listData?.total, totalRowsInEventX, 'total debe coincidir con filas de eventX');
+      assert.equal(listData?.items?.length, 1, 'Debe devolver exactamente 1 item con p_limit = 1');
+
+      const firstItem = listData.items[0];
+      assert.equal(firstItem.id, latestLog.id, 'La fila devuelta primero debe ser la recién creada');
+      assert.equal(firstItem.guest_id, targetGuest.id, 'guest_id no coincide');
+      assert.equal(firstItem.guest_name, currentGuest.full_name, 'guest_name no coincide');
+      assert.equal(firstItem.group_name, ctx.invitationA.group_name, 'group_name no coincide');
+      assert.equal(firstItem.invitation_kind, ctx.invitationA.kind ?? 'group', 'invitation_kind no coincide');
+      assert.equal(firstItem.source, 'team', 'source debe ser team');
+      assert.equal(firstItem.rsvp, newRsvp, 'rsvp no coincide');
+      assert.equal(firstItem.previous_rsvp, previousRsvp, 'previous_rsvp no coincide');
+
+      const expectedActorName = ctx.ownerXUser.raw_user_meta_data?.display_name?.trim() || null;
+      assert.equal(
+        firstItem.actor_name,
+        expectedActorName,
+        'actor_name debe ser display_name del usuario o null si no tiene'
+      );
+
+      const { data: helperListData, error: helperListErr } = await ctx.helperXClient.rpc('list_rsvp_log', {
+        p_event_id: ctx.eventX.id,
+        p_limit: 1,
+      });
+      assert.equal(helperListErr, null, 'Error al llamar list_rsvp_log con helperXClient');
+      assert.equal(helperListData?.total, totalRowsInEventX, 'helperXClient debe ver el mismo total');
+
+      const countBeforeInsert = totalRowsInEventX;
+      tempGuestId = crypto.randomUUID();
+      const { error: insertGuestErr } = await ctx.ownerXClient
+        .from('guests')
+        .insert({
+          id: tempGuestId,
+          event_id: ctx.eventX.id,
+          invitation_id: ctx.invitationA.id,
+          full_name: 'Persona Temporal Pending 66',
+          rsvp: 'pending',
+          sort_order: 99,
+        });
+      assert.equal(insertGuestErr, null, 'Error al insertar persona con pending');
+
+      const { count: countAfterInsert, error: countAfterErr } = await ctx.adminClient
+        .from('rsvp_log')
+        .select('*', { count: 'exact', head: true })
+        .eq('event_id', ctx.eventX.id);
+      assert.equal(countAfterErr, null);
+      assert.equal(
+        countAfterInsert,
+        countBeforeInsert,
+        'Insertar una persona nueva con pending no debe agregar fila a rsvp_log'
+      );
+    } finally {
+      if (tempGuestId) {
+        await ctx.adminClient.from('guests').delete().eq('id', tempGuestId);
+      }
+    }
+  }
+);
+
+test(
+  '67. anonClient no lee ni ejecuta list_rsvp_log, ownerY recibe not_event_member y ownerX no puede hacer insert, update ni delete en rsvp_log',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    const { data: anonData, error: anonErr } = await ctx.anonClient
+      .from('rsvp_log')
+      .select('*')
+      .limit(5);
+    const anonRows = anonData ?? [];
+    assert.equal(anonRows.length, 0, 'anonClient no debe ver filas de rsvp_log');
+    assert.ok(
+      Boolean(anonErr) || Array.isArray(anonData),
+      'anonClient debe recibir error o lista vacia'
+    );
+
+    const { error: anonRpcErr } = await ctx.anonClient.rpc('list_rsvp_log', {
+      p_event_id: ctx.eventX.id,
+    });
+    assert.ok(anonRpcErr, 'anonClient debe fallar al llamar list_rsvp_log');
+
+    const { error: ownerYRpcErr } = await ctx.ownerYClient.rpc('list_rsvp_log', {
+      p_event_id: ctx.eventX.id,
+    });
+    assert.ok(ownerYRpcErr, 'ownerYClient debe recibir error al llamar list_rsvp_log para eventX');
+    assert.ok(
+      ownerYRpcErr.message.includes('not_event_member'),
+      `Se esperaba not_event_member pero se recibio: ${ownerYRpcErr.message}`
+    );
+
+    const { data: ownerYData, error: ownerYErr } = await ctx.ownerYClient
+      .from('rsvp_log')
+      .select('*')
+      .eq('event_id', ctx.eventX.id);
+    assert.equal(ownerYData?.length ?? 0, 0, 'ownerYClient no debe ver filas de eventX en rsvp_log');
+
+    const { data: beforeRows, error: beforeErr } = await ctx.adminClient
+      .from('rsvp_log')
+      .select('*')
+      .eq('event_id', ctx.eventX.id)
+      .order('id');
+    assert.equal(beforeErr, null, 'Error al consultar filas previas con adminClient');
+
+    const fakeLogId = crypto.randomUUID();
+    const { error: insertErr } = await ctx.ownerXClient
+      .from('rsvp_log')
+      .insert({
+        id: fakeLogId,
+        event_id: ctx.eventX.id,
+        invitation_id: ctx.invitationA.id,
+        guest_id: ctx.guestsA[0].id,
+        rsvp: 'accepted',
+        source: 'team',
+      });
+    assert.ok(insertErr, 'ownerXClient debe recibir error de permisos al intentar insert en rsvp_log');
+
+    const targetRowId = beforeRows.length > 0 ? beforeRows[0].id : crypto.randomUUID();
+    const { error: updateErr } = await ctx.ownerXClient
+      .from('rsvp_log')
+      .update({ rsvp: 'declined' })
+      .eq('id', targetRowId);
+    assert.ok(updateErr, 'ownerXClient debe recibir error de permisos al intentar update en rsvp_log');
+
+    const { error: deleteErr } = await ctx.ownerXClient
+      .from('rsvp_log')
+      .delete()
+      .eq('id', targetRowId);
+    assert.ok(deleteErr, 'ownerXClient debe recibir error de permisos al intentar delete en rsvp_log');
+
+    const { data: afterRows, error: afterErr } = await ctx.adminClient
+      .from('rsvp_log')
+      .select('*')
+      .eq('event_id', ctx.eventX.id)
+      .order('id');
+    assert.equal(afterErr, null, 'Error al consultar filas posteriores con adminClient');
+    assert.deepEqual(
+      afterRows,
+      beforeRows,
+      'Las filas de rsvp_log para eventX deben mantenerse exactamente iguales'
+    );
+  }
+);
+
+test(
+  '68. list_rsvp_log pagina correctamente sin repetir filas, ordena created_at desc y valida limites y offsets',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    const { count: initialCount } = await ctx.adminClient
+      .from('rsvp_log')
+      .select('*', { count: 'exact', head: true })
+      .eq('event_id', ctx.eventX.id);
+
+    const needed = Math.max(0, 3 - (initialCount ?? 0));
+    const guestsToToggle = [ctx.guestsA[0], ctx.guestsA[1], ctx.guestB];
+
+    for (let i = 0; i < needed; i++) {
+      const g = guestsToToggle[i % guestsToToggle.length];
+      const { data: gData } = await ctx.adminClient
+        .from('guests')
+        .select('rsvp')
+        .eq('id', g.id)
+        .single();
+      const nextRsvp = gData?.rsvp === 'accepted' ? 'declined' : 'accepted';
+      const { error: updateErr } = await ctx.ownerXClient
+        .from('guests')
+        .update({ rsvp: nextRsvp })
+        .eq('id', g.id);
+      assert.equal(updateErr, null, 'Error al generar fila de prueba en guests');
+    }
+
+    const { count: finalCount } = await ctx.adminClient
+      .from('rsvp_log')
+      .select('*', { count: 'exact', head: true })
+      .eq('event_id', ctx.eventX.id);
+    assert.ok((finalCount ?? 0) >= 3, 'Se esperaban al menos 3 filas en eventX para la prueba de paginacion');
+
+    const { data: page1, error: page1Err } = await ctx.ownerXClient.rpc('list_rsvp_log', {
+      p_event_id: ctx.eventX.id,
+      p_limit: 2,
+      p_offset: 0,
+    });
+    assert.equal(page1Err, null, 'Error en pagina 1');
+    assert.equal(page1?.items?.length, 2, 'Pagina 1 debe devolver 2 items');
+
+    const { data: page2, error: page2Err } = await ctx.ownerXClient.rpc('list_rsvp_log', {
+      p_event_id: ctx.eventX.id,
+      p_limit: 2,
+      p_offset: 2,
+    });
+    assert.equal(page2Err, null, 'Error en pagina 2');
+    assert.ok(
+      (page2?.items?.length ?? 0) >= 1,
+      'Pagina 2 debe devolver al menos 1 item con 3 o mas filas'
+    );
+
+    const page1Ids = page1.items.map((it) => it.id);
+    const page2Ids = page2.items.map((it) => it.id);
+    for (const id of page2Ids) {
+      assert.equal(
+        page1Ids.includes(id),
+        false,
+        `El id ${id} de la pagina 2 no debe repetirse en la pagina 1`
+      );
+    }
+
+    const allPagedItems = [...page1.items, ...page2.items];
+    for (let i = 0; i < allPagedItems.length - 1; i++) {
+      const current = allPagedItems[i];
+      const next = allPagedItems[i + 1];
+      const currentMs = new Date(current.created_at).getTime();
+      const nextMs = new Date(next.created_at).getTime();
+      assert.ok(
+        currentMs >= nextMs,
+        'Los elementos deben estar ordenados descendentemente por created_at'
+      );
+    }
+
+    const { data: limitZeroData, error: limitZeroErr } = await ctx.ownerXClient.rpc('list_rsvp_log', {
+      p_event_id: ctx.eventX.id,
+      p_limit: 0,
+    });
+    assert.equal(limitZeroErr, null, 'Error con p_limit = 0');
+    assert.equal(limitZeroData?.items?.length, 1, 'p_limit = 0 debe devolver 1 item');
+
+    const { data: limit500Data, error: limit500Err } = await ctx.ownerXClient.rpc('list_rsvp_log', {
+      p_event_id: ctx.eventX.id,
+      p_limit: 500,
+    });
+    assert.equal(limit500Err, null, 'Error con p_limit = 500');
+    assert.ok(
+      (limit500Data?.items?.length ?? 0) <= 50,
+      'p_limit = 500 debe devolver como maximo 50 items'
+    );
+
+    const { data: offsetNegData, error: offsetNegErr } = await ctx.ownerXClient.rpc('list_rsvp_log', {
+      p_event_id: ctx.eventX.id,
+      p_limit: 2,
+      p_offset: -5,
+    });
+    assert.equal(offsetNegErr, null, 'Error con p_offset = -5');
+    assert.deepEqual(
+      offsetNegData?.items,
+      page1.items,
+      'p_offset = -5 debe devolver exactamente lo mismo que p_offset = 0'
+    );
+  }
+);
+
+
