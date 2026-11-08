@@ -1,4 +1,4 @@
-import { DestroyRef, Injectable, inject } from '@angular/core';
+import { DestroyRef, Injectable, InjectionToken, inject } from '@angular/core';
 import { App } from '@capacitor/app';
 import { Capacitor, PluginListenerHandle } from '@capacitor/core';
 import { SupabaseService } from '../supabase/supabase.service';
@@ -15,9 +15,20 @@ export type RealtimeTable =
 const DEBOUNCE_MS = 300;
 let channelCounter = 0;
 
+export type AppResumeListener = (
+  callback: () => void,
+) => Promise<PluginListenerHandle> | null;
+
+export const APP_RESUME_LISTENER = new InjectionToken<AppResumeListener>('APP_RESUME_LISTENER', {
+  providedIn: 'root',
+  factory: () => (callback) =>
+    Capacitor.isNativePlatform() ? App.addListener('resume', callback) : null,
+});
+
 @Injectable({ providedIn: 'root' })
 export class RealtimeService {
   private readonly supabase = inject(SupabaseService);
+  private readonly listenResume = inject(APP_RESUME_LISTENER);
 
   watch(
     eventId: string,
@@ -90,18 +101,19 @@ export class RealtimeService {
       }
     });
 
-    if (Capacitor.isNativePlatform()) {
-      void App.addListener('resume', () => {
-        scheduleChange();
-      }).then((handle) => {
-        if (cleanedUp) {
-          void handle.remove().catch(() => {});
-        } else {
-          resumeHandle = handle;
-        }
-      }).catch(() => {
-        // Ignorar si falla el listener nativo
-      });
+    const resumeListener = this.listenResume(() => {
+      scheduleChange();
+    });
+    if (resumeListener) {
+      void resumeListener
+        .then((handle) => {
+          if (cleanedUp) {
+            void handle.remove().catch(() => {});
+          } else {
+            resumeHandle = handle;
+          }
+        })
+        .catch(() => {});
     }
 
     const handleVisibilityChange = (): void => {

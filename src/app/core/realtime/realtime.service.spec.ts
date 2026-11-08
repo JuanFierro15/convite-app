@@ -1,15 +1,13 @@
 import { DestroyRef } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
-import { App } from '@capacitor/app';
-import { Capacitor, PluginListenerHandle } from '@capacitor/core';
+import { PluginListenerHandle } from '@capacitor/core';
 import { SupabaseService } from '../supabase/supabase.service';
-import { RealtimeService, RealtimeTable } from './realtime.service';
-
-vi.mock('@capacitor/app', () => ({
-  App: {
-    addListener: vi.fn(),
-  },
-}));
+import {
+  APP_RESUME_LISTENER,
+  AppResumeListener,
+  RealtimeService,
+  RealtimeTable,
+} from './realtime.service';
 
 interface PostgresChangesBinding {
   type: string;
@@ -66,9 +64,11 @@ describe('RealtimeService', () => {
     onChange: (): void => {},
   };
   let onChangeSpy: ReturnType<typeof vi.spyOn>;
+  let resumeListener: AppResumeListener;
 
   beforeEach(() => {
     vi.useFakeTimers();
+    resumeListener = () => null;
     onChangeSpy = vi.spyOn(listener, 'onChange').mockImplementation(() => {});
 
     mockSupabase = {
@@ -85,6 +85,10 @@ describe('RealtimeService', () => {
       providers: [
         RealtimeService,
         { provide: SupabaseService, useValue: mockSupabase },
+        {
+          provide: APP_RESUME_LISTENER,
+          useValue: ((callback) => resumeListener(callback)) satisfies AppResumeListener,
+        },
       ],
     });
 
@@ -256,21 +260,17 @@ describe('RealtimeService', () => {
   });
 
   it('cleans up Capacitor resume listener handle on native platform', async () => {
-    vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true);
     const removeSpy = vi.fn().mockResolvedValue(undefined);
     const resumeCallbacks: (() => void)[] = [];
-
-    vi.spyOn(App, 'addListener').mockImplementation((eventName: string, listener: any) => {
-      if (eventName === 'resume') {
-        resumeCallbacks.push(listener as () => void);
-      }
+    resumeListener = (callback) => {
+      resumeCallbacks.push(callback);
       return Promise.resolve({ remove: removeSpy } as unknown as PluginListenerHandle);
-    });
+    };
 
     const cleanup = service.watch('evt-123', ['guests'], listener.onChange);
     await Promise.resolve();
 
-    expect(App.addListener).toHaveBeenCalledWith('resume', expect.any(Function));
+    expect(resumeCallbacks).toHaveLength(1);
 
     for (const cb of resumeCallbacks) {
       cb();
@@ -283,14 +283,12 @@ describe('RealtimeService', () => {
   });
 
   it('removes Capacitor resume listener handle if cleanup ran before the addListener promise resolved', async () => {
-    vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(true);
     const removeSpy = vi.fn().mockResolvedValue(undefined);
     let resolveListenerPromise: ((handle: PluginListenerHandle) => void) | undefined;
     const addListenerPromise = new Promise<PluginListenerHandle>((resolve) => {
       resolveListenerPromise = resolve;
     });
-
-    vi.spyOn(App, 'addListener').mockReturnValue(addListenerPromise as any);
+    resumeListener = () => addListenerPromise;
 
     const cleanup = service.watch('evt-123', ['guests'], listener.onChange);
 
