@@ -53,6 +53,7 @@ import {
   RsvpLogEntry,
   RsvpLogRepository,
   TABLES_ENABLED,
+  TaskRow,
   TasksRepository,
   ThemeService,
   budgetCardText,
@@ -136,7 +137,14 @@ export class EventDashboardPage implements ViewWillEnter, ViewWillLeave {
     arrivedTotal: 0,
   });
   readonly budgetSummaryText = signal<string | null>(null);
-  readonly tasksSummaryText = signal<string | null>(null);
+  readonly tasks = signal<TaskRow[] | null>(null);
+  readonly tasksSummaryText = computed<string | null>(() => {
+    const list = this.tasks();
+    if (list === null) {
+      return null;
+    }
+    return tasksCardText(list, toBogotaDateInput(this.now()));
+  });
   readonly recentRsvpEntries = signal<RsvpLogEntry[]>([]);
   readonly recentRsvpTotal = signal<number>(0);
   readonly recentRsvpLoading = signal<boolean>(true);
@@ -158,7 +166,7 @@ export class EventDashboardPage implements ViewWillEnter, ViewWillLeave {
     if (!currentEvent) {
       return '';
     }
-    const remaining = daysUntil(currentEvent.starts_at);
+    const remaining = daysUntil(currentEvent.starts_at, this.now());
     if (remaining > 1) {
       return `Faltan ${remaining} días`;
     }
@@ -213,7 +221,7 @@ export class EventDashboardPage implements ViewWillEnter, ViewWillLeave {
     if (this.eventContext.event()?.id !== eventId) {
       this.eventContext.clear();
       this.budgetSummaryText.set(null);
-      this.tasksSummaryText.set(null);
+      this.tasks.set(null);
       this.counts.set({ accepted: 0, pending: 0, declined: 0, total: 0 });
       this.arrivals.set({
         confirmed: 0,
@@ -228,7 +236,7 @@ export class EventDashboardPage implements ViewWillEnter, ViewWillLeave {
     }
     this.startNowTimer();
     this.initialLoading.set(true);
-    void this.loadDashboard(eventId, true);
+    void this.loadDashboard(eventId, { isInitial: true, forceEvent: true });
     void this.arrivalSession.prefetch(eventId);
 
     this.stopRealtime?.();
@@ -236,7 +244,7 @@ export class EventDashboardPage implements ViewWillEnter, ViewWillLeave {
       eventId,
       ['events', 'guests', 'tasks', 'rsvp_log'],
       () => {
-        void this.loadDashboard(this.id(), false);
+        void this.loadDashboard(this.id(), { isInitial: false, forceEvent: true });
       },
       this.destroyRef,
     );
@@ -254,7 +262,7 @@ export class EventDashboardPage implements ViewWillEnter, ViewWillLeave {
 
   async retryLoad(): Promise<void> {
     this.initialLoading.set(true);
-    await this.loadDashboard(this.id(), true);
+    await this.loadDashboard(this.id(), { isInitial: true, forceEvent: true });
   }
 
   async retryRecentRsvp(): Promise<void> {
@@ -293,12 +301,14 @@ export class EventDashboardPage implements ViewWillEnter, ViewWillLeave {
 
   private async loadDashboard(
     eventId: string,
-    isInitial: boolean,
+    options: { isInitial?: boolean; forceEvent?: boolean } = {},
   ): Promise<void> {
+    const isInitial = options.isInitial ?? false;
+    const forceEvent = options.forceEvent ?? isInitial;
     void this.loadRecentRsvp(eventId);
     try {
       const [, attendanceResult] = await Promise.allSettled([
-        this.eventContext.load(eventId, { force: isInitial }),
+        this.eventContext.load(eventId, { force: forceEvent }),
         this.eventsRepo.attendanceFor(eventId),
       ]);
 
@@ -316,11 +326,9 @@ export class EventDashboardPage implements ViewWillEnter, ViewWillLeave {
 
       try {
         const tasks = await this.tasksRepo.list(eventId);
-        this.tasksSummaryText.set(
-          tasksCardText(tasks, toBogotaDateInput(new Date())),
-        );
+        this.tasks.set(tasks);
       } catch {
-        this.tasksSummaryText.set(null);
+        this.tasks.set(null);
       }
 
       if (this.isOwner()) {

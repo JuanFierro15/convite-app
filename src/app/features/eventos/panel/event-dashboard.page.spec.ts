@@ -457,6 +457,76 @@ describe('EventDashboardPage - Arrivals & Attendance', () => {
     );
   });
 
+  it('calls eventContext.load with { force: true } when realtime watch callback is invoked', async () => {
+    component.ionViewWillEnter();
+    await fixture.whenStable();
+
+    const watchCallback = mockRealtime.watch.mock.calls[0][2] as () => void;
+    mockEventContext.load.mockClear();
+
+    watchCallback();
+    await fixture.whenStable();
+
+    expect(mockEventContext.load).toHaveBeenCalledWith('event-123', { force: true });
+    expect(component.loading()).toBe(false);
+  });
+
+  it('updates countdown title from "Falta 1 día" to "Es hoy" when passing midnight in Bogota', async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2026-11-28T23:59:00-05:00'));
+
+      component.ionViewWillEnter();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(component.countdownTitle()).toBe('Falta 1 día');
+      expect(fixture.nativeElement.textContent).toContain('Falta 1 día');
+
+      vi.advanceTimersByTime(120_000);
+      fixture.detectChanges();
+
+      expect(component.countdownTitle()).toBe('Es hoy');
+      expect(fixture.nativeElement.textContent).toContain('Es hoy');
+    } finally {
+      component.ionViewWillLeave();
+      vi.useRealTimers();
+    }
+  });
+
+  it('counts task due on Nov 28 as overdue after midnight without reloading tasks', async () => {
+    vi.useFakeTimers();
+    try {
+      vi.setSystemTime(new Date('2026-11-28T23:59:00-05:00'));
+
+      mockTasksRepo.list.mockResolvedValue([
+        makeMockTask({
+          id: 'task-nov-28',
+          due_date: '2026-11-28',
+          done_at: null,
+        }),
+      ]);
+
+      component.ionViewWillEnter();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(mockTasksRepo.list).toHaveBeenCalledTimes(1);
+      expect(component.tasksSummaryText()).toBe('1 pendiente');
+      expect(fixture.nativeElement.textContent).toContain('1 pendiente');
+
+      vi.advanceTimersByTime(120_000);
+      fixture.detectChanges();
+
+      expect(mockTasksRepo.list).toHaveBeenCalledTimes(1);
+      expect(component.tasksSummaryText()).toBe('1 pendiente, 1 vencida');
+      expect(fixture.nativeElement.textContent).toContain('1 pendiente, 1 vencida');
+    } finally {
+      component.ionViewWillLeave();
+      vi.useRealTimers();
+    }
+  });
+
   it('does not render budget card or mentions and never calls committedTotal for helpers', async () => {
     mockEventContext.isOwner.set(false);
     mockEventContext.event.set({
@@ -500,7 +570,7 @@ describe('EventDashboardPage - Arrivals & Attendance', () => {
 
   it('resets budgetSummaryText and tasksSummaryText to null when changing event on enter', async () => {
     component.budgetSummaryText.set('Van $ 500.000 en gastos');
-    component.tasksSummaryText.set('Sin pendientes');
+    component.tasks.set([makeMockTask()]);
     mockEventContext.event.set(mockEvent);
 
     fixture.componentRef.setInput('id', 'event-999');
