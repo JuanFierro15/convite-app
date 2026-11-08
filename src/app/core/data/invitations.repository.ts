@@ -78,6 +78,7 @@ export class InvitationsRepository {
     eventId: string,
     invitationId: string,
     input: InvitationInput,
+    knownGuestIds: string[] = [],
   ): Promise<InvitationWithGuests> {
     let phone: string | null;
     try {
@@ -98,6 +99,7 @@ export class InvitationsRepository {
       p_phone: phone ?? '',
       p_guests: guests,
       p_kind: input.kind,
+      p_known_guest_ids: knownGuestIds,
     });
 
     if (error) {

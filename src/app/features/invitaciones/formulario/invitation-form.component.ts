@@ -133,6 +133,7 @@ export class InvitationFormComponent implements OnInit, OnDestroy {
 
   private invitationId = '';
   private initialSnapshot = '';
+  private knownGuestIds: string[] = [];
   private duplicatePhoneTimer: ReturnType<typeof setTimeout> | null = null;
   private duplicateCheckSequence = 0;
 
@@ -164,6 +165,7 @@ export class InvitationFormComponent implements OnInit, OnDestroy {
     if (existing) {
       this.isEdit.set(true);
       this.invitationId = existing.id;
+      this.knownGuestIds = existing.guests.map((g) => g.id);
       const initialKind = toInvitationKind(existing.kind);
       this.kind.set(initialKind);
       this.form.controls.kind.setValue(initialKind);
@@ -192,6 +194,7 @@ export class InvitationFormComponent implements OnInit, OnDestroy {
     } else {
       this.isEdit.set(false);
       this.invitationId = newId();
+      this.knownGuestIds = [];
       this.kind.set('group');
       this.form.controls.kind.setValue('group');
       this.phoneStatus.set('empty');
@@ -539,6 +542,7 @@ export class InvitationFormComponent implements OnInit, OnDestroy {
         targetEventId,
         this.invitationId,
         payload,
+        this.knownGuestIds,
       );
       await this.modalController.dismiss(saved, 'saved');
     } catch (err) {

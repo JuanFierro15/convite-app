@@ -224,6 +224,7 @@ describe('InvitationFormComponent', () => {
         phone: null,
         guests: [{ id: firstGuestId, full_name: 'Persona Ejemplo' }],
       },
+      [],
     );
     expect(mockModalCtrl.dismiss).toHaveBeenCalledWith(expect.anything(), 'saved');
   });
@@ -267,6 +268,121 @@ describe('InvitationFormComponent', () => {
 
     expect(mockAlertCtrl.create).toHaveBeenCalled();
     expect(mockInvitationsRepo.save).not.toHaveBeenCalled();
+  });
+
+  it('envía los ids de invitados cargados inicialmente aunque se hayan quitado en el formulario', async () => {
+    component.eventId = 'event-1';
+    component.invitation = {
+      id: 'inv-edit',
+      event_id: 'event-1',
+      group_name: 'Familia Edit',
+      kind: 'group',
+      phone: null,
+      code: 'EDIT123',
+      created_at: '2026-10-25T00:00:00Z',
+      updated_at: '2026-10-25T00:00:00Z',
+      whatsapp_sent_at: null,
+      guests: [
+        {
+          id: 'g-1',
+          invitation_id: 'inv-edit',
+          event_id: 'event-1',
+          full_name: 'Persona Uno',
+          rsvp: 'pending',
+          rsvp_updated_at: null,
+          arrived_at: null,
+          arrived_by: null,
+          sort_order: 0,
+          created_at: '2026-10-25T00:00:00Z',
+        },
+        {
+          id: 'g-2',
+          invitation_id: 'inv-edit',
+          event_id: 'event-1',
+          full_name: 'Persona Dos',
+          rsvp: 'pending',
+          rsvp_updated_at: null,
+          arrived_at: null,
+          arrived_by: null,
+          sort_order: 1,
+          created_at: '2026-10-25T00:00:00Z',
+        },
+      ],
+    };
+
+    component.ngOnInit();
+    expect(component.guestsArray.length).toBe(2);
+
+    component.removeGuest(1);
+    expect(component.guestsArray.length).toBe(1);
+
+    await component.save();
+
+    expect(mockInvitationsRepo.save).toHaveBeenCalledWith(
+      'event-1',
+      'inv-edit',
+      expect.objectContaining({
+        guests: [{ id: 'g-1', full_name: 'Persona Uno' }],
+      }),
+      ['g-1', 'g-2'],
+    );
+  });
+
+  it('reintenta el guardado enviando la misma lista de ids conocidos cargados', async () => {
+    component.eventId = 'event-1';
+    component.invitation = {
+      id: 'inv-retry',
+      event_id: 'event-1',
+      group_name: 'Familia Retry',
+      kind: 'group',
+      phone: null,
+      code: 'RETRY123',
+      created_at: '2026-10-25T00:00:00Z',
+      updated_at: '2026-10-25T00:00:00Z',
+      whatsapp_sent_at: null,
+      guests: [
+        {
+          id: 'g-x',
+          invitation_id: 'inv-retry',
+          event_id: 'event-1',
+          full_name: 'Persona X',
+          rsvp: 'pending',
+          rsvp_updated_at: null,
+          arrived_at: null,
+          arrived_by: null,
+          sort_order: 0,
+          created_at: '2026-10-25T00:00:00Z',
+        },
+      ],
+    };
+
+    mockInvitationsRepo.save.mockRejectedValueOnce(new Error('Network error'));
+    component.ngOnInit();
+
+    await component.save();
+    expect(mockActionsService.showError).toHaveBeenCalled();
+    expect(mockInvitationsRepo.save).toHaveBeenCalledTimes(1);
+
+    mockInvitationsRepo.save.mockResolvedValueOnce({
+      id: 'inv-retry',
+      event_id: 'event-1',
+      group_name: 'Familia Retry',
+      kind: 'group',
+      phone: null,
+      code: 'RETRY123',
+      created_at: '2026-10-25T00:00:00Z',
+      updated_at: '2026-10-25T00:00:00Z',
+      guests: [],
+    });
+
+    await component.save();
+    expect(mockInvitationsRepo.save).toHaveBeenCalledTimes(2);
+    expect(mockInvitationsRepo.save).toHaveBeenLastCalledWith(
+      'event-1',
+      'inv-retry',
+      expect.anything(),
+      ['g-x'],
+    );
   });
 
   describe('hasChanges y guardia de descarte', () => {

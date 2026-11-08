@@ -7584,4 +7584,271 @@ test(
   }
 );
 
+test(
+  '69. helperX llama a get_gifts, reserve_gift y release_gift con el codigo de una invitacion de su evento y las tres fallan con not_allowed sin cambiar reservas',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    const { count: countBefore, error: countBeforeErr } = await ctx.adminClient
+      .from('gift_reservations')
+      .select('*', { count: 'exact', head: true })
+      .eq('event_id', ctx.eventX.id);
+    assert.equal(countBeforeErr, null, 'Error al consultar conteo previo de reservas');
+
+    const { error: giftsErr } = await ctx.helperXClient.rpc('get_gifts', {
+      p_code: ctx.invitationA.code,
+    });
+    assert.ok(giftsErr, 'helperX debe recibir error al llamar a get_gifts');
+    assert.ok(
+      giftsErr.message.includes('not_allowed'),
+      `Se esperaba not_allowed en get_gifts, pero se recibio: ${giftsErr.message}`
+    );
+
+    const { error: reserveErr } = await ctx.helperXClient.rpc('reserve_gift', {
+      p_code: ctx.invitationA.code,
+      p_gift_id: ctx.giftXRepeatable.id,
+    });
+    assert.ok(reserveErr, 'helperX debe recibir error al llamar a reserve_gift');
+    assert.ok(
+      reserveErr.message.includes('not_allowed'),
+      `Se esperaba not_allowed en reserve_gift, pero se recibio: ${reserveErr.message}`
+    );
+
+    const { error: releaseErr } = await ctx.helperXClient.rpc('release_gift', {
+      p_code: ctx.invitationA.code,
+      p_gift_id: ctx.giftXRepeatable.id,
+    });
+    assert.ok(releaseErr, 'helperX debe recibir error al llamar a release_gift');
+    assert.ok(
+      releaseErr.message.includes('not_allowed'),
+      `Se esperaba not_allowed en release_gift, pero se recibio: ${releaseErr.message}`
+    );
+
+    const { count: countAfter, error: countAfterErr } = await ctx.ownerXClient
+      .from('gift_reservations')
+      .select('*', { count: 'exact', head: true })
+      .eq('event_id', ctx.eventX.id);
+    assert.equal(countAfterErr, null, 'Error al consultar conteo posterior con ownerXClient');
+    assert.equal(countAfter, countBefore, 'Ninguna reserva debe cambiar');
+  }
+);
+
+test(
+  '70. ownerX con sesion y anonClient siguen pudiendo llamar a get_gifts, reserve_gift y release_gift con un codigo valido',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    const tempGiftId = crypto.randomUUID();
+
+    try {
+      const { error: insertErr } = await ctx.adminClient.from('gifts').insert({
+        id: tempGiftId,
+        event_id: ctx.eventX.id,
+        name: 'Regalo Temporal Regla 70',
+        kind: 'repeatable',
+        max_reservations: 10,
+        sort_order: 9999,
+      });
+      assert.equal(insertErr, null, 'Error al crear regalo temporal de prueba');
+
+      const { data: ownerGifts, error: ownerGiftsErr } = await ctx.ownerXClient.rpc('get_gifts', {
+        p_code: ctx.invitationA.code,
+      });
+      assert.equal(ownerGiftsErr, null, 'ownerX debe poder llamar a get_gifts sin error');
+      assert.ok(Array.isArray(ownerGifts), 'ownerX debe recibir arreglo de regalos');
+
+      const { error: ownerReserveErr } = await ctx.ownerXClient.rpc('reserve_gift', {
+        p_code: ctx.invitationA.code,
+        p_gift_id: tempGiftId,
+      });
+      assert.equal(ownerReserveErr, null, 'ownerX debe poder llamar a reserve_gift sin error');
+
+      const { error: ownerReleaseErr } = await ctx.ownerXClient.rpc('release_gift', {
+        p_code: ctx.invitationA.code,
+        p_gift_id: tempGiftId,
+      });
+      assert.equal(ownerReleaseErr, null, 'ownerX debe poder llamar a release_gift sin error');
+
+      const { data: anonGifts, error: anonGiftsErr } = await ctx.anonClient.rpc('get_gifts', {
+        p_code: ctx.invitationA.code,
+      });
+      assert.equal(anonGiftsErr, null, 'anonClient debe poder llamar a get_gifts sin error');
+      assert.ok(Array.isArray(anonGifts), 'anonClient debe recibir arreglo de regalos');
+
+      const { error: anonReserveErr } = await ctx.anonClient.rpc('reserve_gift', {
+        p_code: ctx.invitationA.code,
+        p_gift_id: tempGiftId,
+      });
+      assert.equal(anonReserveErr, null, 'anonClient debe poder llamar a reserve_gift sin error');
+
+      const { error: anonReleaseErr } = await ctx.anonClient.rpc('release_gift', {
+        p_code: ctx.invitationA.code,
+        p_gift_id: tempGiftId,
+      });
+      assert.equal(anonReleaseErr, null, 'anonClient debe poder llamar a release_gift sin error');
+    } finally {
+      await ctx.adminClient.from('gift_reservations').delete().eq('gift_id', tempGiftId);
+      await ctx.adminClient.from('gifts').delete().eq('id', tempGiftId);
+    }
+  }
+);
+
+test(
+  '71. Edicion simultanea: guardar con p_known_guest_ids conserva a los invitados agregados por otra sesion',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    const testInvId = crypto.randomUUID();
+    const guestAId = crypto.randomUUID();
+    const guestCId = crypto.randomUUID();
+
+    try {
+      const { error: err1 } = await ctx.ownerXClient.rpc('save_invitation', {
+        p_invitation_id: testInvId,
+        p_event_id: ctx.eventX.id,
+        p_group_name: 'Familia Prueba 71',
+        p_phone: '+573001112233',
+        p_guests: [{ id: guestAId, full_name: 'Invitado A' }],
+        p_kind: 'group',
+        p_known_guest_ids: [],
+      });
+      assert.equal(err1, null, 'Error al crear invitacion inicial con invitado A');
+
+      const { error: err2 } = await ctx.ownerXClient.rpc('save_invitation', {
+        p_invitation_id: testInvId,
+        p_event_id: ctx.eventX.id,
+        p_group_name: 'Familia Prueba 71',
+        p_phone: '+573001112233',
+        p_guests: [
+          { id: guestAId, full_name: 'Invitado A' },
+          { id: guestCId, full_name: 'Invitado C' },
+        ],
+        p_kind: 'group',
+        p_known_guest_ids: [guestAId],
+      });
+      assert.equal(err2, null, 'Error al guardar edicion con A y C');
+
+      const { error: err3 } = await ctx.ownerXClient.rpc('save_invitation', {
+        p_invitation_id: testInvId,
+        p_event_id: ctx.eventX.id,
+        p_group_name: 'Familia Prueba 71',
+        p_phone: '+573001112233',
+        p_guests: [{ id: guestAId, full_name: 'Invitado A' }],
+        p_kind: 'group',
+        p_known_guest_ids: [guestAId],
+      });
+      assert.equal(err3, null, 'Error al guardar edicion vieja solo con A');
+
+      const { data: guests, error: guestsErr } = await ctx.adminClient
+        .from('guests')
+        .select('id, full_name')
+        .eq('invitation_id', testInvId);
+      assert.equal(guestsErr, null, 'Error al consultar invitados de la invitacion');
+
+      const guestIds = (guests ?? []).map((g) => g.id);
+      assert.ok(guestIds.includes(guestAId), 'El invitado A debe existir');
+      assert.ok(guestIds.includes(guestCId), 'El invitado C debe seguir existiendo tras la edicion vieja');
+      assert.equal(guestIds.length, 2, 'Deben existir exactamente dos invitados');
+    } finally {
+      await ctx.adminClient.from('guests').delete().eq('invitation_id', testInvId);
+      await ctx.adminClient.from('invitations').delete().eq('id', testInvId);
+    }
+  }
+);
+
+test(
+  '72. Quitar a proposito: con p_known_guest_ids = [A, C] y p_guests = [A], C se borra',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    const testInvId = crypto.randomUUID();
+    const guestAId = crypto.randomUUID();
+    const guestCId = crypto.randomUUID();
+
+    try {
+      const { error: initErr } = await ctx.ownerXClient.rpc('save_invitation', {
+        p_invitation_id: testInvId,
+        p_event_id: ctx.eventX.id,
+        p_group_name: 'Familia Prueba 72',
+        p_phone: '+573001112233',
+        p_guests: [
+          { id: guestAId, full_name: 'Invitado A' },
+          { id: guestCId, full_name: 'Invitado C' },
+        ],
+        p_kind: 'group',
+        p_known_guest_ids: [],
+      });
+      assert.equal(initErr, null, 'Error al crear invitacion con invitados A y C');
+
+      const { error: saveErr } = await ctx.ownerXClient.rpc('save_invitation', {
+        p_invitation_id: testInvId,
+        p_event_id: ctx.eventX.id,
+        p_group_name: 'Familia Prueba 72',
+        p_phone: '+573001112233',
+        p_guests: [{ id: guestAId, full_name: 'Invitado A' }],
+        p_kind: 'group',
+        p_known_guest_ids: [guestAId, guestCId],
+      });
+      assert.equal(saveErr, null, 'Error al guardar quitando a C intencionalmente');
+
+      const { data: guests, error: guestsErr } = await ctx.adminClient
+        .from('guests')
+        .select('id')
+        .eq('invitation_id', testInvId);
+      assert.equal(guestsErr, null, 'Error al consultar invitados');
+
+      const guestIds = (guests ?? []).map((g) => g.id);
+      assert.deepEqual(guestIds, [guestAId], 'Solo debe quedar el invitado A; C se debio borrar');
+    } finally {
+      await ctx.adminClient.from('guests').delete().eq('invitation_id', testInvId);
+      await ctx.adminClient.from('invitations').delete().eq('id', testInvId);
+    }
+  }
+);
+
+test(
+  '73. Sin el parametro (null), save_invitation borra a todos los que no vienen en p_guests como antes',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    const testInvId = crypto.randomUUID();
+    const guestAId = crypto.randomUUID();
+    const guestCId = crypto.randomUUID();
+
+    try {
+      const { error: initErr } = await ctx.ownerXClient.rpc('save_invitation', {
+        p_invitation_id: testInvId,
+        p_event_id: ctx.eventX.id,
+        p_group_name: 'Familia Prueba 73',
+        p_phone: '+573001112233',
+        p_guests: [
+          { id: guestAId, full_name: 'Invitado A' },
+          { id: guestCId, full_name: 'Invitado C' },
+        ],
+        p_kind: 'group',
+        p_known_guest_ids: [],
+      });
+      assert.equal(initErr, null, 'Error al crear invitacion con invitados A y C');
+
+      const { error: saveErr } = await ctx.ownerXClient.rpc('save_invitation', {
+        p_invitation_id: testInvId,
+        p_event_id: ctx.eventX.id,
+        p_group_name: 'Familia Prueba 73',
+        p_phone: '+573001112233',
+        p_guests: [{ id: guestAId, full_name: 'Invitado A' }],
+        p_kind: 'group',
+        p_known_guest_ids: null,
+      });
+      assert.equal(saveErr, null, 'Error al guardar con p_known_guest_ids nulo');
+
+      const { data: guests, error: guestsErr } = await ctx.adminClient
+        .from('guests')
+        .select('id')
+        .eq('invitation_id', testInvId);
+      assert.equal(guestsErr, null, 'Error al consultar invitados');
+
+      const guestIds = (guests ?? []).map((g) => g.id);
+      assert.deepEqual(guestIds, [guestAId], 'Sin el parametro, debe borrar a todos los no incluidos en p_guests');
+    } finally {
+      await ctx.adminClient.from('guests').delete().eq('invitation_id', testInvId);
+      await ctx.adminClient.from('invitations').delete().eq('id', testInvId);
+    }
+  }
+);
+
 

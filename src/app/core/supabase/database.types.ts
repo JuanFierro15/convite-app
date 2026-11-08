@@ -664,6 +664,7 @@ export type Database = {
           p_guests: Json
           p_invitation_id: string
           p_kind?: string
+          p_known_guest_ids?: string[] | null
           p_phone: string
         }
         Returns: Json
