@@ -185,6 +185,11 @@ export class GuestInvitationPage implements OnInit, ViewWillEnter {
     return formatInvitationCode(rawCode);
   });
 
+  readonly showEntryCode = computed<boolean>(() => {
+    const inv = this.invitation();
+    return inv?.guests.some((g) => g.rsvp === 'accepted') ?? false;
+  });
+
   readonly formattedEventDate = computed(() => {
     const inv = this.invitation();
     if (!inv) {

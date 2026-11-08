@@ -209,35 +209,37 @@
           }
         </section>
 
-        <ion-card class="section-card entry-code-card">
-          <ion-card-content class="entry-code-card__content">
-            <h2 class="text-section entry-code-card__title">{{ texts().entryCodeTitle }}</h2>
+        @if (showEntryCode()) {
+          <ion-card class="section-card entry-code-card">
+            <ion-card-content class="entry-code-card__content">
+              <h2 class="text-section entry-code-card__title">{{ texts().entryCodeTitle }}</h2>
 
-            @if (qrCodeDataUrl(); as qrUrl) {
-              <div class="entry-code-card__qr-wrapper">
-                <img
-                  class="entry-code-card__qr-image"
-                  [src]="qrUrl"
-                  alt="Código QR de la invitación"
-                  width="220"
-                  height="220"
-                />
-              </div>
-            }
+              @if (qrCodeDataUrl(); as qrUrl) {
+                <div class="entry-code-card__qr-wrapper">
+                  <img
+                    class="entry-code-card__qr-image"
+                    [src]="qrUrl"
+                    alt="Código QR de la invitación"
+                    width="220"
+                    height="220"
+                  />
+                </div>
+              }
 
-            <p class="entry-code-card__code">
-              {{ formattedInvitationCode() }}
-            </p>
+              <p class="entry-code-card__code">
+                {{ formattedInvitationCode() }}
+              </p>
 
-            <p class="entry-code-card__instruction">
-              {{ texts().entryCodeInstruction }}
-            </p>
+              <p class="entry-code-card__instruction">
+                {{ texts().entryCodeInstruction }}
+              </p>
 
-            <p class="entry-code-card__tip">
-              {{ texts().entryCodeTip }}
-            </p>
-          </ion-card-content>
-        </ion-card>
+              <p class="entry-code-card__tip">
+                {{ texts().entryCodeTip }}
+              </p>
+            </ion-card-content>
+          </ion-card>
+        }
 
         <ion-card class="section-card gifts-card">
           <div class="gifts-card__cover" aria-hidden="true">

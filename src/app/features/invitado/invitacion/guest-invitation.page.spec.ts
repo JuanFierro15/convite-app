@@ -144,7 +144,14 @@ describe('GuestInvitationPage', () => {
   });
 
   it('renders group invitation with plural texts and entry code card', async () => {
-    mockGuestApi.getInvitation.mockResolvedValue(mockGroupInvitation);
+    const invWithAccepted: GuestInvitation = {
+      ...mockGroupInvitation,
+      guests: [
+        { id: 'g-1', full_name: 'Ana Ejemplo', rsvp: 'accepted' },
+        { id: 'g-2', full_name: 'Luis Ejemplo', rsvp: 'pending' },
+      ],
+    };
+    mockGuestApi.getInvitation.mockResolvedValue(invWithAccepted);
     vi.mocked(QRCode.toDataURL).mockResolvedValue('data:image/png;base64,fakeqr' as never);
 
     fixture = TestBed.createComponent(GuestInvitationPage);
@@ -229,7 +236,14 @@ describe('GuestInvitationPage', () => {
   });
 
   it('renders entry code card without QR image if generation fails', async () => {
-    mockGuestApi.getInvitation.mockResolvedValue(mockGroupInvitation);
+    const invWithAccepted: GuestInvitation = {
+      ...mockGroupInvitation,
+      guests: [
+        { id: 'g-1', full_name: 'Ana Ejemplo', rsvp: 'accepted' },
+        { id: 'g-2', full_name: 'Luis Ejemplo', rsvp: 'pending' },
+      ],
+    };
+    mockGuestApi.getInvitation.mockResolvedValue(invWithAccepted);
     vi.mocked(QRCode.toDataURL).mockRejectedValue(new Error('Canvas unavailable'));
 
     fixture = TestBed.createComponent(GuestInvitationPage);
@@ -874,6 +888,129 @@ describe('GuestInvitationPage', () => {
       const loadSpy = vi.spyOn(component, 'loadInvitation');
       retryBtn.handler();
       expect(loadSpy).toHaveBeenCalledWith(false);
+    });
+  });
+
+  describe('visibilidad del código de entrada (showEntryCode)', () => {
+    it('no muestra el código de entrada si todos los invitados están en pending', async () => {
+      mockGuestApi.getInvitation.mockResolvedValue(mockGroupInvitation);
+
+      fixture = TestBed.createComponent(GuestInvitationPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('code', 'ABCD1234JK');
+
+      await component.loadInvitation();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('.entry-code-card')).toBeNull();
+    });
+
+    it('no muestra el código de entrada si todos los invitados están en declined', async () => {
+      const allDeclined: GuestInvitation = {
+        ...mockGroupInvitation,
+        guests: [
+          { id: 'g-1', full_name: 'Ana Ejemplo', rsvp: 'declined' },
+          { id: 'g-2', full_name: 'Luis Ejemplo', rsvp: 'declined' },
+        ],
+      };
+      mockGuestApi.getInvitation.mockResolvedValue(allDeclined);
+
+      fixture = TestBed.createComponent(GuestInvitationPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('code', 'ABCD1234JK');
+
+      await component.loadInvitation();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('.entry-code-card')).toBeNull();
+    });
+
+    it('muestra el código de entrada si al menos un invitado tiene rsvp accepted', async () => {
+      const oneAccepted: GuestInvitation = {
+        ...mockGroupInvitation,
+        guests: [
+          { id: 'g-1', full_name: 'Ana Ejemplo', rsvp: 'accepted' },
+          { id: 'g-2', full_name: 'Luis Ejemplo', rsvp: 'declined' },
+        ],
+      };
+      mockGuestApi.getInvitation.mockResolvedValue(oneAccepted);
+
+      fixture = TestBed.createComponent(GuestInvitationPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('code', 'ABCD1234JK');
+
+      await component.loadInvitation();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('.entry-code-card')).not.toBeNull();
+    });
+
+    it('muestra el código de entrada cuando un invitado en declined pasa a accepted', async () => {
+      const initialInv: GuestInvitation = {
+        ...mockGroupInvitation,
+        guests: [
+          { id: 'g-1', full_name: 'Ana Ejemplo', rsvp: 'declined' },
+          { id: 'g-2', full_name: 'Luis Ejemplo', rsvp: 'declined' },
+        ],
+      };
+      mockGuestApi.getInvitation.mockResolvedValue(initialInv);
+
+      fixture = TestBed.createComponent(GuestInvitationPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('code', 'ABCD1234JK');
+
+      await component.loadInvitation();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('.entry-code-card')).toBeNull();
+
+      const updatedInv: GuestInvitation = {
+        ...initialInv,
+        guests: [
+          { id: 'g-1', full_name: 'Ana Ejemplo', rsvp: 'accepted' },
+          { id: 'g-2', full_name: 'Luis Ejemplo', rsvp: 'declined' },
+        ],
+      };
+      mockGuestApi.setRsvp.mockResolvedValue(updatedInv);
+
+      await component.onSelectRsvp(initialInv.guests[0], 'accepted');
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('.entry-code-card')).not.toBeNull();
+    });
+
+    it('oculta el código de entrada cuando el único invitado accepted pasa a declined', async () => {
+      const initialInv: GuestInvitation = {
+        ...mockGroupInvitation,
+        guests: [
+          { id: 'g-1', full_name: 'Ana Ejemplo', rsvp: 'accepted' },
+          { id: 'g-2', full_name: 'Luis Ejemplo', rsvp: 'declined' },
+        ],
+      };
+      mockGuestApi.getInvitation.mockResolvedValue(initialInv);
+
+      fixture = TestBed.createComponent(GuestInvitationPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('code', 'ABCD1234JK');
+
+      await component.loadInvitation();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('.entry-code-card')).not.toBeNull();
+
+      const updatedInv: GuestInvitation = {
+        ...initialInv,
+        guests: [
+          { id: 'g-1', full_name: 'Ana Ejemplo', rsvp: 'declined' },
+          { id: 'g-2', full_name: 'Luis Ejemplo', rsvp: 'declined' },
+        ],
+      };
+      mockGuestApi.setRsvp.mockResolvedValue(updatedInv);
+
+      await component.onSelectRsvp(initialInv.guests[0], 'declined');
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('.entry-code-card')).toBeNull();
     });
   });
 
