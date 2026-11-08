@@ -1,7 +1,13 @@
 import { TestBed } from '@angular/core/testing';
 import { SupabaseService } from '../supabase/supabase.service';
 import { BudgetRepository } from './budget.repository';
-import { ExpenseCategoryRow, ExpenseInput, PaymentInput } from '../models/budget';
+import {
+  ExpenseCategoryRow,
+  ExpenseInput,
+  ExpensePaymentRow,
+  ExpenseRow,
+  PaymentInput,
+} from '../models/budget';
 import { LOAD_ERROR_MESSAGE } from './errors';
 
 describe('BudgetRepository', () => {
@@ -59,14 +65,73 @@ describe('BudgetRepository', () => {
       const mockInsert = vi.fn().mockReturnValue({ select: mockSelect });
       mockSupabase.client.from.mockReturnValue({ insert: mockInsert });
 
-      const result = await repository.createCategory('event-1', '  Decoración  ', 1);
+      const result = await repository.createCategory('cat-1', 'event-1', '  Decoración  ', 1);
 
       expect(mockInsert).toHaveBeenCalledWith({
+        id: 'cat-1',
         event_id: 'event-1',
         name: 'Decoración',
         sort_order: 1,
       });
       expect(result.name).toBe('Decoración');
+    });
+
+    it('createCategory ante 23505 devuelve la fila existente', async () => {
+      const existingCategory = {
+        id: 'cat-1',
+        event_id: 'event-1',
+        name: 'Decoración',
+        sort_order: 1,
+      };
+      const mockSingle = vi.fn().mockResolvedValue({
+        data: null,
+        error: { code: '23505', message: 'duplicate key value' },
+      });
+      const mockInsertSelect = vi.fn().mockReturnValue({ single: mockSingle });
+      const mockInsert = vi.fn().mockReturnValue({ select: mockInsertSelect });
+
+      const mockMaybeSingle = vi.fn().mockResolvedValue({
+        data: existingCategory,
+        error: null,
+      });
+      const mockEq = vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingle });
+      const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
+
+      mockSupabase.client.from.mockReturnValue({
+        insert: mockInsert,
+        select: mockSelect,
+      });
+
+      const result = await repository.createCategory('cat-1', 'event-1', 'Decoración', 1);
+
+      expect(mockSelect).toHaveBeenCalledWith('*');
+      expect(mockEq).toHaveBeenCalledWith('id', 'cat-1');
+      expect(result).toEqual(existingCategory);
+    });
+
+    it('createCategory ante 23505 sin fila visible lanza el error', async () => {
+      const mockSingle = vi.fn().mockResolvedValue({
+        data: null,
+        error: { code: '23505', message: 'duplicate key value' },
+      });
+      const mockInsertSelect = vi.fn().mockReturnValue({ single: mockSingle });
+      const mockInsert = vi.fn().mockReturnValue({ select: mockInsertSelect });
+
+      const mockMaybeSingle = vi.fn().mockResolvedValue({
+        data: null,
+        error: null,
+      });
+      const mockEq = vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingle });
+      const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
+
+      mockSupabase.client.from.mockReturnValue({
+        insert: mockInsert,
+        select: mockSelect,
+      });
+
+      await expect(
+        repository.createCategory('cat-1', 'event-1', 'Decoración', 1),
+      ).rejects.toThrow();
     });
 
     it('renameCategory trims name and updates row', async () => {
@@ -361,15 +426,93 @@ describe('BudgetRepository', () => {
         note: '   ',
       };
 
-      await repository.createExpense('event-1', input);
+      await repository.createExpense('exp-1', 'event-1', input);
 
       expect(mockInsert).toHaveBeenCalledWith({
+        id: 'exp-1',
         event_id: 'event-1',
         category_id: 'cat-1',
         description: 'Gasto nuevo',
         amount_cop: 120000,
         note: null,
       });
+    });
+
+    it('createExpense ante 23505 devuelve la fila existente', async () => {
+      const existingExpense: ExpenseRow = {
+        id: 'exp-1',
+        event_id: 'event-1',
+        category_id: 'cat-1',
+        description: 'Gasto existente',
+        amount_cop: 120000,
+        note: null,
+        task_id: null,
+        created_at: '2026-11-01T10:00:00Z',
+        updated_at: '2026-11-01T10:00:00Z',
+      };
+      const mockSingle = vi.fn().mockResolvedValue({
+        data: null,
+        error: { code: '23505', message: 'duplicate key value' },
+      });
+      const mockInsertSelect = vi.fn().mockReturnValue({ single: mockSingle });
+      const mockInsert = vi.fn().mockReturnValue({ select: mockInsertSelect });
+
+      const mockMaybeSingle = vi.fn().mockResolvedValue({
+        data: existingExpense,
+        error: null,
+      });
+      const mockEq = vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingle });
+      const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
+
+      mockSupabase.client.from.mockReturnValue({
+        insert: mockInsert,
+        select: mockSelect,
+      });
+
+      const input: ExpenseInput = {
+        category_id: 'cat-1',
+        description: 'Gasto nuevo',
+        amount_cop: 120000,
+        note: null,
+      };
+
+      const result = await repository.createExpense('exp-1', 'event-1', input);
+
+      expect(mockSelect).toHaveBeenCalledWith('*');
+      expect(mockEq).toHaveBeenCalledWith('id', 'exp-1');
+      expect(result).toEqual(existingExpense);
+    });
+
+    it('createExpense ante 23505 sin fila visible lanza el error', async () => {
+      const mockSingle = vi.fn().mockResolvedValue({
+        data: null,
+        error: { code: '23505', message: 'duplicate key value' },
+      });
+      const mockInsertSelect = vi.fn().mockReturnValue({ single: mockSingle });
+      const mockInsert = vi.fn().mockReturnValue({ select: mockInsertSelect });
+
+      const mockMaybeSingle = vi.fn().mockResolvedValue({
+        data: null,
+        error: null,
+      });
+      const mockEq = vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingle });
+      const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
+
+      mockSupabase.client.from.mockReturnValue({
+        insert: mockInsert,
+        select: mockSelect,
+      });
+
+      const input: ExpenseInput = {
+        category_id: 'cat-1',
+        description: 'Gasto nuevo',
+        amount_cop: 120000,
+        note: null,
+      };
+
+      await expect(
+        repository.createExpense('exp-1', 'event-1', input),
+      ).rejects.toThrow();
     });
 
     it('updateExpense trims description and saves empty note as null', async () => {
@@ -454,15 +597,91 @@ describe('BudgetRepository', () => {
         paid_by_profile_id: 'prof-1',
       };
 
-      await repository.addPayment('event-1', input);
+      await repository.addPayment('pay-1', 'event-1', input);
 
       expect(mockInsert).toHaveBeenCalledWith({
+        id: 'pay-1',
         event_id: 'event-1',
         expense_id: 'exp-1',
         amount_cop: 50000,
         paid_on: '2026-11-05',
         paid_by_profile_id: 'prof-1',
       });
+    });
+
+    it('addPayment ante 23505 devuelve la fila existente', async () => {
+      const existingPayment: ExpensePaymentRow = {
+        id: 'pay-1',
+        event_id: 'event-1',
+        expense_id: 'exp-1',
+        amount_cop: 50000,
+        paid_on: '2026-11-05',
+        paid_by_profile_id: 'prof-1',
+        created_at: '2026-11-05T10:00:00Z',
+      };
+      const mockSingle = vi.fn().mockResolvedValue({
+        data: null,
+        error: { code: '23505', message: 'duplicate key value' },
+      });
+      const mockInsertSelect = vi.fn().mockReturnValue({ single: mockSingle });
+      const mockInsert = vi.fn().mockReturnValue({ select: mockInsertSelect });
+
+      const mockMaybeSingle = vi.fn().mockResolvedValue({
+        data: existingPayment,
+        error: null,
+      });
+      const mockEq = vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingle });
+      const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
+
+      mockSupabase.client.from.mockReturnValue({
+        insert: mockInsert,
+        select: mockSelect,
+      });
+
+      const input: PaymentInput = {
+        expense_id: 'exp-1',
+        amount_cop: 50000,
+        paid_on: '2026-11-05',
+        paid_by_profile_id: 'prof-1',
+      };
+
+      const result = await repository.addPayment('pay-1', 'event-1', input);
+
+      expect(mockSelect).toHaveBeenCalledWith('*');
+      expect(mockEq).toHaveBeenCalledWith('id', 'pay-1');
+      expect(result).toEqual(existingPayment);
+    });
+
+    it('addPayment ante 23505 sin fila visible lanza el error', async () => {
+      const mockSingle = vi.fn().mockResolvedValue({
+        data: null,
+        error: { code: '23505', message: 'duplicate key value' },
+      });
+      const mockInsertSelect = vi.fn().mockReturnValue({ single: mockSingle });
+      const mockInsert = vi.fn().mockReturnValue({ select: mockInsertSelect });
+
+      const mockMaybeSingle = vi.fn().mockResolvedValue({
+        data: null,
+        error: null,
+      });
+      const mockEq = vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingle });
+      const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
+
+      mockSupabase.client.from.mockReturnValue({
+        insert: mockInsert,
+        select: mockSelect,
+      });
+
+      const input: PaymentInput = {
+        expense_id: 'exp-1',
+        amount_cop: 50000,
+        paid_on: '2026-11-05',
+        paid_by_profile_id: 'prof-1',
+      };
+
+      await expect(
+        repository.addPayment('pay-1', 'event-1', input),
+      ).rejects.toThrow();
     });
 
     it('translates payment_exceeds_expense error on addPayment with toUserError', async () => {
@@ -481,7 +700,7 @@ describe('BudgetRepository', () => {
         paid_by_profile_id: 'prof-1',
       };
 
-      await expect(repository.addPayment('event-1', input)).rejects.toThrow(
+      await expect(repository.addPayment('pay-1', 'event-1', input)).rejects.toThrow(
         'El pago supera lo que falta por pagar.',
       );
     });

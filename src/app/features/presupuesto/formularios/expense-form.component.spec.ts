@@ -138,12 +138,38 @@ describe('ExpenseFormComponent', () => {
 
     await component.save();
 
-    expect(mockBudgetRepo.createExpense).toHaveBeenCalledWith('evt-1', {
-      category_id: 'cat-2',
-      description: 'Flores y centros de mesa',
-      amount_cop: 150000,
-      note: 'Rosas y margaritas',
-    });
+    expect(mockBudgetRepo.createExpense).toHaveBeenCalledWith(
+      expect.any(String),
+      'evt-1',
+      {
+        category_id: 'cat-2',
+        description: 'Flores y centros de mesa',
+        amount_cop: 150000,
+        note: 'Rosas y margaritas',
+      },
+    );
+    expect(mockModalCtrl.dismiss).toHaveBeenCalledWith({ id: 'exp-new' }, 'saved');
+  });
+
+  it('dos intentos de guardar después de un error envían el mismo id', async () => {
+    mockBudgetRepo.createExpense.mockRejectedValueOnce(new Error('Fallo de conexión'));
+    mockBudgetRepo.createExpense.mockResolvedValueOnce({ id: 'exp-new' });
+
+    component.ngOnInit();
+    component.form.controls.description.setValue('Torta');
+    component.form.controls.category_id.setValue('cat-1');
+    component.form.controls.amount_cop.setValue('100000');
+
+    await component.save();
+    expect(mockBudgetRepo.createExpense).toHaveBeenCalledTimes(1);
+    const firstId = mockBudgetRepo.createExpense.mock.calls[0][0];
+    expect(typeof firstId).toBe('string');
+    expect(firstId.length).toBeGreaterThan(0);
+
+    await component.save();
+    expect(mockBudgetRepo.createExpense).toHaveBeenCalledTimes(2);
+    const secondId = mockBudgetRepo.createExpense.mock.calls[1][0];
+    expect(secondId).toBe(firstId);
     expect(mockModalCtrl.dismiss).toHaveBeenCalledWith({ id: 'exp-new' }, 'saved');
   });
 

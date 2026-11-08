@@ -39,6 +39,7 @@ import {
   ExpenseInput,
   ExpenseWithPayments,
   formatCopInput,
+  newId,
   paidTotal,
   parseCopInput,
 } from '../../../core';
@@ -79,6 +80,7 @@ export class ExpenseFormComponent implements OnInit {
   private readonly budgetRepo = inject(BudgetRepository);
   private readonly modalCtrl = inject(ModalController);
   private readonly toastCtrl = inject(ToastController);
+  private creationId = newId();
 
   @Input() eventId = '';
   @Input() expense: ExpenseWithPayments | null = null;
@@ -219,7 +221,7 @@ export class ExpenseFormComponent implements OnInit {
     try {
       const saved = this.expense
         ? await this.budgetRepo.updateExpense(this.expense.id, input)
-        : await this.budgetRepo.createExpense(this.eventId, input);
+        : await this.budgetRepo.createExpense(this.creationId, this.eventId, input);
       await this.modalCtrl.dismiss(saved, 'saved');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'No pudimos guardar el gasto.';

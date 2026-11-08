@@ -109,6 +109,7 @@ describe('GiftFormComponent', () => {
     await component.save();
     expect(component.maxReservationsError).toBeNull();
     expect(mockGiftsRepo.create).toHaveBeenCalledWith(
+      expect.any(String),
       'event-1',
       expect.objectContaining({
         name: 'Pañales',
@@ -129,6 +130,7 @@ describe('GiftFormComponent', () => {
     await component.save();
 
     expect(mockGiftsRepo.create).toHaveBeenCalledWith(
+      expect.any(String),
       'event-1',
       expect.objectContaining({
         name: 'Lluvia de sobres',
@@ -391,6 +393,7 @@ describe('GiftFormComponent', () => {
     await component.save();
 
     expect(mockGiftsRepo.create).toHaveBeenCalledWith(
+      expect.any(String),
       'event-1',
       expect.objectContaining({
         name: 'Lluvia de sobres',
@@ -399,6 +402,28 @@ describe('GiftFormComponent', () => {
         category: null,
       }),
     );
+  });
+
+  it('dos intentos de guardar después de un error envían el mismo id', async () => {
+    mockGiftsRepo.create.mockRejectedValueOnce(new Error('Fallo de red'));
+    mockGiftsRepo.create.mockResolvedValueOnce({ id: 'gift-1' });
+
+    component.ngOnInit();
+    component.form.controls.name.setValue('Cuna');
+    component.form.controls.kind.setValue('unique');
+    fixture.detectChanges();
+
+    await component.save();
+    expect(mockGiftsRepo.create).toHaveBeenCalledTimes(1);
+    const firstId = mockGiftsRepo.create.mock.calls[0][0];
+    expect(typeof firstId).toBe('string');
+    expect(firstId.length).toBeGreaterThan(0);
+
+    await component.save();
+    expect(mockGiftsRepo.create).toHaveBeenCalledTimes(2);
+    const secondId = mockGiftsRepo.create.mock.calls[1][0];
+    expect(secondId).toBe(firstId);
+    expect(mockModalCtrl.dismiss).toHaveBeenCalledWith({ id: 'gift-1' }, 'saved');
   });
 
   it('con hasEnvelopeGift = true y envelope forzado en el control, no guarda', async () => {

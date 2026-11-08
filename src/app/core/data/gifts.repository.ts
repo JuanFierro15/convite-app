@@ -75,10 +75,11 @@ export class GiftsRepository {
     return items.sort(compareGifts);
   }
 
-  async create(eventId: string, input: GiftInput): Promise<GiftRow> {
+  async create(id: string, eventId: string, input: GiftInput): Promise<GiftRow> {
     const { data, error } = await this.supabase.client
       .from('gifts')
       .insert({
+        id,
         event_id: eventId,
         name: input.name.trim(),
         description: input.description,
@@ -90,6 +91,17 @@ export class GiftsRepository {
       .single();
 
     if (error) {
+      if ((error as { code?: string })?.code === '23505') {
+        const { data: existing, error: selectError } = await this.supabase.client
+          .from('gifts')
+          .select('*')
+          .eq('id', id)
+          .maybeSingle();
+
+        if (!selectError && existing) {
+          return existing;
+        }
+      }
       throw toUserError(error);
     }
     return data;

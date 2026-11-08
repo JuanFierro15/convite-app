@@ -39,6 +39,7 @@ import {
   EventContextService,
   TeamProfileRow,
   TeamProfilesRepository,
+  newId,
   toUserError,
 } from '../../core';
 import { EmptyStateComponent } from '../../shared';
@@ -81,6 +82,7 @@ export class ProfilesPage implements ViewWillEnter {
   readonly loading = signal<boolean>(true);
   readonly error = signal<string | null>(null);
   readonly busy = signal<boolean>(false);
+  private readonly pendingProfileIds = new Map<string, string>();
 
   readonly activeProfiles = computed<TeamProfileRow[]>(() =>
     this.profiles().filter((p) => p.archived_at === null),
@@ -179,6 +181,7 @@ export class ProfilesPage implements ViewWillEnter {
   }
 
   async openCreateProfileModal(): Promise<void> {
+    const creationId = newId();
     const alert = await this.alertCtrl.create({
       header: 'Agregar perfil',
       cssClass: 'convite-alert',
@@ -207,7 +210,7 @@ export class ProfilesPage implements ViewWillEnter {
               void this.showToast('Escribe un nombre.', 'danger');
               return false;
             }
-            void this.createProfile(trimmed);
+            void this.createProfile(trimmed, creationId);
             return true;
           },
         },
@@ -348,18 +351,30 @@ export class ProfilesPage implements ViewWillEnter {
     }
   }
 
-  private async createProfile(name: string): Promise<void> {
+  private getPendingProfileId(name: string, fallbackId?: string): string {
+    const key = name.trim().toLowerCase();
+    let id = this.pendingProfileIds.get(key);
+    if (!id) {
+      id = fallbackId ?? newId();
+      this.pendingProfileIds.set(key, id);
+    }
+    return id;
+  }
+
+  private async createProfile(name: string, requestedId?: string): Promise<void> {
     const currentTeamId = this.teamId();
     if (!currentTeamId) {
       return;
     }
     this.busy.set(true);
+    const id = this.getPendingProfileId(name, requestedId);
     try {
       const maxOrder = this.profiles().reduce(
         (max, p) => Math.max(max, p.sort_order),
         -1,
       );
-      await this.profilesRepo.create(currentTeamId, name, maxOrder + 1);
+      await this.profilesRepo.create(id, currentTeamId, name, maxOrder + 1);
+      this.pendingProfileIds.delete(name.trim().toLowerCase());
       await this.loadProfiles(false);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'No pudimos crear el perfil.';

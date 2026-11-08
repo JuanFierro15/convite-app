@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { SupabaseService } from '../supabase/supabase.service';
 import { GiftsRepository } from './gifts.repository';
-import { GiftInput } from '../models/gifts';
+import { GiftInput, GiftRow } from '../models/gifts';
 
 describe('GiftsRepository', () => {
   let repository: GiftsRepository;
@@ -168,9 +168,10 @@ describe('GiftsRepository', () => {
         max_reservations: 5,
       };
 
-      await repository.create('event-1', input);
+      await repository.create('gift-1', 'event-1', input);
 
       expect(mockInsert).toHaveBeenCalledWith({
+        id: 'gift-1',
         event_id: 'event-1',
         name: 'Pañales',
         description: null,
@@ -178,6 +179,85 @@ describe('GiftsRepository', () => {
         kind: 'repeatable',
         max_reservations: 5,
       });
+    });
+
+    it('create ante 23505 devuelve la fila existente', async () => {
+      const existingGift: GiftRow = {
+        id: 'gift-1',
+        event_id: 'event-1',
+        name: 'Pañales',
+        description: null,
+        category: null,
+        kind: 'repeatable',
+        max_reservations: 5,
+        sort_order: 0,
+        created_at: '2026-11-01T10:00:00Z',
+      };
+      const mockSingle = vi.fn().mockResolvedValue({
+        data: null,
+        error: { code: '23505', message: 'duplicate key value' },
+      });
+      const mockInsertSelect = vi.fn().mockReturnValue({ single: mockSingle });
+      const mockInsert = vi.fn().mockReturnValue({ select: mockInsertSelect });
+
+      const mockMaybeSingle = vi.fn().mockResolvedValue({
+        data: existingGift,
+        error: null,
+      });
+      const mockEq = vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingle });
+      const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
+
+      mockSupabase.client.from.mockReturnValue({
+        insert: mockInsert,
+        select: mockSelect,
+      });
+
+      const input: GiftInput = {
+        name: 'Pañales',
+        description: null,
+        category: null,
+        kind: 'repeatable',
+        max_reservations: 5,
+      };
+
+      const result = await repository.create('gift-1', 'event-1', input);
+
+      expect(mockSelect).toHaveBeenCalledWith('*');
+      expect(mockEq).toHaveBeenCalledWith('id', 'gift-1');
+      expect(result).toEqual(existingGift);
+    });
+
+    it('create ante 23505 sin fila visible lanza el error', async () => {
+      const mockSingle = vi.fn().mockResolvedValue({
+        data: null,
+        error: { code: '23505', message: 'duplicate key value' },
+      });
+      const mockInsertSelect = vi.fn().mockReturnValue({ single: mockSingle });
+      const mockInsert = vi.fn().mockReturnValue({ select: mockInsertSelect });
+
+      const mockMaybeSingle = vi.fn().mockResolvedValue({
+        data: null,
+        error: null,
+      });
+      const mockEq = vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingle });
+      const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
+
+      mockSupabase.client.from.mockReturnValue({
+        insert: mockInsert,
+        select: mockSelect,
+      });
+
+      const input: GiftInput = {
+        name: 'Pañales',
+        description: null,
+        category: null,
+        kind: 'repeatable',
+        max_reservations: 5,
+      };
+
+      await expect(
+        repository.create('gift-1', 'event-1', input),
+      ).rejects.toThrow();
     });
 
     it('sends null for max_reservations when kind is unique even if input has a number', async () => {
@@ -197,9 +277,10 @@ describe('GiftsRepository', () => {
         max_reservations: 10,
       };
 
-      await repository.create('event-1', input);
+      await repository.create('gift-uniq', 'event-1', input);
 
       expect(mockInsert).toHaveBeenCalledWith({
+        id: 'gift-uniq',
         event_id: 'event-1',
         name: 'Coche',
         description: null,
@@ -226,9 +307,10 @@ describe('GiftsRepository', () => {
         max_reservations: 5,
       };
 
-      await repository.create('event-1', input);
+      await repository.create('gift-sug', 'event-1', input);
 
       expect(mockInsert).toHaveBeenCalledWith({
+        id: 'gift-sug',
         event_id: 'event-1',
         name: 'Pañales',
         description: null,

@@ -100,14 +100,75 @@ describe('TeamProfilesRepository', () => {
       const mockInsert = vi.fn().mockReturnValue({ select: mockSelect });
       mockSupabase.client.from.mockReturnValue({ insert: mockInsert });
 
-      const result = await repository.create('team-1', '  Laura  ', 2);
+      const result = await repository.create('prof-1', 'team-1', '  Laura  ', 2);
 
       expect(mockInsert).toHaveBeenCalledWith({
+        id: 'prof-1',
         team_id: 'team-1',
         name: 'Laura',
         sort_order: 2,
       });
       expect(result.name).toBe('Laura');
+    });
+
+    it('create ante 23505 devuelve la fila existente', async () => {
+      const existingProfile: TeamProfileRow = {
+        id: 'prof-1',
+        team_id: 'team-1',
+        name: 'Laura',
+        sort_order: 2,
+        archived_at: null,
+        created_at: '2026-11-01T10:00:00Z',
+      };
+      const mockSingle = vi.fn().mockResolvedValue({
+        data: null,
+        error: { code: '23505', message: 'duplicate key value' },
+      });
+      const mockInsertSelect = vi.fn().mockReturnValue({ single: mockSingle });
+      const mockInsert = vi.fn().mockReturnValue({ select: mockInsertSelect });
+
+      const mockMaybeSingle = vi.fn().mockResolvedValue({
+        data: existingProfile,
+        error: null,
+      });
+      const mockEq = vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingle });
+      const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
+
+      mockSupabase.client.from.mockReturnValue({
+        insert: mockInsert,
+        select: mockSelect,
+      });
+
+      const result = await repository.create('prof-1', 'team-1', 'Laura', 2);
+
+      expect(mockSelect).toHaveBeenCalledWith('*');
+      expect(mockEq).toHaveBeenCalledWith('id', 'prof-1');
+      expect(result).toEqual(existingProfile);
+    });
+
+    it('create ante 23505 sin fila visible lanza el error', async () => {
+      const mockSingle = vi.fn().mockResolvedValue({
+        data: null,
+        error: { code: '23505', message: 'duplicate key value' },
+      });
+      const mockInsertSelect = vi.fn().mockReturnValue({ single: mockSingle });
+      const mockInsert = vi.fn().mockReturnValue({ select: mockInsertSelect });
+
+      const mockMaybeSingle = vi.fn().mockResolvedValue({
+        data: null,
+        error: null,
+      });
+      const mockEq = vi.fn().mockReturnValue({ maybeSingle: mockMaybeSingle });
+      const mockSelect = vi.fn().mockReturnValue({ eq: mockEq });
+
+      mockSupabase.client.from.mockReturnValue({
+        insert: mockInsert,
+        select: mockSelect,
+      });
+
+      await expect(
+        repository.create('prof-1', 'team-1', 'Laura', 2),
+      ).rejects.toThrow();
     });
 
     it('translates duplicate active name error with toUserError', async () => {
@@ -119,7 +180,7 @@ describe('TeamProfilesRepository', () => {
       const mockInsert = vi.fn().mockReturnValue({ select: mockSelect });
       mockSupabase.client.from.mockReturnValue({ insert: mockInsert });
 
-      await expect(repository.create('team-1', 'Laura', 0)).rejects.toThrow(
+      await expect(repository.create('prof-1', 'team-1', 'Laura', 0)).rejects.toThrow(
         'Ya hay un perfil activo con ese nombre.',
       );
     });

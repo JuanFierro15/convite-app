@@ -283,6 +283,43 @@ describe('ProfilesPage', () => {
     );
   });
 
+  it('dos intentos de crear el mismo perfil después de un error envían el mismo id', async () => {
+    mockProfilesRepo.create.mockRejectedValueOnce(new Error('Fallo de red'));
+    mockProfilesRepo.create.mockResolvedValueOnce({
+      id: 'prof-new',
+      team_id: 'team-1',
+      name: 'Carlos',
+      sort_order: 3,
+      archived_at: null,
+      created_at: '',
+    });
+
+    await component.ionViewWillEnter();
+    await component.openCreateProfileModal();
+
+    const alertArgs = mockAlertCtrl.create.mock.calls[0][0];
+    const saveButton = alertArgs.buttons.find(
+      (b: { text?: string }) => b.text === 'Guardar',
+    );
+
+    saveButton.handler({ name: 'Carlos' });
+    expect(mockProfilesRepo.create).toHaveBeenCalledTimes(1);
+    const firstId = mockProfilesRepo.create.mock.calls[0][0];
+    expect(typeof firstId).toBe('string');
+    expect(firstId.length).toBeGreaterThan(0);
+
+    await component.openCreateProfileModal();
+    const secondAlertArgs = mockAlertCtrl.create.mock.calls[1][0];
+    const secondSaveButton = secondAlertArgs.buttons.find(
+      (b: { text?: string }) => b.text === 'Guardar',
+    );
+    secondSaveButton.handler({ name: 'Carlos' });
+
+    expect(mockProfilesRepo.create).toHaveBeenCalledTimes(2);
+    const secondId = mockProfilesRepo.create.mock.calls[1][0];
+    expect(secondId).toBe(firstId);
+  });
+
   it('borrar en uso: muestra aviso específico si el perfil ya se usó', async () => {
     await component.ionViewWillEnter();
     mockProfilesRepo.remove.mockRejectedValue(

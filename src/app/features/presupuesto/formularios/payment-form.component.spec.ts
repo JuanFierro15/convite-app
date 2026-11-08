@@ -168,12 +168,37 @@ describe('PaymentFormComponent', () => {
 
     await component.save();
 
-    expect(mockBudgetRepo.addPayment).toHaveBeenCalledWith('event-1', {
-      expense_id: 'exp-1',
-      amount_cop: 50000,
-      paid_on: component.today,
-      paid_by_profile_id: 'prof-1',
-    });
+    expect(mockBudgetRepo.addPayment).toHaveBeenCalledWith(
+      expect.any(String),
+      'event-1',
+      {
+        expense_id: 'exp-1',
+        amount_cop: 50000,
+        paid_on: component.today,
+        paid_by_profile_id: 'prof-1',
+      },
+    );
+    expect(mockModalCtrl.dismiss).toHaveBeenCalledWith({ id: 'pay-1' }, 'saved');
+  });
+
+  it('dos intentos de guardar después de un error envían el mismo id', async () => {
+    mockBudgetRepo.addPayment.mockRejectedValueOnce(new Error('Fallo de red'));
+    mockBudgetRepo.addPayment.mockResolvedValueOnce({ id: 'pay-1' });
+
+    component.ngOnInit();
+    component.form.controls.amount_cop.setValue('50.000');
+    component.form.controls.paid_by_profile_id.setValue('prof-1');
+
+    await component.save();
+    expect(mockBudgetRepo.addPayment).toHaveBeenCalledTimes(1);
+    const firstId = mockBudgetRepo.addPayment.mock.calls[0][0];
+    expect(typeof firstId).toBe('string');
+    expect(firstId.length).toBeGreaterThan(0);
+
+    await component.save();
+    expect(mockBudgetRepo.addPayment).toHaveBeenCalledTimes(2);
+    const secondId = mockBudgetRepo.addPayment.mock.calls[1][0];
+    expect(secondId).toBe(firstId);
     expect(mockModalCtrl.dismiss).toHaveBeenCalledWith({ id: 'pay-1' }, 'saved');
   });
 

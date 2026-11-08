@@ -22,10 +22,11 @@ export class TeamProfilesRepository {
     return data ?? [];
   }
 
-  async create(teamId: string, name: string, sortOrder: number): Promise<TeamProfileRow> {
+  async create(id: string, teamId: string, name: string, sortOrder: number): Promise<TeamProfileRow> {
     const { data, error } = await this.supabase.client
       .from('team_profiles')
       .insert({
+        id,
         team_id: teamId,
         name: name.trim(),
         sort_order: sortOrder,
@@ -34,6 +35,17 @@ export class TeamProfilesRepository {
       .single();
 
     if (error) {
+      if ((error as { code?: string })?.code === '23505') {
+        const { data: existing, error: selectError } = await this.supabase.client
+          .from('team_profiles')
+          .select('*')
+          .eq('id', id)
+          .maybeSingle();
+
+        if (!selectError && existing) {
+          return existing;
+        }
+      }
       throw toUserError(error);
     }
 

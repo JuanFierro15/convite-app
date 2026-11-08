@@ -38,6 +38,7 @@ import {
   TeamProfileRow,
   formatCop,
   formatCopInput,
+  newId,
   parseCopInput,
   toBogotaDateInput,
 } from '../../../core';
@@ -114,6 +115,7 @@ export class PaymentFormComponent implements OnInit {
   private readonly budgetRepo = inject(BudgetRepository);
   private readonly modalCtrl = inject(ModalController);
   private readonly toastCtrl = inject(ToastController);
+  private creationId = newId();
 
   @Input() eventId = '';
   @Input() expenseId = '';
@@ -228,7 +230,7 @@ export class PaymentFormComponent implements OnInit {
 
     this.saving.set(true);
     try {
-      const saved = await this.budgetRepo.addPayment(this.eventId, input);
+      const saved = await this.budgetRepo.addPayment(this.creationId, this.eventId, input);
       await this.modalCtrl.dismiss(saved, 'saved');
     } catch (err) {
       const message = err instanceof Error ? err.message : 'No pudimos registrar el pago.';

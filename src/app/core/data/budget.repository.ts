@@ -72,6 +72,7 @@ export class BudgetRepository {
   }
 
   async createCategory(
+    id: string,
     eventId: string,
     name: string,
     sortOrder: number
@@ -79,6 +80,7 @@ export class BudgetRepository {
     const { data, error } = await this.supabase.client
       .from('expense_categories')
       .insert({
+        id,
         event_id: eventId,
         name: name.trim(),
         sort_order: sortOrder,
@@ -87,6 +89,17 @@ export class BudgetRepository {
       .single();
 
     if (error) {
+      if ((error as { code?: string })?.code === '23505') {
+        const { data: existing, error: selectError } = await this.supabase.client
+          .from('expense_categories')
+          .select('*')
+          .eq('id', id)
+          .maybeSingle();
+
+        if (!selectError && existing) {
+          return existing;
+        }
+      }
       throw toUserError(error);
     }
 
@@ -218,12 +231,13 @@ export class BudgetRepository {
     return mapExpenseWithPayments(data as unknown as Record<string, unknown>);
   }
 
-  async createExpense(eventId: string, input: ExpenseInput): Promise<ExpenseRow> {
+  async createExpense(id: string, eventId: string, input: ExpenseInput): Promise<ExpenseRow> {
     const trimmedNote = input.note?.trim();
 
     const { data, error } = await this.supabase.client
       .from('expenses')
       .insert({
+        id,
         event_id: eventId,
         category_id: input.category_id,
         description: input.description.trim(),
@@ -234,6 +248,17 @@ export class BudgetRepository {
       .single();
 
     if (error) {
+      if ((error as { code?: string })?.code === '23505') {
+        const { data: existing, error: selectError } = await this.supabase.client
+          .from('expenses')
+          .select('*')
+          .eq('id', id)
+          .maybeSingle();
+
+        if (!selectError && existing) {
+          return existing;
+        }
+      }
       throw toUserError(error);
     }
 
@@ -286,10 +311,11 @@ export class BudgetRepository {
     return (data ?? []).reduce((sum, row) => sum + row.amount_cop, 0);
   }
 
-  async addPayment(eventId: string, input: PaymentInput): Promise<ExpensePaymentRow> {
+  async addPayment(id: string, eventId: string, input: PaymentInput): Promise<ExpensePaymentRow> {
     const { data, error } = await this.supabase.client
       .from('expense_payments')
       .insert({
+        id,
         event_id: eventId,
         expense_id: input.expense_id,
         amount_cop: input.amount_cop,
@@ -300,6 +326,17 @@ export class BudgetRepository {
       .single();
 
     if (error) {
+      if ((error as { code?: string })?.code === '23505') {
+        const { data: existing, error: selectError } = await this.supabase.client
+          .from('expense_payments')
+          .select('*')
+          .eq('id', id)
+          .maybeSingle();
+
+        if (!selectError && existing) {
+          return existing;
+        }
+      }
       throw toUserError(error);
     }
 

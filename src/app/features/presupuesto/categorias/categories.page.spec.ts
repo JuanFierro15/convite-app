@@ -236,7 +236,43 @@ describe('CategoriesPage', () => {
     // Envío válido
     const validResult = saveButton.handler({ name: 'Animación' });
     expect(validResult).toBe(true);
-    expect(mockBudgetRepo.createCategory).toHaveBeenCalledWith('evt-123', 'Animación', 3);
+    expect(mockBudgetRepo.createCategory).toHaveBeenCalledWith(expect.any(String), 'evt-123', 'Animación', 3);
+  });
+
+  it('dos intentos de crear la misma categoría después de un error envían el mismo id', async () => {
+    mockBudgetRepo.createCategory.mockRejectedValueOnce(new Error('Fallo de red'));
+    mockBudgetRepo.createCategory.mockResolvedValueOnce({
+      id: 'cat-new',
+      event_id: 'evt-123',
+      name: 'Música',
+      sort_order: 3,
+      created_at: '',
+    });
+
+    await component.ionViewWillEnter();
+    await component.openCreateCategoryModal();
+
+    const createArgs = mockAlertCtrl.create.mock.calls[0][0];
+    const saveButton = createArgs.buttons.find(
+      (b: { text?: string }) => b.text === 'Guardar',
+    );
+
+    saveButton.handler({ name: 'Música' });
+    expect(mockBudgetRepo.createCategory).toHaveBeenCalledTimes(1);
+    const firstId = mockBudgetRepo.createCategory.mock.calls[0][0];
+    expect(typeof firstId).toBe('string');
+    expect(firstId.length).toBeGreaterThan(0);
+
+    await component.openCreateCategoryModal();
+    const secondCreateArgs = mockAlertCtrl.create.mock.calls[1][0];
+    const secondSaveButton = secondCreateArgs.buttons.find(
+      (b: { text?: string }) => b.text === 'Guardar',
+    );
+    secondSaveButton.handler({ name: 'Música' });
+
+    expect(mockBudgetRepo.createCategory).toHaveBeenCalledTimes(2);
+    const secondId = mockBudgetRepo.createCategory.mock.calls[1][0];
+    expect(secondId).toBe(firstId);
   });
 
   it('error de borrado mostrado en el aviso: muestra err.message en toast', async () => {

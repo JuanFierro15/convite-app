@@ -34,7 +34,7 @@ import {
 } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import { closeOutline } from 'ionicons/icons';
-import { GiftInput, GiftKind, GiftWithReservations, GiftsRepository } from '../../../core';
+import { GiftInput, GiftKind, GiftWithReservations, GiftsRepository, newId } from '../../../core';
 
 function notBlankValidator(control: AbstractControl<string>): ValidationErrors | null {
   const value = control.value ?? '';
@@ -81,6 +81,7 @@ export class GiftFormComponent implements OnInit {
   private readonly giftsRepo = inject(GiftsRepository);
   private readonly modalCtrl = inject(ModalController);
   private readonly toastCtrl = inject(ToastController);
+  private creationId = newId();
 
   private readonly eventIdSignal = signal<string>('');
   private readonly giftSignal = signal<GiftWithReservations | null>(null);
@@ -312,7 +313,7 @@ export class GiftFormComponent implements OnInit {
     try {
       const saved = current
         ? await this.giftsRepo.update(current.id, input)
-        : await this.giftsRepo.create(this.eventIdSignal(), input);
+        : await this.giftsRepo.create(this.creationId, this.eventIdSignal(), input);
       await this.modalCtrl.dismiss(saved, 'saved');
     } catch (err) {
       const message =

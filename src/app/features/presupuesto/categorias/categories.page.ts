@@ -37,6 +37,7 @@ import {
   BudgetRepository,
   EventContextService,
   ExpenseCategoryRow,
+  newId,
   toUserError,
 } from '../../../core';
 import { EmptyStateComponent } from '../../../shared';
@@ -78,6 +79,7 @@ export class CategoriesPage implements ViewWillEnter {
   readonly error = signal<string | null>(null);
   readonly addingSuggested = signal<boolean>(false);
   readonly busy = signal<boolean>(false);
+  private readonly pendingCategoryIds = new Map<string, string>();
 
   constructor() {
     addIcons({
@@ -148,6 +150,7 @@ export class CategoriesPage implements ViewWillEnter {
   }
 
   async openCreateCategoryModal(): Promise<void> {
+    const creationId = newId();
     const alert = await this.alertCtrl.create({
       header: 'Nueva categoría',
       cssClass: 'convite-alert',
@@ -176,7 +179,7 @@ export class CategoriesPage implements ViewWillEnter {
               void this.showToast('Escribe un nombre.', 'danger');
               return false;
             }
-            void this.createCategory(trimmed);
+            void this.createCategory(trimmed, creationId);
             return true;
           },
         },
@@ -308,14 +311,26 @@ export class CategoriesPage implements ViewWillEnter {
     }
   }
 
-  private async createCategory(name: string): Promise<void> {
+  private getPendingCategoryId(name: string, fallbackId?: string): string {
+    const key = name.trim().toLowerCase();
+    let id = this.pendingCategoryIds.get(key);
+    if (!id) {
+      id = fallbackId ?? newId();
+      this.pendingCategoryIds.set(key, id);
+    }
+    return id;
+  }
+
+  private async createCategory(name: string, requestedId?: string): Promise<void> {
     this.busy.set(true);
+    const id = this.getPendingCategoryId(name, requestedId);
     try {
       const maxOrder = this.categories().reduce(
         (max, c) => Math.max(max, c.sort_order),
         -1,
       );
-      await this.budgetRepo.createCategory(this.id(), name, maxOrder + 1);
+      await this.budgetRepo.createCategory(id, this.id(), name, maxOrder + 1);
+      this.pendingCategoryIds.delete(name.trim().toLowerCase());
       await this.loadCategories(false);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'No pudimos crear la categoría.';
