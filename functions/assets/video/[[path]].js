@@ -15,6 +15,13 @@ export async function onRequest(context) {
     return asset;
   }
 
+  const assetContentType = asset.headers.get('content-type') || '';
+  if (assetContentType.toLowerCase().startsWith('text/html')) {
+    const errorHeaders = new Headers();
+    errorHeaders.set('Cache-Control', 'no-store');
+    return new Response(null, { status: 404, headers: errorHeaders });
+  }
+
   const body = await asset.arrayBuffer();
   const size = body.byteLength;
 

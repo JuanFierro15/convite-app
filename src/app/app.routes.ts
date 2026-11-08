@@ -107,6 +107,7 @@ export const routes: Routes = [
   },
   {
     path: 'i/:code',
+    data: { audience: 'guest' },
     loadComponent: () =>
       import('./features/invitado/invitacion/guest-invitation.page').then(
         (m) => m.GuestInvitationPage,
@@ -114,6 +115,7 @@ export const routes: Routes = [
   },
   {
     path: 'i/:code/regalos',
+    data: { audience: 'guest' },
     loadComponent: () =>
       import('./features/invitado/regalos/guest-gifts.page').then((m) => m.GuestGiftsPage),
   },

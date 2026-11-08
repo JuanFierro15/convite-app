@@ -5,6 +5,7 @@ export * from './events';
 export * from './features';
 export * from './models';
 export * from './realtime';
+export * from './routing';
 export * from './supabase';
 export * from './theme';
 export * from './utils';

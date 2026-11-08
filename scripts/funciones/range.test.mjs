@@ -44,7 +44,7 @@ for (let i = 0; i < 1000; i++) {
 }
 
 function createFakeAssets(options = {}) {
-  const { status = 200 } = options;
+  const { status = 200, contentType = 'video/mp4' } = options;
   let lastRequest = null;
   const fetch = async (req) => {
     lastRequest = req;
@@ -54,7 +54,7 @@ function createFakeAssets(options = {}) {
     return new Response(fakeData.slice(), {
       status: 200,
       headers: {
-        'Content-Type': 'video/mp4',
+        'Content-Type': contentType,
         ETag: '"abc"',
       },
     });
@@ -289,4 +289,30 @@ test('onRequest: POST -> se pasa la peticion original a ASSETS', async () => {
 
   assert.strictEqual(fakeAssets.lastRequest, request);
   assert.strictEqual(fakeAssets.lastRequest.method, 'POST');
+});
+
+test('onRequest: asset con content-type text/html da 404 con no-store y sin cuerpo', async () => {
+  const fakeAssets = createFakeAssets({ contentType: 'text/html; charset=utf-8' });
+  const request = new Request('https://convite.test/assets/video/no-existe.mp4', { method: 'GET' });
+  const response = await onRequest({ request, env: { ASSETS: fakeAssets } });
+
+  assert.strictEqual(response.status, 404);
+  assert.strictEqual(response.headers.get('Cache-Control'), 'no-store');
+  const body = await response.arrayBuffer();
+  assert.strictEqual(body.byteLength, 0);
+});
+
+test('onRequest: asset video/mp4 con Range: bytes=0-9 sigue respondiendo 206', async () => {
+  const fakeAssets = createFakeAssets({ contentType: 'video/mp4' });
+  const request = new Request('https://convite.test/assets/video/intro.mp4', {
+    headers: { Range: 'bytes=0-9' },
+  });
+  const response = await onRequest({ request, env: { ASSETS: fakeAssets } });
+
+  assert.strictEqual(response.status, 206);
+  assert.strictEqual(response.headers.get('Content-Range'), 'bytes 0-9/1000');
+  assert.strictEqual(response.headers.get('Content-Length'), '10');
+
+  const body = new Uint8Array(await response.arrayBuffer());
+  assert.deepStrictEqual(body, fakeData.slice(0, 10));
 });
