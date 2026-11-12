@@ -979,3 +979,84 @@ export async function teardownTestContext(ctx) {
     }
   }
 }
+
+export const MINIMAL_JPEG_BASE64 =
+  '/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAABAAEBAREA/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/9oACAEBAAA/AL8A/9k=';
+
+export const MINIMAL_JPEG_BUFFER = Buffer.from(MINIMAL_JPEG_BASE64, 'base64');
+
+export async function uploadTestPhoto(
+  client,
+  eventId,
+  photoId = crypto.randomUUID()
+) {
+  const photoPath = `${eventId}/${photoId}.jpg`;
+  const thumbPath = `${eventId}/${photoId}_thumb.jpg`;
+  const fileBuffer = MINIMAL_JPEG_BUFFER;
+
+  const { error: thumbError } = await client.storage
+    .from('event-photos')
+    .upload(thumbPath, fileBuffer, { contentType: 'image/jpeg' });
+  if (thumbError) {
+    throw new Error(
+      `No se pudo subir la miniatura de prueba ${thumbPath}: ${thumbError.message}`
+    );
+  }
+
+  const { error: photoError } = await client.storage
+    .from('event-photos')
+    .upload(photoPath, fileBuffer, { contentType: 'image/jpeg' });
+  if (photoError) {
+    throw new Error(
+      `No se pudo subir la foto de prueba ${photoPath}: ${photoError.message}`
+    );
+  }
+
+  const { data, error: rowError } = await client
+    .from('event_photos')
+    .insert({
+      id: photoId,
+      event_id: eventId,
+      width: 10,
+      height: 10,
+      size_bytes: fileBuffer.length,
+      thumb_size_bytes: fileBuffer.length,
+    })
+    .select()
+    .single();
+
+  if (rowError) {
+    throw new Error(
+      `No se pudo insertar la fila de la foto ${photoId}: ${rowError.message}`
+    );
+  }
+
+  return data;
+}
+
+export async function removeTestPhotoFiles(adminClient, eventId) {
+  if (!adminClient || !eventId) {
+    return;
+  }
+  let offset = 0;
+  const limit = 100;
+  while (true) {
+    const { data: files, error } = await adminClient.storage
+      .from('event-photos')
+      .list(eventId, { limit, offset });
+    if (error || !files || files.length === 0) {
+      break;
+    }
+    const paths = files
+      .filter((file) => file.name && file.name !== '.emptyFolderPlaceholder')
+      .map((file) => `${eventId}/${file.name}`);
+    if (paths.length > 0) {
+      await adminClient.storage.from('event-photos').remove(paths);
+    }
+    if (files.length < limit) {
+      break;
+    }
+    offset += limit;
+  }
+}
+
