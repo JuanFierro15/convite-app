@@ -768,9 +768,22 @@ describe('arrival-logic', () => {
   });
 
   describe('classifyScanError', () => {
+    it('classifies permission denied errors correctly', () => {
+      expect(classifyScanError({ code: 'OS-PLUG-BARC-0007' })).toBe('permission-denied');
+      expect(classifyScanError({ code: '0007' })).toBe('permission-denied');
+      expect(
+        classifyScanError(
+          new Error("Couldn't scan because camera access wasn't provided."),
+        ),
+      ).toBe('permission-denied');
+      expect(classifyScanError({ message: 'camera access denied' })).toBe('permission-denied');
+      expect(classifyScanError('Error: camera access required')).toBe('permission-denied');
+    });
+
     it('classifies cancellations correctly', () => {
       expect(classifyScanError(new Error('User cancelled the scan'))).toBe('cancelled');
       expect(classifyScanError({ code: 'OS-PLUG-BARC-0006' })).toBe('cancelled');
+      expect(classifyScanError({ code: '0006' })).toBe('cancelled');
       expect(classifyScanError({ message: 'scan Cancelled by user' })).toBe('cancelled');
       expect(classifyScanError('cancelled')).toBe('cancelled');
     });

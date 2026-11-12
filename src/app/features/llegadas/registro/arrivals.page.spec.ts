@@ -13,6 +13,8 @@ import {
   RealtimeService,
   ThemeService,
 } from '../../../core';
+import { CameraPermissionService } from '../../../core/photos/camera-permission.service';
+import { CameraPermissionNoticeComponent } from '../../../shared';
 import { ArrivalGroupComponent } from '../grupo/arrival-group.component';
 import { ArrivalsPage } from './arrivals.page';
 
@@ -64,6 +66,11 @@ describe('ArrivalsPage', () => {
   let mockQrScanner: { isAvailable: ReturnType<typeof vi.fn>; scan: ReturnType<typeof vi.fn> };
   let mockToastCtrl: { create: ReturnType<typeof vi.fn> };
   let mockModalCtrl: { create: ReturnType<typeof vi.fn> };
+  let mockCameraPermission: {
+    isNative: ReturnType<typeof vi.fn>;
+    ensureCamera: ReturnType<typeof vi.fn>;
+    openAppSettings: ReturnType<typeof vi.fn>;
+  };
   let mockStopRealtime: ReturnType<typeof vi.fn>;
 
   const sampleSnapshot: ArrivalSnapshot = {
@@ -167,6 +174,12 @@ describe('ArrivalsPage', () => {
       }),
     };
 
+    mockCameraPermission = {
+      isNative: vi.fn().mockReturnValue(true),
+      ensureCamera: vi.fn().mockResolvedValue('granted'),
+      openAppSettings: vi.fn().mockResolvedValue(true),
+    };
+
     await TestBed.configureTestingModule({
       imports: [ArrivalsPage],
       providers: [
@@ -174,6 +187,7 @@ describe('ArrivalsPage', () => {
         { provide: ThemeService, useValue: mockThemeService },
         { provide: RealtimeService, useValue: mockRealtime },
         { provide: QrScannerService, useValue: mockQrScanner },
+        { provide: CameraPermissionService, useValue: mockCameraPermission },
         { provide: ToastController, useValue: mockToastCtrl },
         { provide: ModalController, useValue: mockModalCtrl },
       ],
@@ -841,5 +855,110 @@ describe('ArrivalsPage', () => {
         expandToScroll: false,
       }),
     );
+  });
+
+  it('opens permission notice modal when scan outcome is permission-denied', async () => {
+    mockSession.snapshot.set(sampleSnapshot);
+    mockQrScanner.isAvailable.mockReturnValue(true);
+    mockQrScanner.scan.mockResolvedValue({ status: 'permission-denied' });
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    await component.onScanQr();
+
+    expect(component.permissionModalOpen()).toBe(true);
+    expect(component.permissionKind()).toBe('denied');
+    expect(component.cameraPermissionPurpose).toBe(
+      'Convite usa la cámara para leer el código QR de cada invitación cuando la familia llega.',
+    );
+
+    const noticeFixture = TestBed.createComponent(CameraPermissionNoticeComponent);
+    noticeFixture.componentRef.setInput('kind', component.permissionKind());
+    noticeFixture.componentRef.setInput('purpose', component.cameraPermissionPurpose);
+    noticeFixture.componentRef.setInput('showGalleryOption', false);
+    noticeFixture.detectChanges();
+
+    const element = noticeFixture.nativeElement as HTMLElement;
+    expect(element.textContent).toContain('Falta el permiso de la cámara');
+    expect(element.textContent).toContain(
+      'Convite usa la cámara para leer el código QR de cada invitación cuando la familia llega.',
+    );
+    expect(element.textContent).toContain('Intentar de nuevo');
+    expect(element.textContent).not.toContain('Elegir de la galería');
+  });
+
+  it('opens permission notice modal when scan outcome is permission-permanently-denied', async () => {
+    mockSession.snapshot.set(sampleSnapshot);
+    mockQrScanner.isAvailable.mockReturnValue(true);
+    mockQrScanner.scan.mockResolvedValue({ status: 'permission-permanently-denied' });
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    await component.onScanQr();
+
+    expect(component.permissionModalOpen()).toBe(true);
+    expect(component.permissionKind()).toBe('permanently-denied');
+    expect(component.cameraPermissionPurpose).toBe(
+      'Convite usa la cámara para leer el código QR de cada invitación cuando la familia llega.',
+    );
+
+    const noticeFixture = TestBed.createComponent(CameraPermissionNoticeComponent);
+    noticeFixture.componentRef.setInput('kind', component.permissionKind());
+    noticeFixture.componentRef.setInput('purpose', component.cameraPermissionPurpose);
+    noticeFixture.componentRef.setInput('showGalleryOption', false);
+    noticeFixture.detectChanges();
+
+    const element = noticeFixture.nativeElement as HTMLElement;
+    expect(element.textContent).toContain('La cámara está bloqueada');
+    expect(element.textContent).toContain(
+      'Android ya no vuelve a preguntar. Para usar la cámara, actívala en los ajustes:',
+    );
+    expect(element.textContent).toContain('Abre los ajustes de Convite.');
+    expect(element.textContent).toContain('Abrir ajustes');
+    expect(element.textContent).not.toContain('Elegir de la galería');
+  });
+
+  it('closes modal and rescans on permission retry', async () => {
+    mockSession.snapshot.set(sampleSnapshot);
+    mockQrScanner.isAvailable.mockReturnValue(true);
+    mockQrScanner.scan.mockResolvedValueOnce({ status: 'permission-denied' });
+
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    await component.onScanQr();
+    expect(component.permissionModalOpen()).toBe(true);
+    expect(mockQrScanner.scan).toHaveBeenCalledTimes(1);
+
+    mockQrScanner.scan.mockResolvedValueOnce({ status: 'cancelled' });
+    component.onPermissionRetry();
+
+    expect(component.permissionModalOpen()).toBe(false);
+    expect(mockQrScanner.scan).toHaveBeenCalledTimes(2);
+  });
+
+  it('calls openAppSettings and shows error toast if settings could not be opened', async () => {
+    mockCameraPermission.openAppSettings.mockResolvedValue(false);
+
+    await component.onPermissionOpenSettings();
+
+    expect(mockCameraPermission.openAppSettings).toHaveBeenCalled();
+    expect(mockToastCtrl.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: 'No pudimos abrir los ajustes. Ábrelos desde el celular.',
+        color: 'danger',
+      }),
+    );
+  });
+
+  it('calls openAppSettings and does not show toast if settings were opened successfully', async () => {
+    mockCameraPermission.openAppSettings.mockResolvedValue(true);
+
+    await component.onPermissionOpenSettings();
+
+    expect(mockCameraPermission.openAppSettings).toHaveBeenCalled();
+    expect(mockToastCtrl.create).not.toHaveBeenCalled();
   });
 });

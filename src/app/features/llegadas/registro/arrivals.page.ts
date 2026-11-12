@@ -21,6 +21,7 @@ import {
   IonItem,
   IonLabel,
   IonList,
+  IonModal,
   IonSearchbar,
   IonSpinner,
   IonTitle,
@@ -46,7 +47,8 @@ import {
   formatListAge,
   isListStale,
 } from '../../../core';
-import { EmptyStateComponent } from '../../../shared';
+import { CameraPermissionService } from '../../../core/photos/camera-permission.service';
+import { CameraPermissionNoticeComponent, EmptyStateComponent } from '../../../shared';
 import { ArrivalGroupComponent } from '../grupo/arrival-group.component';
 
 export type ArrivedSummaryTone = 'complete' | 'partial' | 'none';
@@ -78,7 +80,9 @@ export interface ArrivedSummary {
     IonList,
     IonItem,
     IonLabel,
+    IonModal,
     EmptyStateComponent,
+    CameraPermissionNoticeComponent,
   ],
 })
 export class ArrivalsPage implements ViewWillEnter, ViewWillLeave {
@@ -86,6 +90,7 @@ export class ArrivalsPage implements ViewWillEnter, ViewWillLeave {
   private readonly themeService = inject(ThemeService);
   private readonly realtime = inject(RealtimeService);
   private readonly qrScanner = inject(QrScannerService);
+  private readonly cameraPermission = inject(CameraPermissionService);
   private readonly toastCtrl = inject(ToastController);
   private readonly modalCtrl = inject(ModalController);
   private readonly destroyRef = inject(DestroyRef);
@@ -94,6 +99,11 @@ export class ArrivalsPage implements ViewWillEnter, ViewWillLeave {
 
   readonly searchbar = viewChild(IonSearchbar);
   readonly searchQuery = signal<string>('');
+
+  readonly permissionModalOpen = signal<boolean>(false);
+  readonly permissionKind = signal<'denied' | 'permanently-denied'>('denied');
+  readonly cameraPermissionPurpose =
+    'Convite usa la cámara para leer el código QR de cada invitación cuando la familia llega.';
 
   readonly now = signal<Date>(new Date());
   private clockTimer: ReturnType<typeof setInterval> | null = null;
@@ -281,6 +291,19 @@ export class ArrivalsPage implements ViewWillEnter, ViewWillLeave {
       return;
     }
 
+    if (
+      outcome.status === 'permission-denied' ||
+      outcome.status === 'permission-permanently-denied'
+    ) {
+      this.permissionKind.set(
+        outcome.status === 'permission-permanently-denied'
+          ? 'permanently-denied'
+          : 'denied',
+      );
+      this.permissionModalOpen.set(true);
+      return;
+    }
+
     const code = extractInvitationCode(outcome.text);
     if (!code) {
       await this.vibrateWarning();
@@ -300,6 +323,21 @@ export class ArrivalsPage implements ViewWillEnter, ViewWillLeave {
     }
 
     void this.openGroup(invitation.id);
+  }
+
+  onPermissionRetry(): void {
+    this.permissionModalOpen.set(false);
+    void this.onScanQr();
+  }
+
+  async onPermissionOpenSettings(): Promise<void> {
+    const opened = await this.cameraPermission.openAppSettings();
+    if (!opened) {
+      await this.showToast(
+        'No pudimos abrir los ajustes. Ábrelos desde el celular.',
+        'danger',
+      );
+    }
   }
 
   private startClock(): void {

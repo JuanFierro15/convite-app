@@ -377,7 +377,9 @@ export function applyRecordResults(
   };
 }
 
-export function classifyScanError(error: unknown): 'cancelled' | 'unavailable' {
+export function classifyScanError(
+  error: unknown,
+): 'cancelled' | 'unavailable' | 'permission-denied' {
   if (!error) {
     return 'unavailable';
   }
@@ -396,10 +398,23 @@ export function classifyScanError(error: unknown): 'cancelled' | 'unavailable' {
         ? String(errObj['code'])
         : '';
 
+  const messageLower = message.toLowerCase();
+  const codeTrimmed = code.trim();
+
+  if (
+    codeTrimmed === 'OS-PLUG-BARC-0007' ||
+    codeTrimmed === '0007' ||
+    message.includes('OS-PLUG-BARC-0007') ||
+    messageLower.includes('camera access')
+  ) {
+    return 'permission-denied';
+  }
+
   const combined = `${message} ${code}`.toLowerCase();
   if (
     combined.includes('cancel') ||
-    code === 'OS-PLUG-BARC-0006' ||
+    codeTrimmed === 'OS-PLUG-BARC-0006' ||
+    codeTrimmed === '0006' ||
     message.includes('OS-PLUG-BARC-0006')
   ) {
     return 'cancelled';
