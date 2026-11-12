@@ -1,0 +1,152 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button [defaultHref]="'/eventos/' + id() + '/panel'"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Galería</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [class.content-with-fab]="isNative" [class.content-list]="!isNative">
+  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  <div class="gallery-container">
+    <div class="counter">
+      <span class="label">Fotos de la fiesta</span>
+      <span class="pill">{{ photos().length }} de {{ photoLimit }}</span>
+    </div>
+
+    @if (!isNative) {
+      <p class="web-notice text-body">Para subir fotos usa la app en el celular</p>
+    }
+
+    @if (loading()) {
+      <ion-grid class="photos-grid ion-no-padding">
+        <ion-row>
+          @for (skel of skeletonItems; track skel) {
+            <ion-col size="6" size-md="4" size-lg="3" size-xl="2">
+              <div class="photo-tile skeleton-tile">
+                <ion-skeleton-text animated class="photo-skeleton"></ion-skeleton-text>
+              </div>
+            </ion-col>
+          }
+        </ion-row>
+      </ion-grid>
+    } @else if (error(); as errorMsg) {
+      <div class="gallery-error text-center">
+        <p class="text-body text-danger">{{ errorMsg }}</p>
+        <ion-button fill="outline" color="primary" (click)="retryLoad()">
+          Reintentar
+        </ion-button>
+      </div>
+    } @else if (photos().length === 0 && uploads().length === 0) {
+      <app-empty-state
+        message="Todavía no hay fotos. Sube la primera desde la fiesta."
+        [actionLabel]="isNative ? 'Agregar foto' : undefined"
+        (action)="handleAddPhotoClick()"
+      ></app-empty-state>
+    } @else {
+      <ion-grid class="photos-grid ion-no-padding">
+        <ion-row>
+          @for (upload of uploads(); track upload.id) {
+            <ion-col size="6" size-md="4" size-lg="3" size-xl="2">
+              <div class="photo-tile upload-tile">
+                @if (upload.previewUrl) {
+                  <img [src]="upload.previewUrl" alt="Vista previa" class="photo-img" />
+                }
+                @if (upload.status !== 'failed') {
+                  <div class="upload-overlay">
+                    <span class="upload-status-text">Subiendo…</span>
+                    <ion-progress-bar [value]="upload.progress"></ion-progress-bar>
+                  </div>
+                } @else {
+                  <div class="upload-overlay fail">
+                    <button
+                      type="button"
+                      class="discard-btn"
+                      (click)="dismissUpload(upload.id)"
+                      aria-label="Descartar"
+                    >
+                      <ion-icon name="close" aria-hidden="true"></ion-icon>
+                    </button>
+                    <span class="upload-fail-title">No se pudo subir</span>
+                    @if (upload.error) {
+                      <small class="upload-fail-msg">{{ upload.error }}</small>
+                    }
+                    @if (upload.retryable) {
+                      <button
+                        type="button"
+                        class="mini-retry-btn"
+                        (click)="retryUpload(upload.id)"
+                      >
+                        Reintentar
+                      </button>
+                    }
+                  </div>
+                }
+              </div>
+            </ion-col>
+          }
+
+          @for (photo of visiblePhotos(); track photo.id; let i = $index) {
+            <ion-col size="6" size-md="4" size-lg="3" size-xl="2">
+              <button
+                type="button"
+                class="photo-tile-btn"
+                [attr.aria-label]="getPhotoAriaLabel(photo, i)"
+                (click)="openViewer(i, $event)"
+              >
+                @if (thumbUrls()[photo.thumbPath]; as thumbUrl) {
+                  <img [src]="thumbUrl" [alt]="'Foto ' + (i + 1)" class="photo-img" />
+                } @else if (thumbErrors()[photo.thumbPath]) {
+                  <div class="thumb-fallback">
+                    <ion-icon name="image-outline" aria-hidden="true"></ion-icon>
+                  </div>
+                } @else {
+                  <ion-skeleton-text animated class="photo-skeleton"></ion-skeleton-text>
+                }
+              </button>
+            </ion-col>
+          }
+        </ion-row>
+      </ion-grid>
+
+      @if (visibleCount() < photos().length) {
+        <ion-infinite-scroll (ionInfinite)="loadMore($event)">
+          <ion-infinite-scroll-content></ion-infinite-scroll-content>
+        </ion-infinite-scroll>
+      }
+    }
+  </div>
+
+  @if (isNative) {
+    <ion-fab slot="fixed" vertical="bottom" horizontal="end">
+      <ion-fab-button color="primary" aria-label="Agregar fotos" (click)="handleAddPhotoClick()">
+        <ion-icon name="add" aria-hidden="true"></ion-icon>
+      </ion-fab-button>
+    </ion-fab>
+  }
+
+  <ion-modal
+    [isOpen]="permissionModalOpen()"
+    (didDismiss)="permissionModalOpen.set(false)"
+    [breakpoints]="[0, 0.6, 1]"
+    [initialBreakpoint]="0.6"
+    [expandToScroll]="false"
+  >
+    <ng-template>
+      <ion-content class="ion-padding">
+        <app-camera-permission-notice
+          [kind]="permissionKind()"
+          purpose="Convite usa la cámara solo para tomar las fotos que subes a la galería del evento."
+          [showGalleryOption]="true"
+          (retry)="onPermissionRetry()"
+          (openSettings)="onPermissionOpenSettings()"
+          (chooseGallery)="onPermissionChooseGallery()"
+        ></app-camera-permission-notice>
+      </ion-content>
+    </ng-template>
+  </ion-modal>
+</ion-content>

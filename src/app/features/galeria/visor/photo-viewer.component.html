@@ -1,0 +1,62 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button
+        fill="clear"
+        color="light"
+        class="close-btn"
+        #closeBtn
+        (click)="close()"
+        aria-label="Cerrar"
+      >
+        <ion-icon slot="icon-only" name="close" aria-hidden="true"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title class="viewer-counter">
+      {{ photosList().length > 0 ? currentIndex() + 1 + ' de ' + photosList().length : '' }}
+    </ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [scrollY]="false">
+  <div #slider class="photo-slider" (scroll)="onScroll()">
+    @for (photo of photosList(); track photo.id; let i = $index) {
+      <div class="photo-slide">
+        @if (fullUrls()[photo.photoPath]; as fullUrl) {
+          <img [src]="fullUrl" [alt]="'Foto ' + (i + 1)" class="viewer-img" />
+        } @else {
+          <div class="viewer-placeholder">
+            @if (getThumbUrl(photo.thumbPath); as thumbUrl) {
+              <img [src]="thumbUrl" alt="" class="viewer-thumb-blur" />
+            }
+            <ion-spinner name="crescent" color="light"></ion-spinner>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</ion-content>
+
+<ion-footer class="ion-no-border">
+  <ion-toolbar>
+    @if (currentPhoto(); as photo) {
+      <div class="viewer-footer-content">
+        <div class="who">
+          <span class="uploader-name">{{ getUploaderLabel(photo) }}</span>
+          <small class="photo-date">{{ getFormattedDate(photo.createdAt) }}</small>
+        </div>
+        @if (canDeleteCurrentPhoto()) {
+          <ion-button
+            fill="clear"
+            color="light"
+            class="delete-btn"
+            (click)="confirmDelete()"
+            aria-label="Borrar foto"
+          >
+            <ion-icon slot="icon-only" name="trash-outline" aria-hidden="true"></ion-icon>
+          </ion-button>
+        }
+      </div>
+    }
+  </ion-toolbar>
+</ion-footer>

@@ -21,6 +21,7 @@ import {
   IonIcon,
   IonList,
   IonRow,
+  IonSkeletonText,
   IonSpinner,
   IonTitle,
   IonToolbar,
@@ -37,6 +38,7 @@ import {
   createOutline,
   giftOutline,
   gridOutline,
+  imagesOutline,
   mailOutline,
   qrCodeOutline,
   time,
@@ -62,6 +64,9 @@ import {
   tasksCardText,
   toBogotaDateInput,
 } from '../../../core';
+import { PhotoCacheService } from '../../../core/photos/photo-cache.service';
+import { EventPhoto } from '../../../core/photos/photo.models';
+import { PhotosRepository } from '../../../core/photos/photos.repository';
 import { EmptyStateComponent, RsvpLogItemComponent } from '../../../shared';
 
 const DAY_MONTH_FORMATTER = new Intl.DateTimeFormat('es-CO', {
@@ -99,6 +104,7 @@ function formatDayMonthBogota(iso: string): string {
     IonGrid,
     IonRow,
     IonCol,
+    IonSkeletonText,
     IonList,
     EmptyStateComponent,
     RsvpLogItemComponent,
@@ -111,6 +117,8 @@ export class EventDashboardPage implements ViewWillEnter, ViewWillLeave {
   private readonly tasksRepo = inject(TasksRepository);
   private readonly arrivalSession = inject(ArrivalSessionService);
   private readonly rsvpLogRepo = inject(RsvpLogRepository);
+  private readonly photosRepo = inject(PhotosRepository);
+  private readonly photoCache = inject(PhotoCacheService);
   private readonly realtime = inject(RealtimeService);
   private readonly themeService = inject(ThemeService);
   private readonly router = inject(Router);
@@ -144,6 +152,33 @@ export class EventDashboardPage implements ViewWillEnter, ViewWillLeave {
       return null;
     }
     return tasksCardText(list, toBogotaDateInput(this.now()));
+  });
+  readonly photoCount = signal<number | null>(null);
+  readonly recentPhotos = signal<EventPhoto[]>([]);
+  readonly thumbnailUrls = signal<Record<string, string>>({});
+  readonly hasPhotos = computed<boolean>(() => (this.photoCount() ?? 0) > 0);
+  readonly photoSummaryText = computed<string | null>(() => {
+    const count = this.photoCount();
+    if (count === null) {
+      return null;
+    }
+    if (count === 0) {
+      return 'Sin fotos todavía';
+    }
+    if (count === 1) {
+      return '1 foto';
+    }
+    return `${count} fotos`;
+  });
+  readonly galleryAriaLabel = computed<string>(() => {
+    const count = this.photoCount();
+    if (count === null || count === 0) {
+      return 'Galería, sin fotos';
+    }
+    if (count === 1) {
+      return 'Galería, 1 foto';
+    }
+    return `Galería, ${count} fotos`;
   });
   readonly recentRsvpEntries = signal<RsvpLogEntry[]>([]);
   readonly recentRsvpTotal = signal<number>(0);
@@ -209,6 +244,7 @@ export class EventDashboardPage implements ViewWillEnter, ViewWillLeave {
       walletOutline,
       checkboxOutline,
       qrCodeOutline,
+      imagesOutline,
     });
 
     this.destroyRef.onDestroy(() => {
@@ -233,6 +269,9 @@ export class EventDashboardPage implements ViewWillEnter, ViewWillLeave {
       this.recentRsvpTotal.set(0);
       this.recentRsvpLoading.set(true);
       this.recentRsvpError.set(false);
+      this.photoCount.set(null);
+      this.recentPhotos.set([]);
+      this.thumbnailUrls.set({});
     }
     this.startNowTimer();
     this.initialLoading.set(true);
@@ -242,7 +281,7 @@ export class EventDashboardPage implements ViewWillEnter, ViewWillLeave {
     this.stopRealtime?.();
     this.stopRealtime = this.realtime.watch(
       eventId,
-      ['events', 'guests', 'tasks', 'rsvp_log'],
+      ['events', 'guests', 'tasks', 'rsvp_log', 'event_photos'],
       () => {
         void this.loadDashboard(this.id(), { isInitial: false, forceEvent: true });
       },
@@ -341,10 +380,45 @@ export class EventDashboardPage implements ViewWillEnter, ViewWillLeave {
           this.budgetSummaryText.set(null);
         }
       }
+
+      try {
+        const photos = await this.photosRepo.list(eventId);
+        this.photoCount.set(photos.length);
+        const recent = photos.slice(0, 3);
+        this.recentPhotos.set(recent);
+        this.loadThumbnails(recent);
+      } catch {
+        this.photoCount.set(null);
+        this.recentPhotos.set([]);
+        this.thumbnailUrls.set({});
+      }
     } finally {
       if (isInitial) {
         this.initialLoading.set(false);
       }
+    }
+  }
+
+  private loadThumbnails(photos: EventPhoto[]): void {
+    for (const photo of photos) {
+      const cached = this.photoCache.peek(photo.thumbPath);
+      if (cached) {
+        this.thumbnailUrls.update((current) => ({
+          ...current,
+          [photo.thumbPath]: cached,
+        }));
+      }
+      void this.photoCache
+        .getUrl(photo.thumbPath)
+        .then((url) => {
+          this.thumbnailUrls.update((current) => ({
+            ...current,
+            [photo.thumbPath]: url,
+          }));
+        })
+        .catch(() => {
+          // Si falla la descarga de la miniatura, se mantiene el skeleton.
+        });
     }
   }
 

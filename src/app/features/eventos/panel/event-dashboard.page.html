@@ -242,6 +242,66 @@
                   </ion-card-content>
                 </ion-card>
               </ion-col>
+
+              @if (hasPhotos()) {
+                <ion-col size="12">
+                  <ion-card
+                    class="access-card access-card--gallery-wide"
+                    [button]="true"
+                    [routerLink]="['/eventos', id(), 'galeria']"
+                    [attr.aria-label]="galleryAriaLabel()"
+                  >
+                    <ion-card-content class="access-card__content access-card__content--gallery">
+                      <div class="access-card__gallery-header">
+                        <div class="access-card__icon-box">
+                          <ion-icon name="images-outline" aria-hidden="true"></ion-icon>
+                        </div>
+                        <div class="access-card__text-block access-card__title--grow">
+                          <span class="text-name access-card__title">Galería</span>
+                          @if (photoSummaryText()) {
+                            <span class="text-label access-card__summary">{{ photoSummaryText() }}</span>
+                          }
+                        </div>
+                        <span class="access-card__action-link" aria-hidden="true">Ver &rsaquo;</span>
+                      </div>
+
+                      <div class="access-card__gallery-thumbs">
+                        @for (photo of recentPhotos(); track photo.id) {
+                          @if (thumbnailUrls()[photo.thumbPath]; as url) {
+                            <img [src]="url" alt="" class="access-card__gallery-thumb" />
+                          } @else {
+                            <ion-skeleton-text
+                              [animated]="true"
+                              class="access-card__gallery-skeleton"
+                            ></ion-skeleton-text>
+                          }
+                        }
+                      </div>
+                    </ion-card-content>
+                  </ion-card>
+                </ion-col>
+              } @else {
+                <ion-col size="6">
+                  <ion-card
+                    class="access-card"
+                    [button]="true"
+                    [routerLink]="['/eventos', id(), 'galeria']"
+                    [attr.aria-label]="galleryAriaLabel()"
+                  >
+                    <ion-card-content class="access-card__content">
+                      <div class="access-card__top">
+                        <div class="access-card__icon-box">
+                          <ion-icon name="images-outline" aria-hidden="true"></ion-icon>
+                        </div>
+                      </div>
+                      <span class="text-name access-card__title">Galería</span>
+                      @if (photoSummaryText()) {
+                        <span class="text-label access-card__summary">{{ photoSummaryText() }}</span>
+                      }
+                    </ion-card-content>
+                  </ion-card>
+                </ion-col>
+              }
             </ion-row>
           </ion-grid>
         } @else {
@@ -288,6 +348,62 @@
                 </span>
               </ion-card-content>
             </ion-card>
+
+            @if (hasPhotos()) {
+              <ion-card
+                class="access-card helper-actions__gallery-card access-card--gallery-wide"
+                [button]="true"
+                [routerLink]="['/eventos', id(), 'galeria']"
+                [attr.aria-label]="galleryAriaLabel()"
+              >
+                <ion-card-content class="access-card__content access-card__content--gallery">
+                  <div class="access-card__gallery-header">
+                    <div class="access-card__icon-box">
+                      <ion-icon name="images-outline" aria-hidden="true"></ion-icon>
+                    </div>
+                    <div class="access-card__text-block access-card__title--grow">
+                      <span class="text-name access-card__title">Galería</span>
+                      @if (photoSummaryText()) {
+                        <span class="text-label access-card__summary">{{ photoSummaryText() }}</span>
+                      }
+                    </div>
+                    <span class="access-card__action-link" aria-hidden="true">Ver &rsaquo;</span>
+                  </div>
+
+                  <div class="access-card__gallery-thumbs">
+                    @for (photo of recentPhotos(); track photo.id) {
+                      @if (thumbnailUrls()[photo.thumbPath]; as url) {
+                        <img [src]="url" alt="" class="access-card__gallery-thumb" />
+                      } @else {
+                        <ion-skeleton-text
+                          [animated]="true"
+                          class="access-card__gallery-skeleton"
+                        ></ion-skeleton-text>
+                      }
+                    }
+                  </div>
+                </ion-card-content>
+              </ion-card>
+            } @else {
+              <ion-card
+                class="access-card helper-actions__gallery-card"
+                [button]="true"
+                [routerLink]="['/eventos', id(), 'galeria']"
+                [attr.aria-label]="galleryAriaLabel()"
+              >
+                <ion-card-content class="access-card__content access-card__content--row">
+                  <div class="access-card__icon-box">
+                    <ion-icon name="images-outline" aria-hidden="true"></ion-icon>
+                  </div>
+                  <div class="access-card__text-block access-card__title--grow">
+                    <span class="text-name access-card__title">Galería</span>
+                    @if (photoSummaryText()) {
+                      <span class="text-label access-card__summary">{{ photoSummaryText() }}</span>
+                    }
+                  </div>
+                </ion-card-content>
+              </ion-card>
+            }
           </div>
         }
       </section>

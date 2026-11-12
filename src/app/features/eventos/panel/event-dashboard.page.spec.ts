@@ -17,6 +17,9 @@ import {
   TasksRepository,
   formatCop,
 } from '../../../core';
+import { PhotoCacheService } from '../../../core/photos/photo-cache.service';
+import { EventPhoto } from '../../../core/photos/photo.models';
+import { PhotosRepository } from '../../../core/photos/photos.repository';
 import { EventDashboardPage } from './event-dashboard.page';
 
 const mockEvent: EventRow = {
@@ -68,6 +71,23 @@ function makeMockTask(overrides: Partial<TaskRow> = {}): TaskRow {
   };
 }
 
+function makeMockPhoto(id: string, overrides: Partial<EventPhoto> = {}): EventPhoto {
+  return {
+    id,
+    eventId: 'event-123',
+    uploadedBy: 'user-1',
+    uploaderName: 'Usuario 1',
+    uploaderRole: 'owner',
+    createdAt: '2026-11-10T12:00:00-05:00',
+    width: 1600,
+    height: 1200,
+    sizeBytes: 150_000,
+    photoPath: `event-123/${id}.jpg`,
+    thumbPath: `event-123/${id}_thumb.jpg`,
+    ...overrides,
+  };
+}
+
 describe('EventDashboardPage - Arrivals & Attendance', () => {
   let fixture: ComponentFixture<EventDashboardPage>;
   let component: EventDashboardPage;
@@ -97,6 +117,13 @@ describe('EventDashboardPage - Arrivals & Attendance', () => {
   let mockRealtime: {
     watch: ReturnType<typeof vi.fn>;
   };
+  let mockPhotosRepo: {
+    list: ReturnType<typeof vi.fn>;
+  };
+  let mockPhotoCache: {
+    peek: ReturnType<typeof vi.fn>;
+    getUrl: ReturnType<typeof vi.fn>;
+  };
 
   beforeEach(async () => {
     mockEventContext = {
@@ -125,6 +152,13 @@ describe('EventDashboardPage - Arrivals & Attendance', () => {
     mockRealtime = {
       watch: vi.fn().mockReturnValue(() => {}),
     };
+    mockPhotosRepo = {
+      list: vi.fn().mockResolvedValue([]),
+    };
+    mockPhotoCache = {
+      peek: vi.fn().mockReturnValue(null),
+      getUrl: vi.fn().mockImplementation((path: string) => Promise.resolve(`blob:${path}`)),
+    };
 
     await TestBed.configureTestingModule({
       imports: [EventDashboardPage],
@@ -137,6 +171,8 @@ describe('EventDashboardPage - Arrivals & Attendance', () => {
         { provide: RsvpLogRepository, useValue: mockRsvpLogRepo },
         { provide: ArrivalSessionService, useValue: mockArrivalSession },
         { provide: RealtimeService, useValue: mockRealtime },
+        { provide: PhotosRepository, useValue: mockPhotosRepo },
+        { provide: PhotoCacheService, useValue: mockPhotoCache },
       ],
     }).compileComponents();
 
@@ -447,11 +483,11 @@ describe('EventDashboardPage - Arrivals & Attendance', () => {
     expect(toastSpy).not.toHaveBeenCalled();
   });
 
-  it('includes tasks and rsvp_log in realtime watch', () => {
+  it('includes tasks, rsvp_log and event_photos in realtime watch', () => {
     component.ionViewWillEnter();
     expect(mockRealtime.watch).toHaveBeenCalledWith(
       'event-123',
-      ['events', 'guests', 'tasks', 'rsvp_log'],
+      ['events', 'guests', 'tasks', 'rsvp_log', 'event_photos'],
       expect.any(Function),
       expect.anything(),
     );
@@ -682,6 +718,217 @@ describe('EventDashboardPage - Arrivals & Attendance', () => {
 
       expect(component.recentRsvpEntries()).toEqual([]);
       expect(component.recentRsvpTotal()).toBe(0);
+    });
+  });
+
+  describe('Gallery Card Section', () => {
+    function getCardAriaLabel(cardEl: HTMLElement): string | null {
+      return (
+        cardEl.getAttribute('aria-label') ??
+        cardEl.shadowRoot?.querySelector('.card-native')?.getAttribute('aria-label') ??
+        null
+      );
+    }
+
+    it('renders "Sin fotos todavía" and aria-label "Galería, sin fotos" when there are no photos', async () => {
+      mockPhotosRepo.list.mockResolvedValue([]);
+
+      component.ionViewWillEnter();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(mockPhotosRepo.list).toHaveBeenCalledWith('event-123');
+      expect(component.photoCount()).toBe(0);
+      expect(component.photoSummaryText()).toBe('Sin fotos todavía');
+      expect(component.hasPhotos()).toBe(false);
+
+      const linkElements = fixture.debugElement.queryAll(By.directive(RouterLink));
+      const galleryCard = linkElements.find((el) =>
+        el.nativeElement.textContent?.includes('Galería'),
+      );
+      expect(galleryCard).toBeTruthy();
+
+      const routerLinkInstance = galleryCard?.injector.get(RouterLink);
+      expect(routerLinkInstance?.urlTree?.toString()).toBe('/eventos/event-123/galeria');
+
+      const cardNative = galleryCard?.nativeElement as HTMLElement;
+      expect(getCardAriaLabel(cardNative)).toBe('Galería, sin fotos');
+      expect(cardNative.textContent).toContain('Sin fotos todavía');
+
+      // Propietario sin fotos: se ubica en ion-col size="6"
+      const parentCol = cardNative.closest('ion-col');
+      expect(parentCol?.getAttribute('size')).toBe('6');
+    });
+
+    it('renders "5 fotos", 3 thumbnails and "Ver ›" when there are 5 photos', async () => {
+      const photos = [
+        makeMockPhoto('1'),
+        makeMockPhoto('2'),
+        makeMockPhoto('3'),
+        makeMockPhoto('4'),
+        makeMockPhoto('5'),
+      ];
+      mockPhotosRepo.list.mockResolvedValue(photos);
+
+      component.ionViewWillEnter();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(component.photoCount()).toBe(5);
+      expect(component.photoSummaryText()).toBe('5 fotos');
+      expect(component.hasPhotos()).toBe(true);
+
+      const linkElements = fixture.debugElement.queryAll(By.directive(RouterLink));
+      const galleryCard = linkElements.find((el) =>
+        el.nativeElement.textContent?.includes('Galería'),
+      );
+      expect(galleryCard).toBeTruthy();
+
+      const cardNative = galleryCard?.nativeElement as HTMLElement;
+      expect(getCardAriaLabel(cardNative)).toBe('Galería, 5 fotos');
+      expect(cardNative.textContent).toContain('5 fotos');
+      expect(cardNative.textContent).toContain('Ver ›');
+
+      // Propietario con fotos: se ubica en ion-col size="12"
+      const parentCol = cardNative.closest('ion-col');
+      expect(parentCol?.getAttribute('size')).toBe('12');
+
+      // Debe pedir las URLs de las 3 miniaturas más recientes
+      expect(mockPhotoCache.getUrl).toHaveBeenCalledTimes(3);
+      expect(mockPhotoCache.getUrl).toHaveBeenCalledWith('event-123/1_thumb.jpg');
+      expect(mockPhotoCache.getUrl).toHaveBeenCalledWith('event-123/2_thumb.jpg');
+      expect(mockPhotoCache.getUrl).toHaveBeenCalledWith('event-123/3_thumb.jpg');
+
+      const thumbImgs = fixture.debugElement.queryAll(By.css('.access-card__gallery-thumb'));
+      expect(thumbImgs).toHaveLength(3);
+      for (const img of thumbImgs) {
+        expect(img.nativeElement.getAttribute('alt')).toBe('');
+      }
+    });
+
+    it('renders "1 foto" and 1 thumbnail when there is 1 photo', async () => {
+      mockPhotosRepo.list.mockResolvedValue([makeMockPhoto('1')]);
+
+      component.ionViewWillEnter();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(component.photoCount()).toBe(1);
+      expect(component.photoSummaryText()).toBe('1 foto');
+      expect(component.hasPhotos()).toBe(true);
+
+      const linkElements = fixture.debugElement.queryAll(By.directive(RouterLink));
+      const galleryCard = linkElements.find((el) =>
+        el.nativeElement.textContent?.includes('Galería'),
+      );
+      expect(galleryCard).toBeTruthy();
+
+      const cardNative = galleryCard?.nativeElement as HTMLElement;
+      expect(getCardAriaLabel(cardNative)).toBe('Galería, 1 foto');
+      expect(cardNative.textContent).toContain('1 foto');
+
+      const thumbImgs = fixture.debugElement.queryAll(By.css('.access-card__gallery-thumb'));
+      expect(thumbImgs).toHaveLength(1);
+    });
+
+    it('renders Galería card for owner in access-grid and for helper in helper-actions', async () => {
+      // Propietario
+      mockEventContext.isOwner.set(true);
+      mockPhotosRepo.list.mockResolvedValue([makeMockPhoto('1')]);
+      component.ionViewWillEnter();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const ownerGrid = fixture.debugElement.query(By.css('.access-grid'));
+      const ownerCard = ownerGrid.query(By.css('.access-card--gallery-wide'));
+      expect(ownerCard).toBeTruthy();
+
+      // Ayudante con fotos: card ancha en helper-actions
+      mockEventContext.isOwner.set(false);
+      component.ionViewWillEnter();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const helperActions = fixture.debugElement.query(By.css('.helper-actions'));
+      const helperWideCard = helperActions.query(By.css('.access-card--gallery-wide'));
+      expect(helperWideCard).toBeTruthy();
+
+      // Ayudante sin fotos: card en fila con "Sin fotos todavía"
+      mockPhotosRepo.list.mockResolvedValue([]);
+      component.ionViewWillEnter();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const helperRowCard = helperActions.query(By.css('.helper-actions__gallery-card'));
+      expect(helperRowCard).toBeTruthy();
+      expect(helperRowCard.nativeElement.textContent).toContain('Sin fotos todavía');
+    });
+
+    it('renders skeleton while thumbnail is loading and updates to image when resolved', async () => {
+      let resolveUrl: (url: string) => void = () => {};
+      mockPhotoCache.getUrl.mockReturnValue(
+        new Promise<string>((resolve) => {
+          resolveUrl = resolve;
+        }),
+      );
+      mockPhotosRepo.list.mockResolvedValue([makeMockPhoto('1')]);
+
+      component.ionViewWillEnter();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const skeleton = fixture.debugElement.query(By.css('.access-card__gallery-skeleton'));
+      expect(skeleton).toBeTruthy();
+
+      resolveUrl('blob:event-123/1_thumb.jpg');
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const img = fixture.debugElement.query(By.css('.access-card__gallery-thumb'));
+      expect(img).toBeTruthy();
+      expect(img.nativeElement.getAttribute('src')).toBe('blob:event-123/1_thumb.jpg');
+    });
+
+    it('renders card with title only and without toast when PhotosRepository.list fails, keeping rest of dashboard loaded', async () => {
+      mockPhotosRepo.list.mockRejectedValue(new Error('Connection error'));
+      const toastCtrl = TestBed.inject(ToastController);
+      const toastSpy = vi.spyOn(toastCtrl, 'create');
+
+      component.ionViewWillEnter();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(mockPhotosRepo.list).toHaveBeenCalledWith('event-123');
+      expect(component.photoCount()).toBeNull();
+      expect(component.photoSummaryText()).toBeNull();
+      expect(toastSpy).not.toHaveBeenCalled();
+
+      // El resto del panel carga normalmente
+      expect(component.counts().total).toBe(40);
+      expect(fixture.nativeElement.textContent).toContain('Resumen de asistencia');
+
+      // La card muestra el título "Galería" sin resumen
+      const linkElements = fixture.debugElement.queryAll(By.directive(RouterLink));
+      const galleryCard = linkElements.find((el) =>
+        el.nativeElement.textContent?.includes('Galería'),
+      );
+      expect(galleryCard).toBeTruthy();
+      expect(galleryCard?.nativeElement.querySelector('.access-card__summary')).toBeNull();
+      expect(getCardAriaLabel(galleryCard?.nativeElement as HTMLElement)).toBe('Galería, sin fotos');
+    });
+
+    it('resets photoCount, recentPhotos and thumbnailUrls when changing event on enter', () => {
+      component.photoCount.set(10);
+      component.recentPhotos.set([makeMockPhoto('1')]);
+      component.thumbnailUrls.set({ 'event-123/1_thumb.jpg': 'blob:thumb-1' });
+      mockEventContext.event.set(mockEvent);
+
+      fixture.componentRef.setInput('id', 'event-999');
+      component.ionViewWillEnter();
+
+      expect(component.photoCount()).toBeNull();
+      expect(component.recentPhotos()).toEqual([]);
+      expect(component.thumbnailUrls()).toEqual({});
     });
   });
 });

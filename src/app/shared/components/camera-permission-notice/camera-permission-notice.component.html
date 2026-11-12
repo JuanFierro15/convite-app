@@ -1,0 +1,40 @@
+<div class="camera-notice">
+  <div class="camera-notice__icon-box">
+    <ion-icon name="camera-outline" class="camera-notice__icon" aria-hidden="true"></ion-icon>
+  </div>
+
+  @if (kind() === 'denied') {
+    <h2 class="camera-notice__title">Falta el permiso de la cámara</h2>
+    <p class="camera-notice__text text-body">{{ purpose() }}</p>
+    <div class="camera-notice__actions">
+      <ion-button expand="block" color="primary" (click)="retry.emit()">
+        Intentar de nuevo
+      </ion-button>
+      @if (showGalleryOption()) {
+        <ion-button expand="block" fill="outline" color="primary" (click)="chooseGallery.emit()">
+          Elegir de la galería
+        </ion-button>
+      }
+    </div>
+  } @else {
+    <h2 class="camera-notice__title">La cámara está bloqueada</h2>
+    <p class="camera-notice__text text-body">
+      Android ya no vuelve a preguntar. Para usar la cámara, actívala en los ajustes:
+    </p>
+    <ol class="camera-notice__steps">
+      <li>Abre los ajustes de Convite.</li>
+      <li>Entra a Permisos › Cámara.</li>
+      <li>Elige «Permitir solo mientras se usa la app».</li>
+    </ol>
+    <div class="camera-notice__actions">
+      <ion-button expand="block" color="primary" (click)="openSettings.emit()">
+        Abrir ajustes
+      </ion-button>
+      @if (showGalleryOption()) {
+        <ion-button expand="block" fill="outline" color="primary" (click)="chooseGallery.emit()">
+          Elegir de la galería
+        </ion-button>
+      }
+    </div>
+  }
+</div>

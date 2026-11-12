@@ -106,6 +106,11 @@ export const routes: Routes = [
     loadComponent: () => import('./features/tareas/lista/tasks.page').then((m) => m.TasksPage),
   },
   {
+    path: 'eventos/:id/galeria',
+    canActivate: [authGuard],
+    loadComponent: () => import('./features/galeria/gallery.page').then((m) => m.GalleryPage),
+  },
+  {
     path: 'i/:code',
     data: { audience: 'guest' },
     loadComponent: () =>
