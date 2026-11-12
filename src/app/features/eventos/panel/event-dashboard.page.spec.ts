@@ -634,13 +634,11 @@ describe('EventDashboardPage - Arrivals & Attendance', () => {
       };
     }
 
-    it('renders up to 5 recent rsvps and "Ver todas (N)" button pointing to /eventos/{id}/respuestas', async () => {
+    it('renders up to 3 recent rsvps and "Ver todas (N)" button pointing to /eventos/{id}/respuestas', async () => {
       const items = [
         makeMockRsvpEntry('1', 'Persona 1'),
         makeMockRsvpEntry('2', 'Persona 2'),
         makeMockRsvpEntry('3', 'Persona 3'),
-        makeMockRsvpEntry('4', 'Persona 4'),
-        makeMockRsvpEntry('5', 'Persona 5'),
       ];
       mockRsvpLogRepo.list.mockResolvedValue({ total: 12, items });
 
@@ -648,10 +646,10 @@ describe('EventDashboardPage - Arrivals & Attendance', () => {
       await fixture.whenStable();
       fixture.detectChanges();
 
-      expect(mockRsvpLogRepo.list).toHaveBeenCalledWith('event-123', { limit: 5, offset: 0 });
+      expect(mockRsvpLogRepo.list).toHaveBeenCalledWith('event-123', { limit: 3, offset: 0 });
 
       const itemElements = fixture.debugElement.queryAll(By.css('app-rsvp-log-item'));
-      expect(itemElements).toHaveLength(5);
+      expect(itemElements).toHaveLength(3);
 
       const viewAllBtn = fixture.debugElement.query(
         By.css('.recent-rsvp-card ion-button[expand="block"]'),

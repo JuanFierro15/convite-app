@@ -69,6 +69,8 @@ import { EventPhoto } from '../../../core/photos/photo.models';
 import { PhotosRepository } from '../../../core/photos/photos.repository';
 import { EmptyStateComponent, RsvpLogItemComponent } from '../../../shared';
 
+const RECENT_RSVP_LIMIT = 3;
+
 const DAY_MONTH_FORMATTER = new Intl.DateTimeFormat('es-CO', {
   day: 'numeric',
   month: 'long',
@@ -157,6 +159,8 @@ export class EventDashboardPage implements ViewWillEnter, ViewWillLeave {
   readonly recentPhotos = signal<EventPhoto[]>([]);
   readonly thumbnailUrls = signal<Record<string, string>>({});
   readonly hasPhotos = computed<boolean>(() => (this.photoCount() ?? 0) > 0);
+  // La galería con fotos ocupa toda la fila: si antes queda un número impar de accesos, el último se ensancha.
+  readonly qrCardWide = computed<boolean>(() => this.hasPhotos() && !this.tablesEnabled);
   readonly photoSummaryText = computed<string | null>(() => {
     const count = this.photoCount();
     if (count === null) {
@@ -327,7 +331,7 @@ export class EventDashboardPage implements ViewWillEnter, ViewWillLeave {
 
   private async loadRecentRsvp(eventId: string): Promise<void> {
     try {
-      const page = await this.rsvpLogRepo.list(eventId, { limit: 5, offset: 0 });
+      const page = await this.rsvpLogRepo.list(eventId, { limit: RECENT_RSVP_LIMIT, offset: 0 });
       this.recentRsvpEntries.set(page.items);
       this.recentRsvpTotal.set(page.total);
       this.recentRsvpError.set(false);

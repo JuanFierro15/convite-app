@@ -226,13 +226,16 @@
                 </ion-card>
               </ion-col>
 
-              <ion-col size="6">
+              <ion-col [size]="qrCardWide() ? '12' : '6'">
                 <ion-card
                   class="access-card"
                   [button]="true"
                   [routerLink]="['/eventos', id(), 'llegadas']"
                 >
-                  <ion-card-content class="access-card__content">
+                  <ion-card-content
+                    class="access-card__content"
+                    [class.access-card__content--row]="qrCardWide()"
+                  >
                     <div class="access-card__top">
                       <div class="access-card__icon-box">
                         <ion-icon name="qr-code-outline" aria-hidden="true"></ion-icon>

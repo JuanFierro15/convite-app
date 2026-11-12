@@ -214,6 +214,7 @@
     &--row {
       flex-direction: row;
       align-items: center;
+      justify-content: flex-start;
       min-height: auto;
 
       .access-card__summary {
