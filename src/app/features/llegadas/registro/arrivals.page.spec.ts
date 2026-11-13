@@ -202,7 +202,6 @@ describe('ArrivalsPage', () => {
     vi.clearAllMocks();
   });
 
-  // 1. La barra no tiene .header-indicators ni insignias
   it('does not render .header-indicators or badges in the toolbar', () => {
     const element = fixture.nativeElement as HTMLElement;
     const toolbar = element.querySelector('ion-toolbar');
@@ -212,7 +211,6 @@ describe('ArrivalsPage', () => {
     expect(toolbar?.querySelector('.badge-soft-warning')).toBeNull();
   });
 
-  // 2. .connection-badge muestra los tres textos y clases según connection
   it('renders .connection-badge with text and classes according to connection', async () => {
     mockSession.snapshot.set(sampleSnapshot);
 
@@ -241,7 +239,6 @@ describe('ArrivalsPage', () => {
     expect(badge.textContent.trim()).toBe('Sin conexión');
   });
 
-  // 3. .counter-offline aparece con 'slow' y 'offline', y no con 'online'
   it('renders .counter-offline with slow and offline connection, but not with online', async () => {
     mockSession.snapshot.set(sampleSnapshot);
 
@@ -265,7 +262,6 @@ describe('ArrivalsPage', () => {
     expect(offlineCounter.textContent).toContain('Según este celular');
   });
 
-  // 4. .list-age con "hace 4 min" (reloj fijo) y list-age--stale pasados 61 minutos con el texto de "Actualízala…"
   it('displays .list-age with "hace 4 min" and adds .list-age--stale after 61 minutes', async () => {
     mockSession.snapshot.set(sampleSnapshot);
     mockSession.downloadedAt.set('2026-11-29T10:00:00-05:00');
@@ -299,7 +295,6 @@ describe('ArrivalsPage', () => {
     expect(fixture.nativeElement.querySelector('.list-age')).toBeNull();
   });
 
-  // 5. .queue-line en singular y plural; spinner con syncing
   it('renders .queue-line in singular and plural, with spinner when syncing', async () => {
     mockSession.snapshot.set(sampleSnapshot);
 
@@ -330,7 +325,6 @@ describe('ArrivalsPage', () => {
     expect(queueLine.textContent).toContain('5 llegadas guardadas en este celular, por sincronizar');
   });
 
-  // 6. .sync-error con el mensaje y Reintentar ahora llamando retrySync; deshabilitado sin conexión; sin cola no aparece
   it('renders .sync-error with retry button, disabled when offline, and hidden without queue', async () => {
     mockSession.snapshot.set(sampleSnapshot);
 
@@ -389,9 +383,7 @@ describe('ArrivalsPage', () => {
     );
   });
 
-  // 7. Resumen de búsqueda: los tres tonos, concordancia "1 de 3 llegó" y textos individuales
   it('calculates arrived summary correctly with tones, singular agreement, and individual texts', () => {
-    // All arrived - group
     const completeGroup = component.formatArrivedSummary({
       arrivedCount: 3,
       totalCount: 3,
@@ -399,7 +391,6 @@ describe('ArrivalsPage', () => {
     });
     expect(completeGroup).toEqual({ text: 'Ya llegaron todos', tone: 'complete' });
 
-    // All arrived - individual
     const completeIndiv = component.formatArrivedSummary({
       arrivedCount: 1,
       totalCount: 1,
@@ -407,7 +398,6 @@ describe('ArrivalsPage', () => {
     });
     expect(completeIndiv).toEqual({ text: 'Ya llegó', tone: 'complete' });
 
-    // Partial - 1 arrived
     const partialSingle = component.formatArrivedSummary({
       arrivedCount: 1,
       totalCount: 3,
@@ -415,7 +405,6 @@ describe('ArrivalsPage', () => {
     });
     expect(partialSingle).toEqual({ text: '1 de 3 llegó', tone: 'partial' });
 
-    // Partial - multiple arrived
     const partialMulti = component.formatArrivedSummary({
       arrivedCount: 2,
       totalCount: 3,
@@ -423,7 +412,6 @@ describe('ArrivalsPage', () => {
     });
     expect(partialMulti).toEqual({ text: '2 de 3 llegaron', tone: 'partial' });
 
-    // None arrived - group
     const noneGroup = component.formatArrivedSummary({
       arrivedCount: 0,
       totalCount: 3,
@@ -431,7 +419,6 @@ describe('ArrivalsPage', () => {
     });
     expect(noneGroup).toEqual({ text: '0 de 3 llegaron', tone: 'none' });
 
-    // None arrived - individual
     const noneIndiv = component.formatArrivedSummary({
       arrivedCount: 0,
       totalCount: 1,
@@ -476,26 +463,22 @@ describe('ArrivalsPage', () => {
     const items = fixture.nativeElement.querySelectorAll('.search-results-list ion-item');
     expect(items.length).toBe(3);
 
-    // Complete item
     expect(items[0].classList).toContain('search-item--complete');
     const completeBadge = items[0].querySelector('.search-item-badge--complete');
     expect(completeBadge).not.toBeNull();
     expect(completeBadge.textContent.trim()).toBe('Ya llegaron todos');
 
-    // Partial item
     expect(items[1].classList).not.toContain('search-item--complete');
     const partialBadge = items[1].querySelector('.search-item-badge--partial');
     expect(partialBadge).not.toBeNull();
     expect(partialBadge.textContent.trim()).toBe('1 de 3 llegó');
 
-    // None item
     expect(items[2].classList).not.toContain('search-item--complete');
     const noneCount = items[2].querySelector('.search-item-count');
     expect(noneCount).not.toBeNull();
     expect(noneCount.textContent.trim()).toBe('0 de 2 llegaron');
   });
 
-  // 8. .search-item-queued con queuedCount
   it('renders .search-item-queued when item has queued arrivals', async () => {
     mockSession.snapshot.set(sampleSnapshot);
     const queuedSingle: ArrivalInvitationView = {
@@ -521,7 +504,6 @@ describe('ArrivalsPage', () => {
     expect(queuedBadges[1].textContent.trim()).toBe('3 sin sincronizar');
   });
 
-  // 9. Tras cerrar la hoja con 'registered', la búsqueda queda vacía; con otro rol, no
   it('clears search when group modal dismisses with registered role, but retains it with other roles', async () => {
     mockSession.snapshot.set(sampleSnapshot);
     component.onSearchInput({ detail: { value: 'Perez' } } as SearchbarCustomEvent);
@@ -542,7 +524,6 @@ describe('ArrivalsPage', () => {
     expect(component.searchQuery()).toBe('');
   });
 
-  // 10. El reloj se detiene al salir de la vista
   it('stops the clock interval when leaving the view', () => {
     vi.useFakeTimers();
     try {
@@ -562,7 +543,6 @@ describe('ArrivalsPage', () => {
     }
   });
 
-  // 11. Pruebas existentes
   it('calls session.open on ionViewWillEnter and cleans up on ionViewWillLeave', async () => {
     component.ionViewWillEnter();
     expect(mockSession.open).toHaveBeenCalledWith('evt-123');
@@ -665,20 +645,16 @@ describe('ArrivalsPage', () => {
     const element = fixture.nativeElement as HTMLElement;
     const text = element.textContent ?? '';
 
-    // Counter card
     expect(text).toContain('Llegaron');
     expect(text).toContain('4 de 10');
     expect(text).toContain('personas confirmadas');
     expect(text).toContain('1 llegó sin confirmar');
 
-    // Notice card
     expect(text).toContain('Ana Perez ya había sido registrada en otro celular.');
     expect(text).toContain('Entendido');
 
-    // Scan button
     expect(text).toContain('Escanear QR');
 
-    // List status
     expect(text).toContain('Actualizar lista');
     expect(text).toContain('Fallo de red al actualizar');
   });

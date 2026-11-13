@@ -44,7 +44,7 @@ export class PhotosRepository {
   private readonly supabase = inject(SupabaseService);
   private readonly transport = inject(PHOTO_STORAGE_TRANSPORT);
 
-  // El coordinador regenera los tipos de la base de datos después; casteo sin tipos para event_photos.
+  // event_photos todavía no está en database.types.ts: sin este cliente sin tipos, TypeScript rechaza la tabla.
   private get untypedClient(): SupabaseClient {
     return this.supabase.client as unknown as SupabaseClient;
   }

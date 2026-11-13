@@ -112,7 +112,6 @@ describe('RsvpLogPage', () => {
   });
 
   it('renders total text in singular and plural', async () => {
-    // Singular
     mockRsvpLogRepo.list.mockResolvedValueOnce({
       total: 1,
       items: [makeMockEntry('1', 'Persona 1')],
@@ -125,7 +124,6 @@ describe('RsvpLogPage', () => {
     let labelEl = fixture.debugElement.query(By.css('.totals-label'));
     expect(labelEl.nativeElement.textContent.trim()).toBe('1 respuesta registrada');
 
-    // Plural
     mockRsvpLogRepo.list.mockResolvedValueOnce({
       total: 5,
       items: Array.from({ length: 5 }, (_, i) => makeMockEntry(`${i + 1}`, `Persona ${i + 1}`)),
@@ -187,7 +185,6 @@ describe('RsvpLogPage', () => {
   });
 
   it('drops to the last valid page if current page exceeds total on reload', async () => {
-    // Initial page 2 load
     const page2Items = [makeMockEntry('11', 'Persona 11')];
     mockRsvpLogRepo.list.mockResolvedValueOnce({ total: 11, items: page2Items });
 
@@ -195,7 +192,6 @@ describe('RsvpLogPage', () => {
     await fixture.whenStable();
     component.page.set(2);
 
-    // Reload occurs (e.g. through realtime or delete), total is now only 8 items
     const page1Items = Array.from({ length: 8 }, (_, i) => makeMockEntry(`${i + 1}`, `Persona ${i + 1}`));
     mockRsvpLogRepo.list
       .mockResolvedValueOnce({ total: 8, items: [] }) // response for targetPage 2 check

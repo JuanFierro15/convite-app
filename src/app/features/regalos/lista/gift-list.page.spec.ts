@@ -517,13 +517,11 @@ describe('GiftListPage', () => {
       await component.ionViewWillEnter();
       fixture.detectChanges();
 
-      // Página 1: 4 repetibles y 2 únicos. Títulos: "Regalos repetibles" (índice 0) y "Regalos únicos" (cambio en índice 4).
       const page1Headings = fixture.debugElement
         .queryAll(By.css('.section-heading'))
         .map((h) => h.nativeElement.textContent.trim());
       expect(page1Headings).toEqual(['Regalos repetibles', 'Regalos únicos']);
 
-      // Página 2: 2 únicos restantes. Título: "Regalos únicos" (primera card de la página 2).
       component.goToNextPage();
       fixture.detectChanges();
 
@@ -605,28 +603,23 @@ describe('GiftListPage', () => {
       const cards = fixture.debugElement.queryAll(By.css('.gift-card'));
       expect(cards.length).toBe(5);
 
-      // Repetible: conteo de familias
       expect(cards[0].nativeElement.textContent).toContain('2 de 5 familias');
 
-      // Libre: subtítulo y conteo
       expect(cards[1].nativeElement.textContent).toContain(
         'Familias que llevarán un regalo a su elección',
       );
       expect(cards[1].nativeElement.textContent).toContain('1 familia');
 
-      // Único apartado: "Apartado" y botón "Liberar"
       expect(cards[2].nativeElement.textContent).toContain('Apartado');
       const releaseBtn = cards[2].query(By.css('ion-button[color="danger"]'));
       expect(releaseBtn).not.toBeNull();
       expect(releaseBtn.nativeElement.textContent).toContain('Liberar');
 
-      // Sugerencia: badge "Sugerencia" y nota
       expect(cards[3].nativeElement.textContent).toContain('Sugerencia');
       expect(cards[3].nativeElement.textContent).toContain(
         'Los invitados la ven como idea; no se reserva.',
       );
 
-      // Lluvia de sobres: badge "Lluvia de sobres" y nota
       expect(cards[4].nativeElement.textContent).toContain('Lluvia de sobres');
       expect(cards[4].nativeElement.textContent).toContain(
         'Los invitados la ven en su propia card; no se reserva.',
@@ -653,11 +646,9 @@ describe('GiftListPage', () => {
       expect(prevBtn).not.toBeNull();
       expect(nextBtn).not.toBeNull();
 
-      // En la página 1: Anterior deshabilitado, Siguiente habilitado
       expect(prevBtn?.disabled ?? prevBtn?.hasAttribute('disabled')).toBe(true);
       expect(nextBtn?.disabled ?? nextBtn?.hasAttribute('disabled')).toBe(false);
 
-      // Avanzar a la página 2
       nextBtn?.click();
       fixture.detectChanges();
 
@@ -665,7 +656,6 @@ describe('GiftListPage', () => {
       expect(prevBtn?.disabled ?? prevBtn?.hasAttribute('disabled')).toBe(false);
       expect(nextBtn?.disabled ?? nextBtn?.hasAttribute('disabled')).toBe(true);
 
-      // Retroceder a la página 1
       prevBtn?.click();
       fixture.detectChanges();
 

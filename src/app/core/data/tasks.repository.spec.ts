@@ -56,7 +56,6 @@ describe('TasksRepository', () => {
       expect(mockEq).toHaveBeenCalledWith('event_id', 'event-1');
       expect(result).toEqual(mockTasks);
 
-      // Regla central: un ayudante no puede saber de gastos; tasks.repository nunca consulta expenses
       expect(mockSupabase.client.from).not.toHaveBeenCalledWith('expenses');
     });
 

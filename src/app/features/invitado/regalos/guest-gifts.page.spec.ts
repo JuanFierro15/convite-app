@@ -239,7 +239,6 @@ describe('GuestGiftsPage', () => {
         'Es anónimo: ni nosotros ni los demás invitados sabremos qué eligieron.',
       );
 
-      // Individual con lista
       const { fixture: indFixture } = await createPage([buildUniqueGift()], mockIndividualInvitation);
 
       const indIntro = indFixture.nativeElement.querySelector('.gifts-header__intro');
@@ -263,7 +262,6 @@ describe('GuestGiftsPage', () => {
       );
       expect(groupFixture.nativeElement.querySelector('.gifts-header__note')).toBeNull();
 
-      // Individual sin lista
       const { fixture: indFixture } = await createPage([buildSuggestionGift()], mockIndividualInvitation);
 
       const indIntro = indFixture.nativeElement.querySelector('.gifts-header__intro');
@@ -502,7 +500,6 @@ describe('GuestGiftsPage', () => {
         buildSuggestionGift({ id: 's-2', name: 'Crema antipañalitis' }),
       ];
 
-      // Grupo
       const { fixture: groupFixture } = await createPage(suggestions, mockGroupInvitation);
       const basicsCard = groupFixture.nativeElement.querySelector('.basics-card');
       expect(basicsCard).not.toBeNull();
@@ -515,7 +512,6 @@ describe('GuestGiftsPage', () => {
       expect(items[0].textContent?.trim()).toBe('Toallitas húmedas');
       expect(items[1].textContent?.trim()).toBe('Crema antipañalitis');
 
-      // Individual
       const { fixture: indFixture } = await createPage(suggestions, mockIndividualInvitation);
       const indTitle = indFixture.nativeElement.querySelector('#basics-title');
       expect(indTitle?.textContent?.trim()).toBe(
@@ -535,7 +531,6 @@ describe('GuestGiftsPage', () => {
         'Línea 1\nLínea 2',
       );
 
-      // Cuatro ilustraciones
       expect(envelopeCard.querySelector('.envelope-card__rain-1')).not.toBeNull();
       expect(envelopeCard.querySelector('.envelope-card__rain-2')).not.toBeNull();
       expect(envelopeCard.querySelector('.envelope-card__rain-3')).not.toBeNull();
@@ -846,7 +841,6 @@ describe('GuestGiftsPage', () => {
     });
   });
 
-  // Pruebas existentes de lógica de reserva / liberación / paginación
   it('renders "Su regalo" for group invitation with 1 gift', async () => {
     const { fixture } = await createPage(mockGifts, mockGroupInvitation);
 

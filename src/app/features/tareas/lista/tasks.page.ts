@@ -428,7 +428,6 @@ export class TasksPage implements ViewWillEnter, ViewWillLeave {
     const willBeDone = task.done_at === null;
     const originalTasks = this.tasks();
 
-    // Cambio optimista en el signal
     this.tasks.set(
       originalTasks.map((t) =>
         t.id === task.id
@@ -460,7 +459,6 @@ export class TasksPage implements ViewWillEnter, ViewWillLeave {
       );
       this.currentPage.set(this.pagedPending().page);
 
-      // Al marcar con éxito como propietario: verificar si pregunta pago
       if (willBeDone && this.isOwner()) {
         const link = this.linksMap().get(task.id) ?? null;
         if (
@@ -474,7 +472,6 @@ export class TasksPage implements ViewWillEnter, ViewWillLeave {
         }
       }
     } catch (err) {
-      // Revertir optimismo
       this.tasks.set(originalTasks);
       this.currentPage.set(this.pagedPending().page);
       const message =
@@ -565,7 +562,6 @@ export class TasksPage implements ViewWillEnter, ViewWillLeave {
     const link = this.linksMap().get(task.id) ?? null;
 
     if (!link) {
-      // Caso 1: Sin gasto
       const alert = await this.alertCtrl.create({
         cssClass: 'convite-alert',
         header: 'Borrar tarea',
@@ -586,7 +582,6 @@ export class TasksPage implements ViewWillEnter, ViewWillLeave {
     }
 
     if (link.paid_cop === 0) {
-      // Caso 2: Gasto sin pagos
       const alert = await this.alertCtrl.create({
         cssClass: 'convite-alert',
         header: 'Borrar tarea',
@@ -618,7 +613,6 @@ export class TasksPage implements ViewWillEnter, ViewWillLeave {
       return;
     }
 
-    // Caso 3: Gasto con pagos
     const alert = await this.alertCtrl.create({
       cssClass: 'convite-alert',
       header: 'Borrar tarea',

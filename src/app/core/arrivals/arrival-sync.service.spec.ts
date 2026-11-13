@@ -160,7 +160,6 @@ describe('ArrivalSyncService', () => {
     await syncService.syncEvent('event-1');
 
     expect(syncService.lastError()).toBe('Fallo de conexión');
-    // Store mutate was not called because record threw before modifying store
     expect(mockStore.mutate).not.toHaveBeenCalled();
   });
 

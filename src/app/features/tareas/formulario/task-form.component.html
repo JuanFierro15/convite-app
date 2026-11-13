@@ -13,7 +13,6 @@
 
 <ion-content class="ion-padding form-content">
   <form [formGroup]="form" (ngSubmit)="save()" novalidate>
-    <!-- Título -->
     <div class="form-field">
       <span class="field-label text-name" id="task-title-label">Título</span>
       <ion-input
@@ -28,7 +27,6 @@
       }
     </div>
 
-    <!-- Responsable -->
     <div class="form-field">
       @if (availableProfiles().length === 0) {
         <p class="helper-notice text-label">
@@ -51,7 +49,6 @@
       }
     </div>
 
-    <!-- Fecha límite -->
     <div class="form-field">
       <span class="field-label text-name" id="task-due-date-label">Fecha límite</span>
       <ion-input
@@ -65,7 +62,6 @@
       }
     </div>
 
-    <!-- Nota -->
     <div class="form-field">
       <span class="field-label text-name" id="task-note-label">Nota</span>
       <ion-textarea
@@ -81,7 +77,6 @@
       }
     </div>
 
-    <!-- Sección Gasto de esta tarea -->
     <div class="expense-section">
       <h3 class="text-section expense-section__title">Gasto de esta tarea</h3>
 
@@ -95,7 +90,6 @@
           {{ expErr }}
         </div>
       } @else if (link !== null && !unlinked()) {
-        <!-- Gasto actual vinculado -->
         <div class="linked-expense-card">
           <div class="linked-expense-details">
             <span class="text-name">{{ link.description }}</span>
@@ -113,18 +107,15 @@
           </ion-button>
         </div>
       } @else {
-        <!-- Opciones de gasto: Sin gasto / Crear nuevo / Vincular -->
         <ion-radio-group
           [value]="expenseMode()"
           (ionChange)="onExpenseModeChange($event)"
           class="expense-radio-group"
         >
-          <!-- Radio 1: Sin gasto -->
           <ion-radio value="none" justify="start" class="expense-radio">
             Sin gasto
           </ion-radio>
 
-          <!-- Radio 2: Crear gasto nuevo -->
           <div class="expense-radio-wrapper">
             <ion-radio
               value="new"
@@ -141,7 +132,6 @@
             }
           </div>
 
-          <!-- Campos para Crear gasto nuevo -->
           @if (expenseMode() === 'new' && categories().length > 0) {
             <div class="new-expense-fields">
               <div class="form-field subfield">
@@ -194,7 +184,6 @@
             </div>
           }
 
-          <!-- Radio 3: Vincular un gasto existente -->
           <div class="expense-radio-wrapper">
             <ion-radio
               value="link"
@@ -211,7 +200,6 @@
             }
           </div>
 
-          <!-- Campos para Vincular gasto existente -->
           @if (expenseMode() === 'link' && freeExpenses().length > 0) {
             <div class="link-expense-fields">
               <div class="form-field subfield">

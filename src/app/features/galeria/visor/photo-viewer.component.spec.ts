@@ -266,7 +266,6 @@ describe('PhotoViewerComponent', () => {
     component.goToPhoto(1);
     expect(component.currentIndex()).toBe(1);
 
-    // Solo queda photo-1
     component.syncPhotos([samplePhotos[0]]);
     expect(component.currentIndex()).toBe(0);
   });

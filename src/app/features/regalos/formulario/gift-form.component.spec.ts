@@ -50,20 +50,16 @@ describe('GiftFormComponent', () => {
     component.ngOnInit();
     fixture.detectChanges();
 
-    // Default kind is 'unique'
     expect(fixture.debugElement.query(By.css('#gift-max-reservations-label'))).toBeNull();
 
-    // Switch to 'suggestion'
     component.form.controls.kind.setValue('suggestion');
     fixture.detectChanges();
     expect(fixture.debugElement.query(By.css('#gift-max-reservations-label'))).toBeNull();
 
-    // Switch to 'free'
     component.form.controls.kind.setValue('free');
     fixture.detectChanges();
     expect(fixture.debugElement.query(By.css('#gift-max-reservations-label'))).toBeNull();
 
-    // Switch to 'repeatable'
     component.form.controls.kind.setValue('repeatable');
     fixture.detectChanges();
     expect(fixture.debugElement.query(By.css('#gift-max-reservations-label'))).not.toBeNull();
@@ -74,7 +70,6 @@ describe('GiftFormComponent', () => {
     component.form.controls.name.setValue('Pañales');
     component.form.controls.kind.setValue('repeatable');
 
-    // Vacío
     component.form.controls.maxReservations.setValue('');
     await component.save();
     expect(component.maxReservationsError).toBe(
@@ -82,7 +77,6 @@ describe('GiftFormComponent', () => {
     );
     expect(mockGiftsRepo.create).not.toHaveBeenCalled();
 
-    // Con espacios en blanco
     component.form.controls.maxReservations.setValue('   ');
     await component.save();
     expect(component.maxReservationsError).toBe(
@@ -90,13 +84,11 @@ describe('GiftFormComponent', () => {
     );
     expect(mockGiftsRepo.create).not.toHaveBeenCalled();
 
-    // 1
     component.form.controls.maxReservations.setValue('1');
     await component.save();
     expect(component.maxReservationsError).toBe('Si solo una familia puede elegirlo, usa Único.');
     expect(mockGiftsRepo.create).not.toHaveBeenCalled();
 
-    // No es entero positivo ("abc", "0", "-1", "2.5")
     for (const invalid of ['abc', '0', '-1', '2.5']) {
       component.form.controls.maxReservations.setValue(invalid);
       await component.save();
@@ -104,7 +96,6 @@ describe('GiftFormComponent', () => {
       expect(mockGiftsRepo.create).not.toHaveBeenCalled();
     }
 
-    // 2 (válido)
     component.form.controls.maxReservations.setValue('2');
     await component.save();
     expect(component.maxReservationsError).toBeNull();
@@ -141,18 +132,15 @@ describe('GiftFormComponent', () => {
   });
 
   it('la opción libre se oculta si el evento ya tiene uno y se ve al editar el libre', () => {
-    // Caso 1: evento no tiene libre -> opción visible
     component.hasFreeGift = false;
     component.ngOnInit();
     fixture.detectChanges();
     expect(fixture.debugElement.query(By.css('ion-radio[value="free"]'))).not.toBeNull();
 
-    // Caso 2: evento ya tiene libre -> opción oculta
     component.hasFreeGift = true;
     fixture.detectChanges();
     expect(fixture.debugElement.query(By.css('ion-radio[value="free"]'))).toBeNull();
 
-    // Caso 3: editando el regalo libre existente con hasFreeGift = true -> opción visible
     const mockFreeGift: GiftWithReservations = {
       id: 'gift-free-1',
       event_id: 'event-1',
@@ -234,24 +222,20 @@ describe('GiftFormComponent', () => {
     component.ngOnInit();
     fixture.detectChanges();
 
-    // El campo aparece vacío
     expect(component.form.controls.maxReservations.value).toBe('');
 
-    // Cambiar a repetible
     component.form.controls.kind.setValue('repeatable');
     fixture.detectChanges();
 
     expect(fixture.debugElement.query(By.css('#gift-max-reservations-label'))).not.toBeNull();
     expect(component.form.controls.maxReservations.value).toBe('');
 
-    // Guardar vacío exige el número
     await component.save();
     expect(component.maxReservationsError).toBe(
       'Escribe cuántas familias pueden elegirlo (2 o más).',
     );
     expect(mockGiftsRepo.update).not.toHaveBeenCalled();
 
-    // Poner 3 guarda exitosamente
     component.form.controls.maxReservations.setValue('3');
     await component.save();
     expect(component.maxReservationsError).toBeNull();
@@ -296,7 +280,6 @@ describe('GiftFormComponent', () => {
     component.ngOnInit();
     expect(component.form.controls.maxReservations.value).toBe('5');
 
-    // Probar con 2 (menor que 3 reservas existentes)
     component.form.controls.maxReservations.setValue('2');
     await component.save();
 
@@ -305,7 +288,6 @@ describe('GiftFormComponent', () => {
     );
     expect(mockGiftsRepo.update).not.toHaveBeenCalled();
 
-    // Probar con 3 (igual a 3 reservas existentes)
     component.form.controls.maxReservations.setValue('3');
     await component.save();
 
@@ -321,18 +303,15 @@ describe('GiftFormComponent', () => {
   });
 
   it('el radio "Lluvia de sobres" aparece sin hasEnvelopeGift, no aparece con hasEnvelopeGift = true, y sí aparece al editar un envelope aunque hasEnvelopeGift = true', () => {
-    // Caso 1: sin hasEnvelopeGift -> opción visible
     component.hasEnvelopeGift = false;
     component.ngOnInit();
     fixture.detectChanges();
     expect(fixture.debugElement.query(By.css('ion-radio[value="envelope"]'))).not.toBeNull();
 
-    // Caso 2: con hasEnvelopeGift = true -> opción oculta
     component.hasEnvelopeGift = true;
     fixture.detectChanges();
     expect(fixture.debugElement.query(By.css('ion-radio[value="envelope"]'))).toBeNull();
 
-    // Caso 3: editando un envelope aunque hasEnvelopeGift = true -> opción visible
     const mockEnvelopeGift: GiftWithReservations = {
       id: 'gift-env-1',
       event_id: 'event-1',
@@ -357,15 +336,12 @@ describe('GiftFormComponent', () => {
     component.form.controls.kind.setValue('envelope');
     fixture.detectChanges();
 
-    // Categoría no se muestra
     expect(fixture.debugElement.query(By.css('#gift-category-label'))).toBeNull();
 
-    // Etiqueta de descripción es "Texto que verán los invitados"
     const descLabel = fixture.debugElement.query(By.css('#gift-description-label'));
     expect(descLabel).not.toBeNull();
     expect(descLabel.nativeElement.textContent.trim()).toBe('Texto que verán los invitados');
 
-    // Placeholder es "Opcional"
     const textarea = fixture.debugElement.query(By.css('ion-textarea[formControlName="description"]'));
     expect(textarea).not.toBeNull();
     expect(
@@ -374,7 +350,6 @@ describe('GiftFormComponent', () => {
         textarea.nativeElement.placeholder,
     ).toBe('Opcional');
 
-    // Ayuda debajo aparece
     const helps = fixture.debugElement.queryAll(By.css('.field-help'));
     const envelopeHelp = helps.find((h) =>
       h.nativeElement.textContent.includes('Si lo dejas vacío, los invitados solo verán el título y la ilustración.'),

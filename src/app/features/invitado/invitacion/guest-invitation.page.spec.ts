@@ -161,18 +161,14 @@ describe('GuestInvitationPage', () => {
     await component.loadInvitation();
     fixture.detectChanges();
 
-    // Título de bienvenida
     const titleEl = fixture.nativeElement.querySelector('.welcome-card__title');
     expect(titleEl?.textContent?.trim()).toBe('La familia Ejemplo está invitada');
 
-    // Plazo en plural
     const deadlineEl = fixture.nativeElement.querySelector('.deadline-banner span');
     expect(deadlineEl?.textContent?.trim()).toContain('Por favor respondan antes del');
 
-    // Mesa oculta
     expect(fixture.nativeElement.querySelector('.table-card')).toBeNull();
 
-    // Card de regalos
     const giftsTitleEl = fixture.nativeElement.querySelector('.gifts-card__title');
     expect(giftsTitleEl?.textContent?.trim()).toBe('Un detalle para Eloise');
 
@@ -183,7 +179,6 @@ describe('GuestInvitationPage', () => {
     expect(giftsImg.getAttribute('alt')).toBe('');
     expect(giftsImg.src.endsWith('gift-reserved.webp')).toBe(true);
 
-    // Tarjeta de código de entrada
     const entryCard = fixture.nativeElement.querySelector('.entry-code-card');
     expect(entryCard).not.toBeNull();
 
@@ -223,15 +218,12 @@ describe('GuestInvitationPage', () => {
     await component.loadInvitation();
     fixture.detectChanges();
 
-    // Título de bienvenida en singular
     const titleEl = fixture.nativeElement.querySelector('.welcome-card__title');
     expect(titleEl?.textContent?.trim()).toBe('Persona Ejemplo, te invitamos');
 
-    // Plazo en singular
     const deadlineEl = fixture.nativeElement.querySelector('.deadline-banner span');
     expect(deadlineEl?.textContent?.trim()).toContain('Por favor responde antes del');
 
-    // Mesa oculta
     expect(fixture.nativeElement.querySelector('.table-card')).toBeNull();
   });
 
@@ -256,11 +248,9 @@ describe('GuestInvitationPage', () => {
     const entryCard = fixture.nativeElement.querySelector('.entry-code-card');
     expect(entryCard).not.toBeNull();
 
-    // Sin imagen
     const qrImg = entryCard.querySelector('.entry-code-card__qr-image');
     expect(qrImg).toBeNull();
 
-    // Pero el código en texto se mantiene
     const codeEl = entryCard.querySelector('.entry-code-card__code');
     expect(codeEl?.textContent?.trim()).toBe(formatInvitationCode('ABCD1234JK'));
     expect(codeEl?.hasAttribute('aria-label')).toBe(false);
@@ -656,7 +646,6 @@ describe('GuestInvitationPage', () => {
       );
       expect(mockToastController.create).not.toHaveBeenCalled();
 
-      // Al reintentar con éxito, el error desaparece
       const updatedInv = {
         ...mockGroupInvitation,
         guests: [
@@ -824,7 +813,6 @@ describe('GuestInvitationPage', () => {
     });
 
     it('muestra aviso de lista cerrada con gifts_open false y lo oculta con true', async () => {
-      // Con gifts_open: true
       mockGuestApi.getInvitation.mockResolvedValue(mockGroupInvitation);
       fixture = TestBed.createComponent(GuestInvitationPage);
       component = fixture.componentInstance;
@@ -835,7 +823,6 @@ describe('GuestInvitationPage', () => {
 
       expect(fixture.nativeElement.querySelector('.gifts-card__closed')).toBeNull();
 
-      // Con gifts_open: false
       const closedGifts = {
         ...mockGroupInvitation,
         gifts_open: false,

@@ -30,21 +30,17 @@ describe('NetworkStatusService', () => {
     const reconnectSpy = vi.fn();
     const unsubscribe = service.onReconnect(reconnectSpy);
 
-    // Go offline
     Object.defineProperty(navigator, 'onLine', { value: false, configurable: true });
     window.dispatchEvent(new Event('offline'));
     expect(reconnectSpy).not.toHaveBeenCalled();
 
-    // Reconnect -> triggers
     Object.defineProperty(navigator, 'onLine', { value: true, configurable: true });
     window.dispatchEvent(new Event('online'));
     expect(reconnectSpy).toHaveBeenCalledTimes(1);
 
-    // Another online event while already online -> does not trigger again
     window.dispatchEvent(new Event('online'));
     expect(reconnectSpy).toHaveBeenCalledTimes(1);
 
-    // Unsubscribe
     unsubscribe();
     Object.defineProperty(navigator, 'onLine', { value: false, configurable: true });
     window.dispatchEvent(new Event('offline'));

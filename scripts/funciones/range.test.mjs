@@ -37,7 +37,6 @@ async function loadOnRequest() {
 
 const onRequest = await loadOnRequest();
 
-// Datos de prueba: 1000 bytes con i % 256
 const fakeData = new Uint8Array(1000);
 for (let i = 0; i < 1000; i++) {
   fakeData[i] = i % 256;

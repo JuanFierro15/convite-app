@@ -74,13 +74,6 @@ Thumbs.db
 .env.*
 !.env.example
 
-# Local config
-CLAUDE.md
-CLAUDE.local.md
-.claude/
-.mcp.json
-skills-lock.json
-
 # Planificación
 /planificacion/
 
@@ -92,8 +85,3 @@ skills-lock.json
 .wrangler
 .dev.vars*
 !.dev.vars.example
-
-# ODD (seguimiento local de features)
-/odd/
-/.atl/
-/.codegraph/

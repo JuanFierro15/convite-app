@@ -1,7 +1,6 @@
 import fs from 'node:fs';
 import { createClient } from '@supabase/supabase-js';
 
-// Cargar variables de .env si no estan definidas en el entorno
 if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SECRET_KEY) {
   if (typeof process.loadEnvFile === 'function') {
     try {
@@ -82,7 +81,6 @@ async function listAllPhotoFiles() {
       continue;
     }
 
-    // Si es un archivo directo en la raiz
     if (item.id !== null && item.name.includes('.')) {
       allFiles.push({
         path: item.name,
@@ -91,7 +89,6 @@ async function listAllPhotoFiles() {
       continue;
     }
 
-    // Si es una carpeta (por ejemplo el UUID del evento)
     const folderFiles = await listFilesInFolder(item.name);
     for (const subItem of folderFiles) {
       if (!subItem.name || subItem.name === '.emptyFolderPlaceholder') {
