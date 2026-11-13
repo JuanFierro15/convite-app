@@ -11,6 +11,8 @@ import { PhotoViewerComponent } from './photo-viewer.component';
 describe('PhotoViewerComponent', () => {
   let fixture: ComponentFixture<PhotoViewerComponent>;
   let component: PhotoViewerComponent;
+  let resizeCallbacks: Array<() => void>;
+  let disconnectSpy: ReturnType<typeof vi.fn>;
 
   let mockModalCtrl: {
     dismiss: ReturnType<typeof vi.fn>;
@@ -63,9 +65,38 @@ describe('PhotoViewerComponent', () => {
       photoPath: 'evt-1/photo-2.jpg',
       thumbPath: 'evt-1/photo-2_thumb.jpg',
     },
+    {
+      id: 'photo-3',
+      eventId: 'evt-1',
+      uploadedBy: 'user-owner',
+      uploaderName: 'Juan',
+      uploaderRole: 'owner',
+      createdAt: '2026-11-29T16:20:00-05:00',
+      width: 1600,
+      height: 1200,
+      sizeBytes: 160000,
+      photoPath: 'evt-1/photo-3.jpg',
+      thumbPath: 'evt-1/photo-3_thumb.jpg',
+    },
   ];
 
   beforeEach(async () => {
+    resizeCallbacks = [];
+    disconnectSpy = vi.fn();
+    vi.stubGlobal(
+      'ResizeObserver',
+      class {
+        constructor(private readonly cb: () => void) {
+          resizeCallbacks.push(cb);
+        }
+        observe(): void {}
+        unobserve(): void {}
+        disconnect(): void {
+          (disconnectSpy as () => void)();
+        }
+      },
+    );
+
     mockModalCtrl = {
       dismiss: vi.fn().mockResolvedValue(true),
     };
@@ -116,13 +147,15 @@ describe('PhotoViewerComponent', () => {
 
   afterEach(() => {
     PhotoViewerComponent.activeInstance = null;
+    vi.unstubAllGlobals();
+    vi.useRealTimers();
   });
 
   it('muestra contador y botón cerrar al inicializar', async () => {
     fixture.detectChanges();
 
     const titleEl = fixture.debugElement.query(By.css('.viewer-counter'));
-    expect(titleEl.nativeElement.textContent.trim()).toBe('1 de 2');
+    expect(titleEl.nativeElement.textContent.trim()).toBe('1 de 3');
 
     const closeBtn = fixture.debugElement.query(By.css('.close-btn'));
     expect(closeBtn).toBeTruthy();
@@ -236,5 +269,102 @@ describe('PhotoViewerComponent', () => {
     // Solo queda photo-1
     component.syncPhotos([samplePhotos[0]]);
     expect(component.currentIndex()).toBe(0);
+  });
+
+  it('ubica el carrusel en la foto tocada cuando el modal ya tiene ancho', () => {
+    component.startIndex = 2;
+    fixture.detectChanges();
+
+    const sliderEl = fixture.debugElement.query(By.css('.photo-slider')).nativeElement as HTMLDivElement;
+    resizeCallbacks.forEach((cb) => cb());
+    expect(sliderEl.scrollLeft).toBe(0);
+
+    Object.defineProperty(sliderEl, 'clientWidth', { configurable: true, value: 360 });
+    resizeCallbacks.forEach((cb) => cb());
+    expect(sliderEl.scrollLeft).toBe(720);
+    expect(component.currentIndex()).toBe(2);
+  });
+
+  it('no cambia de foto por un scroll antes de ubicar el carrusel', () => {
+    vi.useFakeTimers();
+    component.startIndex = 2;
+    fixture.detectChanges();
+
+    component.onScroll();
+    vi.advanceTimersByTime(50);
+    expect(component.currentIndex()).toBe(2);
+    vi.useRealTimers();
+  });
+
+  it('cambia de foto por un scroll después de ubicar el carrusel', () => {
+    vi.useFakeTimers();
+    component.startIndex = 2;
+    fixture.detectChanges();
+
+    const sliderEl = fixture.debugElement.query(By.css('.photo-slider')).nativeElement as HTMLDivElement;
+    Object.defineProperty(sliderEl, 'clientWidth', { configurable: true, value: 360 });
+    resizeCallbacks.forEach((cb) => cb());
+
+    sliderEl.scrollLeft = 360;
+    component.onScroll();
+    vi.advanceTimersByTime(50);
+    expect(component.currentIndex()).toBe(1);
+    vi.useRealTimers();
+  });
+
+  it('desconecta el observador de tamaño al destruirse', () => {
+    fixture.detectChanges();
+    fixture.destroy();
+    expect(disconnectSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it('muestra el aviso con Reintentar cuando falla la descarga de la foto', async () => {
+    mockPhotoCache.getUrl.mockRejectedValue(new Error('fallo'));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    await Promise.resolve();
+    fixture.detectChanges();
+
+    const firstSlide = fixture.debugElement.query(By.css('.photo-slide'));
+    const errorText = firstSlide.query(By.css('.viewer-error__text'));
+    expect(errorText.nativeElement.textContent.trim()).toBe('No pudimos cargar la foto.');
+
+    const retryBtn = firstSlide.query(By.css('ion-button'));
+    expect(retryBtn.nativeElement.textContent.trim()).toBe('Reintentar');
+
+    const spinner = firstSlide.query(By.css('ion-spinner'));
+    expect(spinner).toBeNull();
+  });
+
+  it('Reintentar vuelve a pedir la foto y la muestra', async () => {
+    mockPhotoCache.getUrl.mockRejectedValue(new Error('fallo'));
+    fixture.detectChanges();
+    await fixture.whenStable();
+    await Promise.resolve();
+    await Promise.resolve();
+    fixture.detectChanges();
+
+    const firstSlide = fixture.debugElement.query(By.css('.photo-slide'));
+    const retryBtn = firstSlide.query(By.css('ion-button'));
+    expect(retryBtn).toBeTruthy();
+
+    mockPhotoCache.getUrl.mockResolvedValue('blob:photo-url');
+    mockPhotoCache.getUrl.mockClear();
+
+    retryBtn.nativeElement.click();
+    await fixture.whenStable();
+    await Promise.resolve();
+    await Promise.resolve();
+    fixture.detectChanges();
+
+    expect(mockPhotoCache.getUrl).toHaveBeenCalledTimes(1);
+    expect(mockPhotoCache.getUrl).toHaveBeenCalledWith('evt-1/photo-1.jpg');
+
+    const img = firstSlide.query(By.css('img.viewer-img'));
+    expect(img).toBeTruthy();
+    expect(img.nativeElement.src).toMatch(/blob:photo-url$/);
+
+    const error = firstSlide.query(By.css('.viewer-error'));
+    expect(error).toBeNull();
   });
 });
