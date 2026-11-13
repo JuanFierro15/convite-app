@@ -42,7 +42,7 @@ El permiso `CAMERA` está declarado en `android/app/src/main/AndroidManifest.xml
 
 Para elegir fotos se usa el selector de fotos del sistema, que solo le entrega a la app las fotos que el usuario escoge. Por eso no se pide ningún permiso de almacenamiento.
 
-Las fotos se comprimen en el celular antes de subirlas (de 3 a 8 MB pasan a unos 200 KB) y se guardan en un bucket privado de Supabase Storage.
+Las fotos se comprimen en el celular antes de subirlas (una foto de varios MB queda en unos cientos de KB) y se guardan en un bucket privado de Supabase Storage.
 
 ## Datos
 
@@ -53,7 +53,7 @@ Las fotos se comprimen en el celular antes de subirlas (de 3 a 8 MB pasan a unos
 ## Stack
 
 - [Ionic 9](https://ionicframework.com/) con [Angular 22](https://angular.dev/): componentes standalone, signals y sin Zone.js.
-- [Capacitor 8](https://capacitorjs.com/) para Android, con los plugins de cámara, lector de códigos, red, preferencias, compartir, háptica y barra de estado.
+- [Capacitor 8](https://capacitorjs.com/) para Android, con plugins oficiales como cámara, lector de códigos, red, preferencias, archivos, teclado, compartir, háptica y barra de estado.
 - [Supabase](https://supabase.com/) en el plan gratuito.
 - Cloudflare Pages para la vista web de los invitados.
 
