@@ -455,7 +455,6 @@ describe('InvitationSendPage', () => {
 
       expect(fixture.nativeElement.querySelector('.mark-failed')).not.toBeNull();
 
-      // Al cambiar la lista (por ejemplo realtime), si la actual ya no es inv-a no se muestra
       component.invitations.set([invitationC, invitationD]);
       fixture.detectChanges();
 

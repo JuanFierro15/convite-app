@@ -230,28 +230,23 @@ describe('TasksPage', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
 
-    // Grupo Vencidas
     const overdueSection = compiled.querySelector('section[aria-labelledby="overdue-heading"]');
     expect(overdueSection).not.toBeNull();
     expect(overdueSection?.textContent).toContain('Vencidas');
     expect(overdueSection?.textContent).toContain('Comprar cinta decorativa');
 
-    // Grupo Próximas
     const upcomingSection = compiled.querySelector('section[aria-labelledby="upcoming-heading"]');
     expect(upcomingSection).not.toBeNull();
     expect(upcomingSection?.textContent).toContain('Próximas');
     expect(upcomingSection?.textContent).toContain('Recoger la torta');
 
-    // Grupo Hechas plegado
     const doneToggle = compiled.querySelector('.done-toggle-btn');
     expect(doneToggle).not.toBeNull();
     expect(doneToggle?.textContent).toContain('Hechas (1)');
     expect(doneToggle?.getAttribute('aria-expanded')).toBe('false');
 
-    // La lista de hechas está oculta mientras esté plegada
     expect(compiled.querySelector('.tasks-group--done .tasks-list')).toBeNull();
 
-    // Desplegar Hechas
     component.toggleShowDone();
     fixture.detectChanges();
 
@@ -267,15 +262,12 @@ describe('TasksPage', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    // Filtro por Juan (prof-1)
     component.selectedFilter.set('prof-1');
     expect(component.filteredTasks().map((t) => t.id)).toEqual(['task-overdue']);
 
-    // Filtro por Sin asignar
     component.selectedFilter.set('unassigned');
     expect(component.filteredTasks().map((t) => t.id)).toEqual(['task-done']);
 
-    // Filtro sin resultados
     component.selectedFilter.set('prof-inexistente');
     expect(component.filteredTasks().length).toBe(0);
     fixture.detectChanges();
@@ -309,7 +301,6 @@ describe('TasksPage', () => {
     const taskToToggle = component.tasks().find((t) => t.id === 'task-overdue')!;
     await component.toggleTaskDone(taskToToggle);
 
-    // Debe haberse revertido a done_at: null
     const taskAfter = component.tasks().find((t) => t.id === 'task-overdue')!;
     expect(taskAfter.done_at).toBeNull();
     expect(mockToastCtrl.create).toHaveBeenCalledWith(
@@ -322,7 +313,6 @@ describe('TasksPage', () => {
     component.ionViewWillEnter();
     await fixture.whenStable();
 
-    // 1. Propietario marcando tarea con gasto abonado (task-upcoming tiene saldo 100.000)
     const taskUpcoming = component.tasks().find((t) => t.id === 'task-upcoming')!;
     await component.toggleTaskDone(taskUpcoming);
 
@@ -336,7 +326,6 @@ describe('TasksPage', () => {
 
     mockAlertCtrl.create.mockClear();
 
-    // 2. Gasto pagado del todo: no debe preguntar
     component.links.set([
       {
         task_id: 'task-overdue',
@@ -350,13 +339,11 @@ describe('TasksPage', () => {
     await component.toggleTaskDone(taskOverdue);
     expect(mockAlertCtrl.create).not.toHaveBeenCalled();
 
-    // 3. Deshacer / desmarcar una tarea hecha: no debe preguntar
     mockAlertCtrl.create.mockClear();
     const taskDone = component.tasks().find((t) => t.id === 'task-done')!;
     await component.toggleTaskDone(taskDone);
     expect(mockAlertCtrl.create).not.toHaveBeenCalled();
 
-    // 4. Ayudante marcando: nunca debe preguntar
     mockEventContext.isOwner.set(false);
     mockAlertCtrl.create.mockClear();
     await component.toggleTaskDone(taskUpcoming);
@@ -377,10 +364,8 @@ describe('TasksPage', () => {
     );
     expect(registerBtn).toBeDefined();
 
-    // Ejecutamos el handler del botón "Registrar pago"
     await registerBtn.handler();
 
-    // Comprobamos que abre la hoja modal con el saldo (150.000 - 50.000 = 100.000)
     expect(mockModalCtrl.create).toHaveBeenCalledWith(
       expect.objectContaining({
         component: PaymentFormComponent,
@@ -418,13 +403,11 @@ describe('TasksPage', () => {
     component.ionViewWillEnter();
     await fixture.whenStable();
 
-    // Modal que se cierra con role: 'delete'
     mockModalCtrl.create.mockResolvedValue({
       present: vi.fn().mockResolvedValue(undefined),
       onWillDismiss: vi.fn().mockResolvedValue({ role: 'delete' }),
     });
 
-    // Caso 1: Sin gasto (task-overdue no tiene link)
     const taskSinGasto = component.tasks().find((t) => t.id === 'task-overdue')!;
     await component.openTaskModal(taskSinGasto);
 
@@ -435,7 +418,6 @@ describe('TasksPage', () => {
       }),
     );
 
-    // Caso 2: Gasto sin pagos
     mockAlertCtrl.create.mockClear();
     component.links.set([
       {
@@ -470,7 +452,6 @@ describe('TasksPage', () => {
       }),
     );
 
-    // Caso 3: Gasto con pagos (task-upcoming tiene pagos)
     mockAlertCtrl.create.mockClear();
     const taskConPagos = component.tasks().find((t) => t.id === 'task-upcoming')!;
     await component.openTaskModal(taskConPagos);
@@ -515,7 +496,6 @@ describe('TasksPage', () => {
     expect(infoBtn.attributes['aria-expanded']).toBe('false');
     expect(fixture.debugElement.query(By.css('.task-detail'))).toBeNull();
 
-    // Primer click: despliega
     infoBtn.nativeElement.click();
     fixture.detectChanges();
 
@@ -525,7 +505,6 @@ describe('TasksPage', () => {
     expect(detail).not.toBeNull();
     expect(detail.nativeElement.textContent).toContain('Esta es la descripción detallada de la tarea.');
 
-    // Segundo click: oculta
     infoBtn.nativeElement.click();
     fixture.detectChanges();
 
@@ -633,7 +612,6 @@ describe('TasksPage', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    // Página 1: 3 vencidas + 7 próximas = 10 filas pendientes
     const page1Status = fixture.debugElement.query(By.css('.pagination__status'));
     expect(page1Status).not.toBeNull();
     expect(page1Status.nativeElement.textContent.trim()).toBe('Página 1 de 2');
@@ -652,7 +630,6 @@ describe('TasksPage', () => {
     expect(overdueRows.length).toBe(3);
     expect(upcomingRows.length).toBe(7);
 
-    // Navegamos a Página 2: 2 próximas restantes
     component.goToNextPage();
     fixture.detectChanges();
 
@@ -716,7 +693,6 @@ describe('TasksPage', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    // En página 1
     component.showDone.set(true);
     fixture.detectChanges();
 
@@ -724,7 +700,6 @@ describe('TasksPage', () => {
     expect(doneSection).not.toBeNull();
     expect(doneSection.nativeElement.textContent).toContain('Tarea hecha de prueba');
 
-    // En página 2
     component.goToNextPage();
     fixture.detectChanges();
 

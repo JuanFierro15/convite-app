@@ -177,7 +177,6 @@ describe('GuestIntroComponent', () => {
     await vi.advanceTimersByTimeAsync(1);
     expect(getFinishedCount()).toBe(1);
 
-    // Un segundo clic no vuelve a emitir ni a llamar markSeen
     skipBtn.click();
     await vi.advanceTimersByTimeAsync(INTRO_FADE_MS);
     expect(getFinishedCount()).toBe(1);
@@ -216,7 +215,6 @@ describe('GuestIntroComponent', () => {
     expect(mockEnv.markSeen).toHaveBeenCalledTimes(1);
     expect(mockEnv.markSeen).toHaveBeenCalledWith('ABCD1234JK');
 
-    // Avanza 5000 ms más: el video sigue reproduciéndose y no ha terminado
     await vi.advanceTimersByTimeAsync(5000);
     expect(getExitStartedCount()).toBe(0);
     expect(getFinishedCount()).toBe(0);
@@ -224,7 +222,6 @@ describe('GuestIntroComponent', () => {
     const removeAttributeSpy = vi.spyOn(videoEl, 'removeAttribute');
     loadSpy.mockClear();
 
-    // Se despacha ended
     videoEl.dispatchEvent(new Event('ended'));
     fixture.detectChanges();
 
@@ -245,7 +242,6 @@ describe('GuestIntroComponent', () => {
     await vi.advanceTimersByTimeAsync(1);
     expect(getFinishedCount()).toBe(1);
 
-    // Al destruir el fixture, cleanup() libera el video
     fixture.destroy();
     expect(loadSpy).toHaveBeenCalled();
   });
@@ -278,7 +274,6 @@ describe('GuestIntroComponent', () => {
 
     const { getFinishedCount, getExitStartedCount } = await createIntroComponent();
 
-    // Espera a que se procese el rechazo de la promesa
     await vi.advanceTimersByTimeAsync(0);
 
     expect(getExitStartedCount()).toBe(1);

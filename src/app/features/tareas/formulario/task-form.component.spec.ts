@@ -200,12 +200,10 @@ describe('TaskFormComponent', () => {
       'Para crear un gasto, primero crea una categoría en Presupuesto.',
     );
 
-    // Debe mostrar el texto sin ningún botón dentro de ese aviso
     const noCatContainer = compiled.querySelector('.no-categories-text');
     expect(noCatContainer).not.toBeNull();
     expect(noCatContainer?.querySelector('button, ion-button')).toBeNull();
 
-    // Vincular disponible si hay gastos libres
     expect(component.freeExpenses().length).toBe(1);
     const radioLink = compiled.querySelector('ion-radio[value="link"]');
     expect(radioLink?.hasAttribute('disabled')).toBe(false);
@@ -361,13 +359,11 @@ describe('TaskFormComponent', () => {
     component.form.controls.expense_category_id.setValue('cat-1');
     component.form.controls.expense_amount_cop.setValue('50000');
 
-    // Primer intento: falla
     await component.save();
     expect(component.saving()).toBe(false);
     expect(component.taskIdSignal()).toBe(stableTaskId);
     expect(component.newExpenseIdSignal()).toBe(stableExpenseId);
 
-    // Segundo intento: éxito
     mockTasksRepo.save.mockResolvedValueOnce({ id: stableTaskId });
     await component.save();
 

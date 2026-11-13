@@ -168,7 +168,6 @@ test(
       helper2PhotoId
     );
 
-    // Ayudante 1 intenta borrar la fila del propietario
     const { data: delOwnerRow } = await ctx.helper1Client
       .from('event_photos')
       .delete()
@@ -180,7 +179,6 @@ test(
       'El delete de la foto del propietario no debio borrar ninguna fila'
     );
 
-    // Releer con cliente admin para comprobar que la fila sigue existiendo
     const { data: checkOwnerRow } = await ctx.adminClient
       .from('event_photos')
       .select('id')
@@ -192,7 +190,6 @@ test(
       'La fila de la foto del propietario debe seguir existiendo'
     );
 
-    // Ayudante 1 intenta borrar archivos de Storage de la foto del propietario
     await ctx.helper1Client.storage
       .from('event-photos')
       .remove([
@@ -200,7 +197,6 @@ test(
         `${ctx.eventMain.id}/${ownerPhoto.id}_thumb.jpg`,
       ]);
 
-    // Comprobar con admin que los archivos siguen en Storage
     const { data: filesOwnerCheck } = await ctx.adminClient.storage
       .from('event-photos')
       .list(ctx.eventMain.id);
@@ -214,7 +210,6 @@ test(
       'La miniatura del propietario debe seguir en Storage'
     );
 
-    // Ayudante 1 intenta borrar la fila del ayudante 2
     const { data: delH2Row } = await ctx.helper1Client
       .from('event_photos')
       .delete()
@@ -226,7 +221,6 @@ test(
       'El delete de la foto de otro ayudante no debio borrar ninguna fila'
     );
 
-    // Releer con cliente admin
     const { data: checkH2Row } = await ctx.adminClient
       .from('event_photos')
       .select('id')
@@ -238,7 +232,6 @@ test(
       'La fila de la foto de otro ayudante debe seguir existiendo'
     );
 
-    // Ayudante 1 intenta borrar archivos de Storage de la foto del ayudante 2
     await ctx.helper1Client.storage
       .from('event-photos')
       .remove([
@@ -246,7 +239,6 @@ test(
         `${ctx.eventMain.id}/${helper2Photo.id}_thumb.jpg`,
       ]);
 
-    // Comprobar con admin
     const { data: filesH2Check } = await ctx.adminClient.storage
       .from('event-photos')
       .list(ctx.eventMain.id);
@@ -273,14 +265,12 @@ test(
       photoId
     );
 
-    // Propietario borra la fila
     const { error: delError } = await ctx.ownerClient
       .from('event_photos')
       .delete()
       .eq('id', photo.id);
     assert.equal(delError, null, 'El propietario debe poder borrar la fila');
 
-    // Verificar con admin que la fila ya no existe
     const { data: checkRow } = await ctx.adminClient
       .from('event_photos')
       .select('id')
@@ -288,7 +278,6 @@ test(
       .maybeSingle();
     assert.equal(checkRow, null, 'La fila debe haber sido eliminada');
 
-    // Propietario borra los archivos
     const { error: remError } = await ctx.ownerClient.storage
       .from('event-photos')
       .remove([
@@ -301,7 +290,6 @@ test(
       'El propietario debe poder borrar los archivos'
     );
 
-    // Verificar con admin que los archivos ya no estan en Storage
     const { data: adminFiles } = await ctx.adminClient.storage
       .from('event-photos')
       .list(ctx.eventMain.id);
@@ -328,7 +316,6 @@ test(
       photoId
     );
 
-    // Ayudante 1 borra su propia fila
     const { error: delError } = await ctx.helper1Client
       .from('event_photos')
       .delete()
@@ -339,7 +326,6 @@ test(
       'El ayudante debe poder borrar su propia fila'
     );
 
-    // Verificar con admin que la fila ya no existe
     const { data: checkRow } = await ctx.adminClient
       .from('event_photos')
       .select('id')
@@ -347,7 +333,6 @@ test(
       .maybeSingle();
     assert.equal(checkRow, null, 'La fila debe haber sido eliminada');
 
-    // Ayudante 1 borra sus propios archivos
     const { error: remError } = await ctx.helper1Client.storage
       .from('event-photos')
       .remove([
@@ -360,7 +345,6 @@ test(
       'El ayudante debe poder borrar sus propios archivos'
     );
 
-    // Verificar con admin que los archivos ya no estan en Storage
     const { data: adminFiles } = await ctx.adminClient.storage
       .from('event-photos')
       .list(ctx.eventMain.id);
@@ -387,7 +371,6 @@ test(
       photoId
     );
 
-    // Anon no lee la tabla (0 filas o error 42501)
     const { data: anonRows, error: anonError } = await ctx.anonClient
       .from('event_photos')
       .select('*')
@@ -406,7 +389,6 @@ test(
       );
     }
 
-    // Anon no baja el archivo con download
     const { error: dlError } = await ctx.anonClient.storage
       .from('event-photos')
       .download(`${ctx.eventMain.id}/${photo.id}.jpg`);
@@ -415,7 +397,6 @@ test(
       'Anon no debe poder descargar el archivo con storage.download'
     );
 
-    // fetch a getPublicUrl no responde 200
     const { data: pubUrlData } = ctx.anonClient.storage
       .from('event-photos')
       .getPublicUrl(`${ctx.eventMain.id}/${photo.id}.jpg`);
@@ -440,7 +421,6 @@ test(
       photoId
     );
 
-    // No lee filas
     const { data: otherRows } = await ctx.otherClient
       .from('event_photos')
       .select('*')
@@ -451,7 +431,6 @@ test(
       'Miembro de otro evento no debe leer filas del evento'
     );
 
-    // No baja archivos
     const { error: dlError } = await ctx.otherClient.storage
       .from('event-photos')
       .download(`${ctx.eventMain.id}/${photo.id}.jpg`);
@@ -460,7 +439,6 @@ test(
       'Miembro de otro evento no debe descargar archivos del evento'
     );
 
-    // No sube un archivo a la carpeta del evento
     const newPhotoId = crypto.randomUUID();
     const { error: upError } = await ctx.otherClient.storage
       .from('event-photos')
@@ -472,7 +450,6 @@ test(
       'Miembro de otro evento no debe poder subir archivos a la carpeta del evento'
     );
 
-    // No borra fila
     const { data: delData } = await ctx.otherClient
       .from('event_photos')
       .delete()
@@ -484,7 +461,6 @@ test(
       'Miembro de otro evento no debe poder borrar la fila'
     );
 
-    // No borra archivos
     await ctx.otherClient.storage
       .from('event-photos')
       .remove([`${ctx.eventMain.id}/${photo.id}.jpg`]);
@@ -555,7 +531,6 @@ test(
     }
     ctx.createdEventIds.push(event300.id);
 
-    // Cliente admin siembra 300 filas en una sola insercion
     const rows300 = [];
     for (let i = 0; i < 300; i++) {
       rows300.push({
@@ -578,7 +553,6 @@ test(
       `Admin debe poder sembrar 300 filas sin archivos: ${seedErr?.message}`
     );
 
-    // Miembro sube los dos archivos de la foto 301
     const photo301Id = crypto.randomUUID();
     const photoPath = `${event300.id}/${photo301Id}.jpg`;
     const thumbPath = `${event300.id}/${photo301Id}_thumb.jpg`;
@@ -601,7 +575,6 @@ test(
       'El miembro debe poder subir la foto 301'
     );
 
-    // Insertar la fila de la 301 falla con photo_limit_reached
     const { error: insert301Err } = await ctx.ownerClient
       .from('event_photos')
       .insert({
@@ -632,7 +605,6 @@ test(
       photoId
     );
 
-    // Update como propietario falla con 42501 (sin permiso de update)
     const { error: ownerUpErr } = await ctx.ownerClient
       .from('event_photos')
       .update({ event_id: ctx.eventOther.id })
@@ -647,7 +619,6 @@ test(
       `Se esperaba codigo 42501, pero se recibio: ${ownerUpErr.code}`
     );
 
-    // Update con cliente admin falla con event_id_immutable
     const { error: adminUpErr } = await ctx.adminClient
       .from('event_photos')
       .update({ event_id: ctx.eventOther.id })
@@ -706,7 +677,6 @@ test(
       Buffer.alloc(50),
     ]);
 
-    // upload con upsert: true a la ruta existente falla
     const { error: upsertErr } = await ctx.helper1Client.storage
       .from('event-photos')
       .upload(`${ctx.eventMain.id}/${photo.id}.jpg`, replacementBuffer, {
@@ -715,7 +685,6 @@ test(
       });
     assert.ok(upsertErr, 'upload con upsert: true debe fallar');
 
-    // upload sin upsert a la ruta existente falla
     const { error: noUpsertErr } = await ctx.helper1Client.storage
       .from('event-photos')
       .upload(`${ctx.eventMain.id}/${photo.id}.jpg`, replacementBuffer, {
@@ -724,7 +693,6 @@ test(
       });
     assert.ok(noUpsertErr, 'upload sin upsert debe fallar');
 
-    // Comprobar con admin que el archivo sigue igual comparando su tamano
     const { data: dlFile, error: dlErr } = await ctx.adminClient.storage
       .from('event-photos')
       .download(`${ctx.eventMain.id}/${photo.id}.jpg`);

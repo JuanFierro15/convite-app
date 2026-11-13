@@ -120,7 +120,6 @@ describe('ExpenseFormComponent', () => {
     component.ngOnInit();
     fixture.detectChanges();
 
-    // El gasto tiene 80.000 pagados. Intentamos poner 50.000.
     component.form.controls.amount_cop.setValue('50000');
 
     await component.save();

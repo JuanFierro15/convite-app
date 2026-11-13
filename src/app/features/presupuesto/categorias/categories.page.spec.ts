@@ -179,7 +179,6 @@ describe('CategoriesPage', () => {
   it('sugeridas con N y con 0: maneja plural, singular y ya existentes', async () => {
     await component.ionViewWillEnter();
 
-    // Caso N = 4
     mockBudgetRepo.addSuggestedCategories.mockResolvedValue(4);
     await component.addSuggestedCategories();
     expect(mockToastCtrl.create).toHaveBeenCalledWith(
@@ -189,7 +188,6 @@ describe('CategoriesPage', () => {
       }),
     );
 
-    // Caso N = 1
     mockBudgetRepo.addSuggestedCategories.mockResolvedValue(1);
     await component.addSuggestedCategories();
     expect(mockToastCtrl.create).toHaveBeenCalledWith(
@@ -199,7 +197,6 @@ describe('CategoriesPage', () => {
       }),
     );
 
-    // Caso 0 (ya estaban)
     mockBudgetRepo.addSuggestedCategories.mockResolvedValue(0);
     await component.addSuggestedCategories();
     expect(mockToastCtrl.create).toHaveBeenCalledWith(
@@ -222,7 +219,6 @@ describe('CategoriesPage', () => {
 
     expect(saveButton).toBeDefined();
 
-    // Envío con espacios vacíos
     const result = saveButton.handler({ name: '   ' });
     expect(result).toBe(false);
     expect(mockToastCtrl.create).toHaveBeenCalledWith(
@@ -233,7 +229,6 @@ describe('CategoriesPage', () => {
     );
     expect(mockBudgetRepo.createCategory).not.toHaveBeenCalled();
 
-    // Envío válido
     const validResult = saveButton.handler({ name: 'Animación' });
     expect(validResult).toBe(true);
     expect(mockBudgetRepo.createCategory).toHaveBeenCalledWith(expect.any(String), 'evt-123', 'Animación', 3);
@@ -304,14 +299,12 @@ describe('CategoriesPage', () => {
   it('subir y bajar: llama a swapCategoryOrder con los elementos adyacentes', async () => {
     await component.ionViewWillEnter();
 
-    // Subir elemento 1 (Decoración con Lugar)
     await component.moveCategoryUp(1);
     expect(mockBudgetRepo.swapCategoryOrder).toHaveBeenCalledWith(
       sampleCategories[1],
       sampleCategories[0],
     );
 
-    // Bajar elemento 0 (Lugar con Decoración)
     await component.moveCategoryDown(0);
     expect(mockBudgetRepo.swapCategoryOrder).toHaveBeenCalledWith(
       sampleCategories[0],
@@ -326,14 +319,12 @@ describe('CategoriesPage', () => {
     const cards = fixture.debugElement.queryAll(By.css('.category-card'));
     expect(cards.length).toBe(3);
 
-    // Primer elemento: botón subir deshabilitado, bajar habilitado
     const firstRowButtons = cards[0].queryAll(By.css('.action-button'));
     const firstUp = firstRowButtons[0].nativeElement as HTMLButtonElement;
     const firstDown = firstRowButtons[1].nativeElement as HTMLButtonElement;
     expect(firstUp.disabled ?? firstUp.hasAttribute('disabled')).toBe(true);
     expect(firstDown.disabled ?? firstDown.hasAttribute('disabled')).toBe(false);
 
-    // Último elemento: botón subir habilitado, bajar deshabilitado
     const lastRowButtons = cards[2].queryAll(By.css('.action-button'));
     const lastUp = lastRowButtons[0].nativeElement as HTMLButtonElement;
     const lastDown = lastRowButtons[1].nativeElement as HTMLButtonElement;

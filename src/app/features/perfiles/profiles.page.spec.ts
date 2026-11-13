@@ -207,20 +207,17 @@ describe('ProfilesPage', () => {
 
     expect(component.canManage()).toBe(false);
 
-    // Mensaje visible
     const note = fixture.debugElement.query(By.css('.manage-note'));
     expect(note).toBeTruthy();
     expect(note.nativeElement.textContent).toContain(
       'Solo los propietarios del equipo pueden cambiar los perfiles.',
     );
 
-    // Sin botón "Agregar perfil"
     const addBtn = fixture.debugElement
       .queryAll(By.css('ion-button'))
       .find((b) => b.nativeElement.textContent.includes('Agregar perfil'));
     expect(addBtn).toBeUndefined();
 
-    // Sin botones de acciones en las filas
     const actionButtons = fixture.debugElement.queryAll(By.css('.profile-actions'));
     expect(actionButtons.length).toBe(0);
   });

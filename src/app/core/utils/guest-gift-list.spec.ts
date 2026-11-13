@@ -277,7 +277,6 @@ describe('guest-gift-list utils', () => {
       expect(p3.items.length).toBe(1);
       expect(p3.items[0].id).toBe('gift-13');
 
-      // Si la card 13 pasa a "Tu regalo", quedan 12 cards (2 páginas)
       const cardsWithout13 = cards.filter((g) => g.id !== 'gift-13');
       const p3After = paginate(cardsWithout13, 3, GUEST_GIFTS_PAGE_SIZE);
       expect(p3After.totalPages).toBe(2);

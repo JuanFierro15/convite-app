@@ -150,7 +150,6 @@ describe('PhotoUploadService', () => {
     expect(failedUpload.retryable).toBe(true);
     expect(failedUpload.error).toBe('Database timeout');
 
-    // Al reintentar, no debe volver a comprimir
     shouldFail = false;
     const retrySuccess = await service.retry(failedUpload.id);
 

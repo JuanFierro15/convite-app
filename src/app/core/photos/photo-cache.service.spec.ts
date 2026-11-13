@@ -89,7 +89,6 @@ describe('PhotoCacheService', () => {
     await expect(service.getUrl('event-1/failed.jpg')).rejects.toThrow('Network error');
     expect(service.peek('event-1/failed.jpg')).toBeNull();
 
-    // Reintento:
     const url = await service.getUrl('event-1/failed.jpg');
     expect(url).toMatch(/^blob:/);
     expect(service.peek('event-1/failed.jpg')).toBe(url);

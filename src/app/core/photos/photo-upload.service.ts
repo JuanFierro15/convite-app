@@ -106,7 +106,6 @@ export class PhotoUploadService {
     }
 
     try {
-      // Paso 1: Lectura y compresión
       if (!internal.compressed) {
         this.updateUploadState(id, {
           status: 'compressing',
@@ -130,7 +129,6 @@ export class PhotoUploadService {
 
       const paths = photoPaths(internal.eventId, internal.id);
 
-      // Paso 2: Subida a Storage (miniatura y foto)
       this.updateUploadState(id, {
         status: 'uploading',
         progress: 0.2,
@@ -148,7 +146,6 @@ export class PhotoUploadService {
       }
       this.updateUploadState(id, { progress: 0.85 });
 
-      // Paso 3: Guardar fila en base de datos
       this.updateUploadState(id, {
         status: 'saving',
         progress: 0.9,
@@ -163,7 +160,6 @@ export class PhotoUploadService {
         thumbSizeBytes: internal.compressed.thumb.size,
       });
 
-      // Éxito: limpiar y quitar de la lista de subidas
       this.cleanupUpload(id);
       this.uploadsSignal.update((current) => current.filter((u) => u.id !== id));
       return true;

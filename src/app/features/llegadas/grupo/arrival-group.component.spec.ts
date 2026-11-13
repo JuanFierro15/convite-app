@@ -120,7 +120,6 @@ describe('ArrivalGroupComponent', () => {
 
     expect(component.invitation()?.id).toBe('inv-1');
     expect(component.formattedCode()).toBe('ABC2-3456-78');
-    // Only guest-1 is accepted and has not arrived yet
     expect(component.selectedGuestIds()).toEqual(['guest-1']);
     expect(component.pendingSelectedCount()).toBe(1);
   });
@@ -129,11 +128,9 @@ describe('ArrivalGroupComponent', () => {
     fixture.detectChanges();
     await fixture.whenStable();
 
-    // User unselects guest-1
     component.selectedGuestIds.set([]);
     expect(component.selectedGuestIds()).toEqual([]);
 
-    // Session emits updated invitations
     mockSession.invitations.set([{ ...sampleInvitation }]);
     fixture.detectChanges();
     await fixture.whenStable();
@@ -227,14 +224,12 @@ describe('ArrivalGroupComponent', () => {
     fixture.detectChanges();
     await fixture.whenStable();
 
-    // guest-1 is already selected initially. Unselect it:
     await component.onToggleGuest(
       sampleGuests[0],
       new CustomEvent('ionChange', { detail: { checked: false } }),
     );
     expect(component.isGuestSelected(sampleGuests[0].id)).toBe(false);
 
-    // Re-select it:
     await component.onToggleGuest(
       sampleGuests[0],
       new CustomEvent('ionChange', { detail: { checked: true } }),
@@ -328,7 +323,6 @@ describe('ArrivalGroupComponent', () => {
     fixture.detectChanges();
     await fixture.whenStable();
 
-    // Add another guest to selection
     component.selectedGuestIds.set(['guest-1', 'guest-4']);
 
     await component.onRegister();

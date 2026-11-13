@@ -246,7 +246,6 @@ describe('BudgetPage', () => {
     expect(component.profileBreakdown().length).toBe(1);
     expect(component.pagedExpenses().items.length).toBe(3);
 
-    // Revisa que la sección por categoría esté visible
     const catSection = fixture.debugElement.query(By.css('.breakdown-section'));
     expect(catSection).not.toBeNull();
   });
@@ -259,16 +258,13 @@ describe('BudgetPage', () => {
 
     expect(component.expenses().length).toBe(0);
 
-    // Por categoría se oculta si no hay gastos
     const categoryHeadings = fixture.debugElement.queryAll(By.css('#category-breakdown-heading'));
     expect(categoryHeadings.length).toBe(0);
 
-    // Quién ha pagado muestra texto vacío
     const noPayments = fixture.debugElement.query(By.css('.no-payments'));
     expect(noPayments).not.toBeNull();
     expect(noPayments.nativeElement.textContent).toContain('Todavía no hay pagos registrados.');
 
-    // Estado vacío en la lista de gastos
     const emptyState = fixture.debugElement.query(By.css('app-empty-state'));
     expect(emptyState).not.toBeNull();
     expect(emptyState.nativeElement.textContent).toContain(
@@ -324,7 +320,6 @@ describe('BudgetPage', () => {
     expect(component.filter()).toBe('to_pay');
     expect(component.currentPage()).toBe(1);
 
-    // exp-2 (abonado) y exp-3 (pendiente), exp-1 está pagado
     const filtered = component.filteredExpenses();
     expect(filtered.length).toBe(2);
     expect(filtered.map((e) => e.id)).toEqual(['exp-2', 'exp-3']);
@@ -434,7 +429,6 @@ describe('BudgetPage', () => {
     expect(emptyState).not.toBeNull();
     expect(emptyState.nativeElement.textContent).toContain('Falla de red');
 
-    // Al reintentar
     mockBudgetRepo.listExpenses.mockResolvedValue(mockExpenses);
     component.retryLoad();
     await fixture.whenStable();

@@ -95,17 +95,14 @@ describe('task-groups', () => {
 
       const groups = groupTasks(all, today);
 
-      // Overdue: due_date ascendente, luego created_at ascendente
       expect(groups.overdue.map((t) => t.id)).toEqual(['overdue-3', 'overdue-2', 'overdue-1']);
 
-      // Upcoming: due_date ascendente, luego created_at ascendente
       expect(groups.upcoming.map((t) => t.id)).toEqual([
         'upcoming-today',
         'upcoming-later-1',
         'upcoming-later-2',
       ]);
 
-      // Done: done_at descendente
       expect(groups.done.map((t) => t.id)).toEqual(['done-2', 'done-1']);
     });
   });
@@ -123,11 +120,9 @@ describe('task-groups', () => {
 
       const task = makeTask({ due_date: '2026-11-20' });
 
-      // En el primer instante: vence hoy, no está vencida
       expect(taskIsOverdue(task, todayBefore)).toBe(false);
       expect(taskDueLabel(task.due_date, todayBefore)).toBe('Vence hoy');
 
-      // Dos minutos después, ya es el día siguiente en Bogotá: venció ayer, está vencida
       expect(taskIsOverdue(task, todayAfter)).toBe(true);
       expect(taskDueLabel(task.due_date, todayAfter)).toBe('Venció ayer');
     });
@@ -147,7 +142,6 @@ describe('task-groups', () => {
     });
 
     it('handles month crossings accurately', () => {
-      // Cruzando fin de octubre a inicio de noviembre
       expect(taskDueLabel('2026-11-01', '2026-10-31')).toBe('Vence mañana');
       expect(taskDueLabel('2026-10-31', '2026-11-01')).toBe('Venció ayer');
       expect(taskDueLabel('2026-11-02', '2026-10-31')).toBe('Vence el 2 de noviembre');
@@ -155,7 +149,6 @@ describe('task-groups', () => {
     });
 
     it('handles year crossings accurately', () => {
-      // Cruzando año nuevo
       expect(taskDueLabel('2027-01-01', '2026-12-31')).toBe('Vence mañana');
       expect(taskDueLabel('2026-12-31', '2027-01-01')).toBe('Venció ayer');
       expect(taskDueLabel('2027-01-02', '2026-12-31')).toBe('Vence el 2 de enero');
@@ -202,13 +195,11 @@ describe('task-groups', () => {
     });
 
     it('returns combined pending and overdue text with proper singular/plural forms', () => {
-      // 1 pendiente, 1 vencida
       const oneOverdueOnePending = [
         makeTask({ id: '1', due_date: '2026-11-19' }), // vencida
       ];
       expect(tasksCardText(oneOverdueOnePending, today)).toBe('1 pendiente, 1 vencida');
 
-      // 4 pendientes, 1 vencida
       const fourPendingOneOverdue = [
         makeTask({ id: '1', due_date: '2026-11-19' }), // vencida
         makeTask({ id: '2', due_date: '2026-11-20' }),
@@ -217,7 +208,6 @@ describe('task-groups', () => {
       ];
       expect(tasksCardText(fourPendingOneOverdue, today)).toBe('4 pendientes, 1 vencida');
 
-      // 4 pendientes, 2 vencidas
       const fourPendingTwoOverdue = [
         makeTask({ id: '1', due_date: '2026-11-18' }), // vencida
         makeTask({ id: '2', due_date: '2026-11-19' }), // vencida

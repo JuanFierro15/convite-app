@@ -249,7 +249,6 @@ describe('ExpenseDetailPage', () => {
     expect(balanceEl).not.toBeNull();
     expect(balanceEl.nativeElement.textContent).toContain(`Faltan ${formatCop(140000)}`);
 
-    // Botón de registrar pago está disponible
     const registerBtn = fixture.debugElement.query(By.css('.register-payment-btn'));
     expect(registerBtn).not.toBeNull();
   });

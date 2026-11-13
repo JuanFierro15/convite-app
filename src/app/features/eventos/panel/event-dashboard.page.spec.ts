@@ -404,7 +404,6 @@ describe('EventDashboardPage - Arrivals & Attendance', () => {
   it('displays all four tasksCardText summaries on the tasks card', async () => {
     mockEventContext.isOwner.set(true);
 
-    // 1. Sin tareas
     mockTasksRepo.list.mockResolvedValue([]);
     component.ionViewWillEnter();
     await fixture.whenStable();
@@ -412,7 +411,6 @@ describe('EventDashboardPage - Arrivals & Attendance', () => {
     expect(component.tasksSummaryText()).toBe('Sin tareas');
     expect(fixture.nativeElement.textContent).toContain('Sin tareas');
 
-    // 2. Sin pendientes (todas hechas)
     mockTasksRepo.list.mockResolvedValue([
       makeMockTask({ id: 't1', done_at: '2026-11-01T10:00:00Z' }),
     ]);
@@ -422,7 +420,6 @@ describe('EventDashboardPage - Arrivals & Attendance', () => {
     expect(component.tasksSummaryText()).toBe('Sin pendientes');
     expect(fixture.nativeElement.textContent).toContain('Sin pendientes');
 
-    // 3. 4 pendientes (ninguna vencida: due_date en el futuro)
     mockTasksRepo.list.mockResolvedValue([
       makeMockTask({ id: 't1', due_date: '2099-12-01' }),
       makeMockTask({ id: 't2', due_date: '2099-12-02' }),
@@ -435,7 +432,6 @@ describe('EventDashboardPage - Arrivals & Attendance', () => {
     expect(component.tasksSummaryText()).toBe('4 pendientes');
     expect(fixture.nativeElement.textContent).toContain('4 pendientes');
 
-    // 4. 4 pendientes, 1 vencida (1 en el pasado, 3 en el futuro)
     mockTasksRepo.list.mockResolvedValue([
       makeMockTask({ id: 't1', due_date: '2000-01-01' }),
       makeMockTask({ id: 't2', due_date: '2099-12-02' }),
@@ -753,7 +749,6 @@ describe('EventDashboardPage - Arrivals & Attendance', () => {
       expect(getCardAriaLabel(cardNative)).toBe('Galería, sin fotos');
       expect(cardNative.textContent).toContain('Sin fotos todavía');
 
-      // Propietario sin fotos: se ubica en ion-col size="6"
       const parentCol = cardNative.closest('ion-col');
       expect(parentCol?.getAttribute('size')).toBe('6');
     });
@@ -787,11 +782,9 @@ describe('EventDashboardPage - Arrivals & Attendance', () => {
       expect(cardNative.textContent).toContain('5 fotos');
       expect(cardNative.textContent).toContain('Ver ›');
 
-      // Propietario con fotos: se ubica en ion-col size="12"
       const parentCol = cardNative.closest('ion-col');
       expect(parentCol?.getAttribute('size')).toBe('12');
 
-      // Debe pedir las URLs de las 3 miniaturas más recientes
       expect(mockPhotoCache.getUrl).toHaveBeenCalledTimes(3);
       expect(mockPhotoCache.getUrl).toHaveBeenCalledWith('event-123/1_thumb.jpg');
       expect(mockPhotoCache.getUrl).toHaveBeenCalledWith('event-123/2_thumb.jpg');
@@ -830,7 +823,6 @@ describe('EventDashboardPage - Arrivals & Attendance', () => {
     });
 
     it('renders Galería card for owner in access-grid and for helper in helper-actions', async () => {
-      // Propietario
       mockEventContext.isOwner.set(true);
       mockPhotosRepo.list.mockResolvedValue([makeMockPhoto('1')]);
       component.ionViewWillEnter();
@@ -841,7 +833,6 @@ describe('EventDashboardPage - Arrivals & Attendance', () => {
       const ownerCard = ownerGrid.query(By.css('.access-card--gallery-wide'));
       expect(ownerCard).toBeTruthy();
 
-      // Ayudante con fotos: card ancha en helper-actions
       mockEventContext.isOwner.set(false);
       component.ionViewWillEnter();
       await fixture.whenStable();
@@ -851,7 +842,6 @@ describe('EventDashboardPage - Arrivals & Attendance', () => {
       const helperWideCard = helperActions.query(By.css('.access-card--gallery-wide'));
       expect(helperWideCard).toBeTruthy();
 
-      // Ayudante sin fotos: card en fila con "Sin fotos todavía"
       mockPhotosRepo.list.mockResolvedValue([]);
       component.ionViewWillEnter();
       await fixture.whenStable();
@@ -901,11 +891,9 @@ describe('EventDashboardPage - Arrivals & Attendance', () => {
       expect(component.photoSummaryText()).toBeNull();
       expect(toastSpy).not.toHaveBeenCalled();
 
-      // El resto del panel carga normalmente
       expect(component.counts().total).toBe(40);
       expect(fixture.nativeElement.textContent).toContain('Resumen de asistencia');
 
-      // La card muestra el título "Galería" sin resumen
       const linkElements = fixture.debugElement.queryAll(By.directive(RouterLink));
       const galleryCard = linkElements.find((el) =>
         el.nativeElement.textContent?.includes('Galería'),

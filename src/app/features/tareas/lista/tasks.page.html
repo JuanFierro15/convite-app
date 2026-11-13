@@ -92,7 +92,6 @@
       } @else {
         <div #taskListStart class="task-list-anchor"></div>
 
-        <!-- Grupo 1: Vencidas -->
         @if (pagedGroups().overdue.length > 0) {
           <section class="tasks-group" aria-labelledby="overdue-heading">
             <h2 id="overdue-heading" class="group-heading group-heading--danger text-section">
@@ -180,7 +179,6 @@
           </section>
         }
 
-        <!-- Grupo 2: Próximas -->
         @if (pagedGroups().upcoming.length > 0) {
           <section class="tasks-group" aria-labelledby="upcoming-heading">
             <h2 id="upcoming-heading" class="group-heading text-section">
@@ -276,7 +274,6 @@
           (next)="goToNextPage()"
         />
 
-        <!-- Grupo 3: Hechas (N) -->
         @if (groups().done.length > 0) {
           <section class="tasks-group tasks-group--done">
             <button

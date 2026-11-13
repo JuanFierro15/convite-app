@@ -90,7 +90,6 @@ describe('arrival-logic', () => {
       const views = buildInvitationViews(mockSnapshot, pending);
       expect(views).toHaveLength(2);
 
-      // inv-1
       expect(views[0].id).toBe('inv-1');
       expect(views[0].arrivedCount).toBe(2);
       expect(views[0].totalCount).toBe(2);
@@ -106,7 +105,6 @@ describe('arrival-logic', () => {
       expect(guest2.arrivedAt).toBe('2026-11-29T15:20:00-05:00');
       expect(guest2.synced).toBe(false);
 
-      // inv-2
       expect(views[1].id).toBe('inv-2');
       expect(views[1].arrivedCount).toBe(0);
       expect(views[1].totalCount).toBe(1);
@@ -316,12 +314,10 @@ describe('arrival-logic', () => {
         },
       ];
 
-      // "Familia Ejemplo" con la consulta "ej" coincide; con "jem" no coincide; con "fam ej" coincide
       expect(searchInvitations(testViews, 'ej')).toHaveLength(1);
       expect(searchInvitations(testViews, 'jem')).toHaveLength(0);
       expect(searchInvitations(testViews, 'fam ej')).toHaveLength(1);
 
-      // una persona "Ana Ejemplo" coincide con "an" y con "ana ej"; "Luciana Ejemplo" no coincide con "ana"
       expect(searchInvitations(testViews, 'an')).toHaveLength(1);
       expect(searchInvitations(testViews, 'ana ej')).toHaveLength(1);
 
@@ -347,7 +343,6 @@ describe('arrival-logic', () => {
       ];
       expect(searchInvitations(lucianaOnlyView, 'ana')).toHaveLength(0);
 
-      // "jose" coincide con "José Ejemplo"
       expect(searchInvitations(testViews, 'jose')).toHaveLength(1);
     });
   });
@@ -549,18 +544,13 @@ describe('arrival-logic', () => {
         'event-1',
       );
 
-      // Pending: guest-2 was in results, so it was removed; guest-3 remains
       expect(nextPending).toHaveLength(1);
       expect(nextPending[0].guestId).toBe('guest-3');
 
-      // Snapshot updated for guest-2
       const updatedGuest2 = snapshot?.invitations[0].guests.find((g) => g.id === 'guest-2');
       expect(updatedGuest2?.arrived_at).toBe('2026-11-29T15:22:00-05:00');
       expect(updatedGuest2?.arrived_by).toBe('user-organizer');
 
-      // Notices:
-      // 1. guest-1 already_arrived by other-user -> other_device notice
-      // 2. guest-unknown not_found -> not_found notice
       expect(notices).toHaveLength(2);
       expect(notices[0].type).toBe('other_device');
       expect(notices[0].guestId).toBe('guest-1');

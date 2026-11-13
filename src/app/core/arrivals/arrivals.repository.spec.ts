@@ -107,11 +107,9 @@ describe('ArrivalsRepository', () => {
       expect(snapshot.userId).toBe('user-organizer');
       expect(snapshot.event.name).toBe('Baby Shower Ficticio');
 
-      // Check sorting by group_name ('Ángela Gómez' before 'Zoraida Pérez' in Spanish)
       expect(snapshot.invitations[0].group_name).toBe('Ángela Gómez');
       expect(snapshot.invitations[1].group_name).toBe('Zoraida Pérez');
 
-      // Check guests sorting by sort_order
       expect(snapshot.invitations[0].guests[0].id).toBe('g-1');
       expect(snapshot.invitations[0].guests[1].id).toBe('g-2');
     });

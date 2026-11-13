@@ -84,7 +84,6 @@ describe('PhotoCompressor', () => {
       const fakeBlobThumb = new Blob(['thumb-bytes'], { type: 'image/jpeg' });
       let callCount = 0;
 
-      // Mock de OffscreenCanvas
       class MockOffscreenCanvas {
         width: number;
         height: number;
