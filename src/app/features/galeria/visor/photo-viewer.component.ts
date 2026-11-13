@@ -83,6 +83,8 @@ export class PhotoViewerComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly inFlight = new Set<string>();
   private readonly deletedIds: string[] = [];
   private scrollTimeout: ReturnType<typeof setTimeout> | null = null;
+  private positioned = false;
+  private resizeObserver: ResizeObserver | null = null;
 
   readonly currentPhoto = computed<EventPhoto | null>(() => {
     const list = this.photosList();
@@ -121,11 +123,27 @@ export class PhotoViewerComponent implements OnInit, AfterViewInit, OnDestroy {
     this.preloadNearbyPhotos(safeIndex);
   }
 
+  private alignSlider(): void {
+    const el = this.sliderRef()?.nativeElement;
+    if (!el || el.clientWidth === 0) {
+      return;
+    }
+    el.scrollLeft = el.clientWidth * this.currentIndex();
+    this.positioned = true;
+  }
+
   ngAfterViewInit(): void {
     const el = this.sliderRef()?.nativeElement;
-    if (el) {
-      el.scrollLeft = el.clientWidth * this.currentIndex();
+    if (!el) {
+      return;
     }
+    if (typeof ResizeObserver === 'undefined') {
+      this.alignSlider();
+      return;
+    }
+    // El modal todavía no se muestra aquí y el carrusel mide 0: se ubica cuando ya tiene ancho.
+    this.resizeObserver = new ResizeObserver(() => this.alignSlider());
+    this.resizeObserver.observe(el);
   }
 
   ngOnDestroy(): void {
@@ -133,6 +151,8 @@ export class PhotoViewerComponent implements OnInit, AfterViewInit, OnDestroy {
       clearTimeout(this.scrollTimeout);
       this.scrollTimeout = null;
     }
+    this.resizeObserver?.disconnect();
+    this.resizeObserver = null;
     if (PhotoViewerComponent.activeInstance === this) {
       PhotoViewerComponent.activeInstance = null;
     }
@@ -148,6 +168,9 @@ export class PhotoViewerComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   onScroll(): void {
+    if (!this.positioned) {
+      return;
+    }
     if (this.scrollTimeout) {
       clearTimeout(this.scrollTimeout);
     }
@@ -195,30 +218,43 @@ export class PhotoViewerComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
+  retryPhoto(photo: EventPhoto): void {
+    const path = photo.photoPath;
+    this.fullErrors.update((m) => {
+      const copy = { ...m };
+      delete copy[path];
+      return copy;
+    });
+    this.loadFullPhoto(path);
+  }
+
   preloadNearbyPhotos(centerIndex: number): void {
     const list = this.photosList();
     const indices = [centerIndex - 1, centerIndex, centerIndex + 1];
 
     for (const idx of indices) {
       if (idx >= 0 && idx < list.length) {
-        const photo = list[idx];
-        const path = photo.photoPath;
-        if (!this.fullUrls()[path] && !this.fullErrors()[path] && !this.inFlight.has(path)) {
-          this.inFlight.add(path);
-          this.photoCache
-            .getUrl(path)
-            .then((url) => {
-              this.fullUrls.update((m) => ({ ...m, [path]: url }));
-            })
-            .catch(() => {
-              this.fullErrors.update((m) => ({ ...m, [path]: true }));
-            })
-            .finally(() => {
-              this.inFlight.delete(path);
-            });
-        }
+        this.loadFullPhoto(list[idx].photoPath);
       }
     }
+  }
+
+  private loadFullPhoto(path: string): void {
+    if (this.fullUrls()[path] || this.fullErrors()[path] || this.inFlight.has(path)) {
+      return;
+    }
+    this.inFlight.add(path);
+    this.photoCache
+      .getUrl(path)
+      .then((url) => {
+        this.fullUrls.update((m) => ({ ...m, [path]: url }));
+      })
+      .catch(() => {
+        this.fullErrors.update((m) => ({ ...m, [path]: true }));
+      })
+      .finally(() => {
+        this.inFlight.delete(path);
+      });
   }
 
   getThumbUrl(thumbPath: string): string | null {

@@ -24,6 +24,13 @@
       <div class="photo-slide">
         @if (fullUrls()[photo.photoPath]; as fullUrl) {
           <img [src]="fullUrl" [alt]="'Foto ' + (i + 1)" class="viewer-img" />
+        } @else if (fullErrors()[photo.photoPath]) {
+          <div class="viewer-error" role="alert">
+            <p class="viewer-error__text">No pudimos cargar la foto.</p>
+            <ion-button fill="outline" color="light" (click)="retryPhoto(photo)">
+              Reintentar
+            </ion-button>
+          </div>
         } @else {
           <div class="viewer-placeholder">
             @if (getThumbUrl(photo.thumbPath); as thumbUrl) {
