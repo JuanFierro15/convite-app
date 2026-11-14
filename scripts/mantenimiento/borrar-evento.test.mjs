@@ -22,6 +22,7 @@ function createFakeClient({
   deleteResponse = null,
   deleteRowCount = null,
   removeError = null,
+  removeResponse = null,
 } = {}) {
   const eventsMap = new Map(events.map((ev) => [ev.id, { ...ev }]));
   const countsMap = new Map(
@@ -216,6 +217,11 @@ function createFakeClient({
                 : removeError;
             if (err) {
               return { data: null, error: err };
+            }
+            if (removeResponse !== null) {
+              return typeof removeResponse === 'function'
+                ? removeResponse(removeCallCount, paths)
+                : removeResponse;
             }
             for (const fullPath of paths) {
               const slashIdx = fullPath.indexOf('/');
@@ -805,6 +811,41 @@ describe('run: fallos', () => {
     assert.equal(client.state.folders.get(EVENT_ID).length, 1);
   });
 
+  test('si delete borra más de una fila sale con código 1 y cero llamadas a remove', async () => {
+    const client = createFakeClient({
+      events: [{ id: EVENT_ID, name: 'Evento Varias Filas' }],
+      storageFolders: { [EVENT_ID]: ['a.jpg'] },
+      deleteResponse: {
+        data: [{ id: EVENT_ID }, { id: OTHER_EVENT_ID }],
+        error: null,
+      },
+    });
+    const loggers = createLoggers();
+
+    const code = await run({
+      client,
+      args: {
+        ok: true,
+        eventId: EVENT_ID,
+        borrar: true,
+        nombre: 'Evento Varias Filas',
+      },
+      log: loggers.log,
+      logError: loggers.logError,
+    });
+
+    assert.equal(code, 1);
+    assert.ok(
+      loggers.errors.some((l) => l.includes('filas borradas: 2')),
+      `Se esperaba "filas borradas: 2", recibido: ${loggers.errors.join(' | ')}`
+    );
+    assert.equal(
+      client.calls.filter((c) => c.method === 'remove').length,
+      0
+    );
+    assert.equal(client.state.folders.get(EVENT_ID).length, 1);
+  });
+
   test('si falla el primero de dos lotes, intenta el segundo y sale con código 1 indicando reintento', async () => {
     const client = createFakeClient({
       events: [{ id: EVENT_ID, name: 'Evento Lote Fallido' }],
@@ -843,6 +884,80 @@ describe('run: fallos', () => {
     assert.equal(client.state.folders.get(EVENT_ID).length, 100);
   });
 
+  test('si remove devuelve { data: [], error: null } para un lote de 2 archivos, sale con código 1', async () => {
+    const client = createFakeClient({
+      events: [{ id: EVENT_ID, name: 'Evento Remove Vacío' }],
+      storageFolders: { [EVENT_ID]: ['a.jpg', 'a_thumb.jpg'] },
+      removeResponse: { data: [], error: null },
+    });
+    const loggers = createLoggers();
+
+    const code = await run({
+      client,
+      args: {
+        ok: true,
+        eventId: EVENT_ID,
+        borrar: true,
+        nombre: 'Evento Remove Vacío',
+      },
+      log: loggers.log,
+      logError: loggers.logError,
+    });
+
+    assert.equal(code, 1);
+    assert.ok(
+      loggers.errors.some((l) =>
+        l.includes(
+          'Error al borrar el lote 1/1 de archivos: se borraron 0 de 2 archivo(s).'
+        )
+      ),
+      `Se esperaba "se borraron 0 de 2 archivo(s)", recibido: ${loggers.errors.join(' | ')}`
+    );
+    assert.ok(
+      loggers.errors.some((l) =>
+        l.includes('Puedes volver a correr el script con el mismo id para terminar')
+      )
+    );
+  });
+
+  test('si remove devuelve data no arreglo en el primer lote de dos, intenta el segundo lote y sale con código 1', async () => {
+    const client = createFakeClient({
+      events: [{ id: EVENT_ID, name: 'Evento Remove Nulo' }],
+      storageFolders: { [EVENT_ID]: makeFileNames(150) },
+      removeResponse: (callNum, paths) =>
+        callNum === 1
+          ? { data: null, error: null }
+          : { data: paths.map((name) => ({ name })), error: null },
+    });
+    const loggers = createLoggers();
+
+    const code = await run({
+      client,
+      args: {
+        ok: true,
+        eventId: EVENT_ID,
+        borrar: true,
+        nombre: 'Evento Remove Nulo',
+      },
+      log: loggers.log,
+      logError: loggers.logError,
+    });
+
+    assert.equal(code, 1);
+    const removeCalls = client.calls.filter((c) => c.method === 'remove');
+    assert.equal(removeCalls.length, 2);
+    assert.equal(removeCalls[0].args[0].length, 100);
+    assert.equal(removeCalls[1].args[0].length, 50);
+    assert.ok(
+      loggers.errors.some((l) =>
+        l.includes(
+          'Error al borrar el lote 1/2 de archivos: se borraron 0 de 100 archivo(s).'
+        )
+      ),
+      `Se esperaba mensaje de lote 1/2 incompleto, recibido: ${loggers.errors.join(' | ')}`
+    );
+  });
+
   test('error al listar sale con código 1 y sin delete ni remove', async () => {
     for (const borrar of [false, true]) {
       const client = createFakeClient({
@@ -876,6 +991,126 @@ describe('run: fallos', () => {
         0
       );
     }
+  });
+
+  test('evento existente con --borrar: primera página con 100 archivos y segunda da error sale con código 1 sin delete ni remove', async () => {
+    const client = createFakeClient({
+      events: [{ id: EVENT_ID, name: 'Evento Error Segunda Página' }],
+      storageFolders: { [EVENT_ID]: makeFileNames(120) },
+      listError: (callNum) =>
+        callNum === 2 ? { message: 'fallo en segunda página' } : null,
+    });
+    const loggers = createLoggers();
+
+    const code = await run({
+      client,
+      args: {
+        ok: true,
+        eventId: EVENT_ID,
+        borrar: true,
+        nombre: 'Evento Error Segunda Página',
+      },
+      log: loggers.log,
+      logError: loggers.logError,
+    });
+
+    assert.equal(code, 1);
+    assert.equal(
+      client.calls.filter((c) => c.method === 'list').length,
+      2
+    );
+    assert.ok(
+      loggers.errors.some((l) =>
+        l.includes(
+          `Error al listar los archivos de ${EVENT_ID}/: fallo en segunda página`
+        )
+      )
+    );
+    assert.equal(
+      client.calls.filter((c) => c.method === 'delete' || c.method === 'remove')
+        .length,
+      0
+    );
+    assert.equal(client.state.events.has(EVENT_ID), true);
+    assert.equal(client.state.folders.get(EVENT_ID).length, 120);
+  });
+
+  test('evento inexistente con --borrar y error al listar sale con código 1 y cero llamadas a remove', async () => {
+    const client = createFakeClient({
+      events: [],
+      listError: { message: 'storage inaccesible' },
+    });
+    const loggers = createLoggers();
+
+    const code = await run({
+      client,
+      args: {
+        ok: true,
+        eventId: EVENT_ID,
+        borrar: true,
+        nombre: null,
+      },
+      log: loggers.log,
+      logError: loggers.logError,
+    });
+
+    assert.equal(code, 1);
+    assert.ok(
+      loggers.errors.some((l) =>
+        l.includes(
+          `Error al listar los archivos de ${EVENT_ID}/: storage inaccesible`
+        )
+      )
+    );
+    assert.equal(
+      client.calls.filter((c) => c.method === 'delete' || c.method === 'remove')
+        .length,
+      0
+    );
+  });
+
+  test('si list siempre devuelve los mismos 100 archivos (ignora offset), aborta con código 1 y sin delete ni remove', async () => {
+    const repeatedPage = makeFileNames(100).map((name) => ({
+      id: `file-${name}`,
+      name,
+    }));
+    const client = createFakeClient({
+      events: [{ id: EVENT_ID, name: 'Evento Offset Ignorado' }],
+      listResponse: () => ({ data: repeatedPage, error: null }),
+    });
+    const loggers = createLoggers();
+
+    const code = await run({
+      client,
+      args: {
+        ok: true,
+        eventId: EVENT_ID,
+        borrar: true,
+        nombre: 'Evento Offset Ignorado',
+      },
+      log: loggers.log,
+      logError: loggers.logError,
+    });
+
+    assert.equal(code, 1);
+    assert.ok(
+      loggers.errors.some((l) =>
+        l.includes(
+          `El listado de ${EVENT_ID}/ repitió una página completa. No se borró nada.`
+        )
+      ),
+      `Se esperaba mensaje de página repetida, recibido: ${loggers.errors.join(' | ')}`
+    );
+    assert.equal(
+      client.calls.filter((c) => c.method === 'list').length,
+      2
+    );
+    assert.equal(
+      client.calls.filter((c) => c.method === 'delete' || c.method === 'remove')
+        .length,
+      0
+    );
+    assert.equal(client.state.events.has(EVENT_ID), true);
   });
 
   test('subcarpeta (id: null), nombre con / o \\, y . o .. fallan con código 1 y cero delete o remove', async () => {
@@ -1266,14 +1501,30 @@ describe('run: evento inexistente y repetición', () => {
 
 describe('punto de entrada CLI', () => {
   test('falla con código 1 si falta el id o no es UUID antes de revisar variables de entorno', () => {
-    const res = spawnSync(process.execPath, [SCRIPT_PATH, 'invalido'], {
-      cwd: os.tmpdir(),
-      env: {},
-      encoding: 'utf8',
-    });
+    const cases = [
+      {
+        argv: [],
+        expected: 'Falta el id del evento.',
+      },
+      {
+        argv: ['invalido'],
+        expected: 'El id del evento no es un UUID válido.',
+      },
+    ];
 
-    assert.equal(res.status, 1);
-    assert.ok(res.stderr.includes('El id del evento no es un UUID válido'));
+    for (const { argv, expected } of cases) {
+      const res = spawnSync(process.execPath, [SCRIPT_PATH, ...argv], {
+        cwd: os.tmpdir(),
+        env: {},
+        encoding: 'utf8',
+      });
+
+      assert.equal(res.status, 1);
+      assert.ok(
+        res.stderr.includes(expected),
+        `Se esperaba "${expected}" para argv=${JSON.stringify(argv)}, recibido: ${res.stderr}`
+      );
+    }
   });
 
   test('falla con código 1 si hay banderas repetidas o --nombre seguido de otra bandera', () => {

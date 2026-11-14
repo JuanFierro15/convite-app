@@ -47,7 +47,7 @@ async function countRowsByEvent(adminClient, table, eventId) {
   assert.equal(
     error,
     null,
-    `No debio fallar la consulta de conteo en ${table}: ${error?.message}`
+    `No debió fallar la consulta de conteo en ${table}: ${error?.message}`
   );
   return count ?? 0;
 }
@@ -60,7 +60,7 @@ async function listRealFiles(adminClient, eventId) {
   assert.equal(
     error,
     null,
-    `No debio fallar el listado en Storage para ${eventId}: ${error?.message}`
+    `No debió fallar el listado en Storage para ${eventId}: ${error?.message}`
   );
   return (data ?? [])
     .map((item) => item.name)
@@ -84,7 +84,7 @@ async function assertEventBIntact() {
   assert.equal(
     await countRowsByEvent(ctx.adminClient, 'invitations', ctx.eventB.id),
     1,
-    'El evento B debe conservar su invitacion'
+    'El evento B debe conservar su invitación'
   );
   assert.equal(
     await countRowsByEvent(ctx.adminClient, 'guests', ctx.eventB.id),
@@ -180,7 +180,7 @@ before(
 
     if (invAError || !invA) {
       throw new Error(
-        `No se pudo crear la invitacion de A: ${invAError?.message ?? 'sin datos'}`
+        `No se pudo crear la invitación de A: ${invAError?.message ?? 'sin datos'}`
       );
     }
 
@@ -207,7 +207,7 @@ before(
 
     if (invBError || !invB) {
       throw new Error(
-        `No se pudo crear la invitacion de B: ${invBError?.message ?? 'sin datos'}`
+        `No se pudo crear la invitación de B: ${invBError?.message ?? 'sin datos'}`
       );
     }
 
@@ -262,7 +262,7 @@ test(
     assert.equal(
       code,
       0,
-      `Se esperaba codigo 0 al borrar A; errores: ${loggers.errors.join(' | ')}`
+      `Se esperaba código 0 al borrar A; errores: ${loggers.errors.join(' | ')}`
     );
 
     const { data: eventARow, error: eventAErr } = await ctx.adminClient
@@ -301,7 +301,7 @@ test(
 );
 
 test(
-  '2. Simulacro sobre B devuelve codigo 0 y conserva filas y archivos',
+  '2. Simulacro sobre B devuelve código 0 y conserva filas y archivos',
   { timeout: TEST_TIMEOUT_MS },
   async () => {
     const loggers = createSilentLoggers();
@@ -321,7 +321,7 @@ test(
     assert.equal(
       code,
       0,
-      `Se esperaba codigo 0 en simulacro; errores: ${loggers.errors.join(' | ')}`
+      `Se esperaba código 0 en simulacro; errores: ${loggers.errors.join(' | ')}`
     );
 
     const output = loggers.logs.join('\n');
@@ -336,7 +336,7 @@ test(
 );
 
 test(
-  '3. --borrar sobre B con nombre equivocado devuelve codigo 1 y conserva todo',
+  '3. --borrar sobre B con nombre equivocado devuelve código 1 y conserva todo',
   { timeout: TEST_TIMEOUT_MS },
   async () => {
     const loggers = createSilentLoggers();
@@ -364,7 +364,7 @@ test(
 );
 
 test(
-  '4. Evento con presupuesto y tareas (categoria, gasto con pago y tarea con responsable) se borra con codigo 0',
+  '4. Evento con presupuesto y tareas (categoría, gasto con pago y tarea con responsable) se borra con código 0',
   { timeout: TEST_TIMEOUT_MS },
   async () => {
     ctx.teamOwnerAUser = await createTestUser(
@@ -414,7 +414,7 @@ test(
     assert.equal(
       taskError,
       null,
-      `No debio fallar la insercion de tarea: ${taskError?.message}`
+      `No debió fallar la inserción de tarea: ${taskError?.message}`
     );
 
     const expenseId = crypto.randomUUID();
@@ -431,7 +431,7 @@ test(
     assert.equal(
       expenseError,
       null,
-      `No debio fallar la insercion de gasto: ${expenseError?.message}`
+      `No debió fallar la inserción de gasto: ${expenseError?.message}`
     );
 
     const paymentId = crypto.randomUUID();
@@ -446,7 +446,7 @@ test(
     assert.equal(
       paymentError,
       null,
-      `No debio fallar la insercion de pago: ${paymentError?.message}`
+      `No debió fallar la inserción de pago: ${paymentError?.message}`
     );
 
     const loggers = createSilentLoggers();
@@ -465,7 +465,7 @@ test(
     assert.equal(
       code,
       0,
-      `Se esperaba codigo 0 al borrar evento con presupuesto y tareas; errores: ${loggers.errors.join(' | ')}`
+      `Se esperaba código 0 al borrar evento con presupuesto y tareas; errores: ${loggers.errors.join(' | ')}`
     );
 
     const { data: deletedEvent, error: checkEventErr } = await ctx.adminClient
@@ -474,7 +474,7 @@ test(
       .eq('id', budgetEvent.id)
       .maybeSingle();
     assert.equal(checkEventErr, null);
-    assert.equal(deletedEvent, null, 'El evento de presupuesto debio borrarse');
+    assert.equal(deletedEvent, null, 'El evento de presupuesto debió borrarse');
 
     for (const table of [
       'expense_categories',
@@ -503,7 +503,7 @@ test(
 );
 
 test(
-  '5. Repetir el borrado de A devuelve codigo 0 con mensaje "No hay nada que borrar."',
+  '5. Repetir el borrado de A devuelve código 0 con mensaje "No hay nada que borrar."',
   { timeout: TEST_TIMEOUT_MS },
   async () => {
     const loggers = createSilentLoggers();
@@ -523,7 +523,7 @@ test(
     assert.equal(
       code,
       0,
-      `Se esperaba codigo 0 al repetir borrado; errores: ${loggers.errors.join(' | ')}`
+      `Se esperaba código 0 al repetir borrado; errores: ${loggers.errors.join(' | ')}`
     );
     assert.ok(
       loggers.logs.some((line) => line.includes('No hay nada que borrar.')),

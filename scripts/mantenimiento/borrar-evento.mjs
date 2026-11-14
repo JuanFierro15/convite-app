@@ -152,6 +152,7 @@ async function listEventFiles(client, eventId) {
     }
 
     const items = Array.isArray(data) ? data : [];
+    let addedInPage = 0;
     for (const item of items) {
       if (!item?.name || item.name === '.emptyFolderPlaceholder') {
         continue;
@@ -172,11 +173,19 @@ async function listEventFiles(client, eventId) {
       if (!seen.has(fullPath)) {
         seen.add(fullPath);
         paths.push(fullPath);
+        addedInPage += 1;
       }
     }
 
     if (items.length < PAGE_LIMIT) {
       break;
+    }
+
+    if (addedInPage === 0) {
+      return {
+        paths: null,
+        error: `El listado de ${eventId}/ repitió una página completa. No se borró nada.`,
+      };
     }
 
     offset += PAGE_LIMIT;
@@ -214,11 +223,18 @@ async function removeFilesInBatches(client, filePaths, log, logError) {
     const batchNumber = Math.floor(i / REMOVE_BATCH_SIZE) + 1;
 
     try {
-      const { error } = await client.storage.from(BUCKET_NAME).remove(batch);
+      const { data, error } =
+        (await client.storage.from(BUCKET_NAME).remove(batch)) ?? {};
       if (error) {
         failedBatches += 1;
         logError(
           `Error al borrar el lote ${batchNumber}/${totalBatches} de archivos: ${formatErrorMessage(error)}`
+        );
+      } else if (!Array.isArray(data) || data.length !== batch.length) {
+        failedBatches += 1;
+        const removedCount = Array.isArray(data) ? data.length : 0;
+        logError(
+          `Error al borrar el lote ${batchNumber}/${totalBatches} de archivos: se borraron ${removedCount} de ${batch.length} archivo(s).`
         );
       } else {
         log(
