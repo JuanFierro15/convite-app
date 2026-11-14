@@ -10,8 +10,10 @@
     "watch": "ng build --watch --configuration development",
     "test": "ng test",
     "lint": "ng lint",
-    "test:reglas": "node --env-file=.env --test \"scripts/reglas/*.test.mjs\"",
+    "test:reglas": "node --env-file=.env --test --test-concurrency=1 \"scripts/reglas/*.test.mjs\"",
     "test:funciones": "node --test \"scripts/funciones/*.test.mjs\"",
+    "test:mantenimiento": "node --test \"scripts/mantenimiento/*.test.mjs\"",
+    "borrar-evento": "node --env-file=.env scripts/mantenimiento/borrar-evento.mjs",
     "deploy:web": "ng build --configuration production,web && wrangler pages deploy www --project-name convite --branch main"
   },
   "private": true,
