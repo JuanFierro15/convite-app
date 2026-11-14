@@ -920,6 +920,37 @@ describe('run: fallos', () => {
     );
   });
 
+  test('si remove borra solo 1 de 2 archivos, sale con código 1', async () => {
+    const client = createFakeClient({
+      events: [{ id: EVENT_ID, name: 'Evento Remove Parcial' }],
+      storageFolders: { [EVENT_ID]: ['a.jpg', 'a_thumb.jpg'] },
+      removeResponse: { data: [{ name: 'a.jpg' }], error: null },
+    });
+    const loggers = createLoggers();
+
+    const code = await run({
+      client,
+      args: {
+        ok: true,
+        eventId: EVENT_ID,
+        borrar: true,
+        nombre: 'Evento Remove Parcial',
+      },
+      log: loggers.log,
+      logError: loggers.logError,
+    });
+
+    assert.equal(code, 1);
+    assert.ok(
+      loggers.errors.some((l) =>
+        l.includes(
+          'Error al borrar el lote 1/1 de archivos: se borraron 1 de 2 archivo(s).'
+        )
+      ),
+      `Se esperaba "se borraron 1 de 2 archivo(s)", recibido: ${loggers.errors.join(' | ')}`
+    );
+  });
+
   test('si remove devuelve data no arreglo en el primer lote de dos, intenta el segundo lote y sale con código 1', async () => {
     const client = createFakeClient({
       events: [{ id: EVENT_ID, name: 'Evento Remove Nulo' }],
@@ -1069,7 +1100,7 @@ describe('run: fallos', () => {
     );
   });
 
-  test('si list siempre devuelve los mismos 100 archivos (ignora offset), aborta con código 1 y sin delete ni remove', async () => {
+  test('si list siempre devuelve los mismos 100 archivos (ignora offset), aborta con código 1 y sin delete ni remove', { timeout: 5000 }, async () => {
     const repeatedPage = makeFileNames(100).map((name) => ({
       id: `file-${name}`,
       name,
