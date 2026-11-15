@@ -52,6 +52,7 @@ describe('InvitationDetailPage', () => {
   const sampleInvitation: InvitationWithGuests = {
     id: 'inv-1',
     event_id: 'evt-123',
+    batch_id: null,
     group_name: 'Familia Ejemplo',
     kind: 'group',
     phone: '+573000000000',

@@ -148,6 +148,20 @@ export function toUserError(error: unknown, fallback?: string): Error {
     return new Error('Esta tarea ya no existe.');
   }
 
+  if (combined.includes('batch_deadline_after_start')) {
+    return new Error(
+      'La fecha límite de cada tanda debe ser anterior o igual a la fecha del evento.',
+    );
+  }
+
+  if (combined.includes('invitations_batch_id_fkey')) {
+    return new Error('Esta tanda tiene invitaciones. Muévelas a otra tanda antes de borrarla.');
+  }
+
+  if (combined.includes('invitation_batches_name_length')) {
+    return new Error('El nombre de la tanda debe tener entre 1 y 60 caracteres.');
+  }
+
   if (
     combined.includes('invitation_event_mismatch') ||
     combined.includes('guest_not_in_invitation') ||
@@ -155,7 +169,8 @@ export function toUserError(error: unknown, fallback?: string): Error {
     combined.includes('invalid_kind') ||
     combined.includes('invalid_expense_action') ||
     combined.includes('expense_not_found') ||
-    combined.includes('event_id_immutable')
+    combined.includes('event_id_immutable') ||
+    combined.includes('batch_not_in_event')
   ) {
     return new Error(DEFAULT_USER_ERROR_MESSAGE);
   }

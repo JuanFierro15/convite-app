@@ -2,6 +2,7 @@ export * from './budget';
 export * from './events';
 export * from './gifts';
 export * from './guest';
+export * from './invitation-batches';
 export * from './invitations';
 export * from './rsvp-log';
 export * from './tasks';

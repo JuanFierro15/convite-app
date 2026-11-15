@@ -79,6 +79,7 @@ describe('InvitationFormComponent', () => {
     component.invitation = {
       id: 'inv-ind',
       event_id: 'event-1',
+      batch_id: null,
       group_name: 'Persona Ejemplo',
       kind: 'individual',
       phone: '+573001234567',
@@ -275,6 +276,7 @@ describe('InvitationFormComponent', () => {
     component.invitation = {
       id: 'inv-edit',
       event_id: 'event-1',
+      batch_id: null,
       group_name: 'Familia Edit',
       kind: 'group',
       phone: null,
@@ -333,6 +335,7 @@ describe('InvitationFormComponent', () => {
     component.invitation = {
       id: 'inv-retry',
       event_id: 'event-1',
+      batch_id: null,
       group_name: 'Familia Retry',
       kind: 'group',
       phone: null,
@@ -396,6 +399,7 @@ describe('InvitationFormComponent', () => {
       editComp.invitation = {
         id: 'inv-guard',
         event_id: 'event-1',
+        batch_id: null,
         group_name: 'Familia Guard',
         kind: 'group',
         phone: '+573001234567',

@@ -3,6 +3,7 @@ export * from './errors';
 export * from './events.repository';
 export * from './gifts.repository';
 export * from './guest-api.service';
+export * from './invitation-batches.repository';
 export * from './invitations.repository';
 export * from './rsvp-log.repository';
 export * from './tasks.repository';

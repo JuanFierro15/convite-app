@@ -39,6 +39,7 @@ function createInvitation(
   return {
     id,
     event_id: 'evt-1',
+    batch_id: null,
     group_name,
     kind: 'family',
     phone,

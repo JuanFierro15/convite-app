@@ -4,6 +4,7 @@ export * from './dates';
 export * from './expense-status';
 export * from './guest-gift-list';
 export * from './guest-link';
+export * from './invitation-batches';
 export * from './invitation-code';
 export * from './invitation-status';
 export * from './invitation-texts';

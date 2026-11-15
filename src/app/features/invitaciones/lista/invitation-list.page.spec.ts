@@ -55,6 +55,7 @@ describe('InvitationListPage', () => {
   const invWithoutSend: InvitationWithGuests = {
     id: 'inv-1',
     event_id: 'evt-123',
+    batch_id: null,
     group_name: 'Familia Uno',
     kind: 'group',
     phone: '+573001111111',
@@ -81,6 +82,7 @@ describe('InvitationListPage', () => {
   const invSent: InvitationWithGuests = {
     id: 'inv-2',
     event_id: 'evt-123',
+    batch_id: null,
     group_name: 'Familia Dos',
     kind: 'group',
     phone: '+573002222222',
@@ -107,6 +109,7 @@ describe('InvitationListPage', () => {
   const invNoPhone: InvitationWithGuests = {
     id: 'inv-3',
     event_id: 'evt-123',
+    batch_id: null,
     group_name: 'Familia Tres',
     kind: 'group',
     phone: null,
@@ -223,6 +226,7 @@ describe('InvitationListPage', () => {
     const invMixed: InvitationWithGuests = {
       id: 'inv-mixed',
       event_id: 'evt-123',
+      batch_id: null,
       group_name: 'Familia Mixta',
       kind: 'group',
       phone: null,
@@ -273,6 +277,7 @@ describe('InvitationListPage', () => {
     const invPlural: InvitationWithGuests = {
       id: 'inv-pl',
       event_id: 'evt-123',
+      batch_id: null,
       group_name: 'Familia Plural',
       kind: 'group',
       phone: null,
@@ -398,6 +403,7 @@ describe('InvitationListPage', () => {
         return {
           id,
           event_id: 'evt-123',
+          batch_id: null,
           group_name: `Familia Ejemplo ${index}`,
           kind: 'group',
           phone: `+5730000000${index.toString().padStart(2, '0')}`,

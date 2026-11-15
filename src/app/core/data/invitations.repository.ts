@@ -33,6 +33,7 @@ export class InvitationsRepository {
     const items: InvitationWithGuests[] = (data ?? []).map((row) => ({
       id: row.id,
       event_id: row.event_id,
+      batch_id: row.batch_id,
       group_name: row.group_name,
       kind: toInvitationKind(row.kind),
       phone: row.phone,
@@ -63,6 +64,7 @@ export class InvitationsRepository {
     return {
       id: data.id,
       event_id: data.event_id,
+      batch_id: data.batch_id,
       group_name: data.group_name,
       kind: toInvitationKind(data.kind),
       phone: data.phone,
@@ -100,6 +102,8 @@ export class InvitationsRepository {
       p_guests: guests,
       p_kind: input.kind,
       p_known_guest_ids: knownGuestIds,
+      p_batch_id: input.batch_id ?? null,
+      p_set_batch: input.batch_id !== undefined,
     });
 
     if (error) {
