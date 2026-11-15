@@ -24,6 +24,26 @@
     />
   } @else {
     <div class="send-container">
+      @if (hasBatches()) {
+        <div class="batch-filter">
+          <span class="text-label batch-filter__label" id="send-batch-label">Tanda</span>
+          <ion-select
+            aria-labelledby="send-batch-label"
+            [value]="selectedBatch()"
+            interface="popover"
+            fill="outline"
+            (ionChange)="onBatchChange($event)"
+            class="batch-filter__select"
+          >
+            <ion-select-option value="all">Todas las tandas</ion-select-option>
+            <ion-select-option value="first">Primera tanda</ion-select-option>
+            @for (batch of batches(); track batch.id) {
+              <ion-select-option [value]="batch.id">{{ batch.name }}</ion-select-option>
+            }
+          </ion-select>
+        </div>
+      }
+
       <p class="text-label progress-label">{{ sentCount() }} de {{ withPhone().length }} enviadas</p>
       <ion-progress-bar [value]="progress()" color="primary"></ion-progress-bar>
 

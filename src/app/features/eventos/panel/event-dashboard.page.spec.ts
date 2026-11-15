@@ -10,6 +10,7 @@ import {
   EventContextService,
   EventRow,
   EventsRepository,
+  InvitationBatchRow,
   RealtimeService,
   RsvpLogEntry,
   RsvpLogRepository,
@@ -94,6 +95,7 @@ describe('EventDashboardPage - Arrivals & Attendance', () => {
   let mockEventContext: {
     event: ReturnType<typeof signal<EventRow | null>>;
     isOwner: ReturnType<typeof signal<boolean>>;
+    batches: ReturnType<typeof signal<InvitationBatchRow[]>>;
     error: ReturnType<typeof signal<string | null>>;
     loading: ReturnType<typeof signal<boolean>>;
     load: ReturnType<typeof vi.fn>;
@@ -129,6 +131,7 @@ describe('EventDashboardPage - Arrivals & Attendance', () => {
     mockEventContext = {
       event: signal(mockEvent),
       isOwner: signal(true),
+      batches: signal<InvitationBatchRow[]>([]),
       error: signal(null),
       loading: signal(false),
       load: vi.fn().mockResolvedValue(undefined),
@@ -915,6 +918,96 @@ describe('EventDashboardPage - Arrivals & Attendance', () => {
       expect(component.photoCount()).toBeNull();
       expect(component.recentPhotos()).toEqual([]);
       expect(component.thumbnailUrls()).toEqual({});
+    });
+  });
+
+  describe('Próxima fecha límite con tandas', () => {
+    const batch2: InvitationBatchRow = {
+      id: 'batch-2',
+      event_id: 'event-123',
+      name: 'Segunda tanda',
+      rsvp_deadline: '2026-11-20T23:59:59-05:00',
+      created_at: '2026-10-02T00:00:00-05:00',
+    };
+    const batch3: InvitationBatchRow = {
+      id: 'batch-3',
+      event_id: 'event-123',
+      name: 'Tercera tanda',
+      rsvp_deadline: '2026-11-25T23:59:59-05:00',
+      created_at: '2026-10-03T00:00:00-05:00',
+    };
+
+    it('sin tandas muestra la fecha límite del evento', async () => {
+      mockEventContext.batches.set([]);
+      component.ionViewWillEnter();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(component.deadlineDateText()).toBe('15 de noviembre');
+      const deadlineEl = fixture.nativeElement.querySelector('.countdown-card__deadline');
+      expect(deadlineEl?.textContent?.replace(/\s+/g, ' ').trim()).toContain(
+        'Límite para confirmar: 15 de noviembre',
+      );
+    });
+
+    it('con primera tanda vencida y segunda vigente muestra la fecha de la segunda tanda', async () => {
+      vi.useFakeTimers();
+      try {
+        vi.setSystemTime(new Date('2026-11-16T10:00:00-05:00'));
+        mockEventContext.batches.set([batch2, batch3]);
+
+        component.ionViewWillEnter();
+        await fixture.whenStable();
+        fixture.detectChanges();
+
+        expect(component.deadlineDateText()).toBe('20 de noviembre');
+        const deadlineEl = fixture.nativeElement.querySelector('.countdown-card__deadline');
+        expect(deadlineEl?.textContent?.replace(/\s+/g, ' ').trim()).toContain(
+          'Límite para confirmar: 20 de noviembre',
+        );
+      } finally {
+        component.ionViewWillLeave();
+        vi.useRealTimers();
+      }
+    });
+
+    it('con todas las tandas vencidas muestra la más tardía', async () => {
+      vi.useFakeTimers();
+      try {
+        vi.setSystemTime(new Date('2026-11-26T10:00:00-05:00'));
+        mockEventContext.batches.set([batch2, batch3]);
+
+        component.ionViewWillEnter();
+        await fixture.whenStable();
+        fixture.detectChanges();
+
+        expect(component.deadlineDateText()).toBe('25 de noviembre');
+      } finally {
+        component.ionViewWillLeave();
+        vi.useRealTimers();
+      }
+    });
+
+    it('recalcula la fecha límite automáticamente con el reloj del panel al vencer la tanda actual', async () => {
+      vi.useFakeTimers();
+      try {
+        vi.setSystemTime(new Date('2026-11-20T23:59:30-05:00'));
+        mockEventContext.batches.set([batch2, batch3]);
+
+        component.ionViewWillEnter();
+        await fixture.whenStable();
+        fixture.detectChanges();
+
+        expect(component.deadlineDateText()).toBe('20 de noviembre');
+
+        vi.advanceTimersByTime(60_000);
+        fixture.detectChanges();
+
+        expect(component.deadlineDateText()).toBe('25 de noviembre');
+      } finally {
+        component.ionViewWillLeave();
+        vi.useRealTimers();
+      }
     });
   });
 });

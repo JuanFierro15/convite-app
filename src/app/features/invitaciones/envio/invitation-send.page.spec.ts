@@ -5,6 +5,7 @@ import {
   EventContextService,
   EventRole,
   EventRow,
+  InvitationBatchRow,
   InvitationWithGuests,
   InvitationsRepository,
   RealtimeService,
@@ -35,11 +36,12 @@ function createInvitation(
   group_name: string,
   phone: string | null,
   whatsapp_sent_at: string | null = null,
+  batch_id: string | null = null,
 ): InvitationWithGuests {
   return {
     id,
     event_id: 'evt-1',
-    batch_id: null,
+    batch_id,
     group_name,
     kind: 'family',
     phone,
@@ -72,6 +74,7 @@ describe('InvitationSendPage', () => {
     event: ReturnType<typeof signal<EventRow | null>>;
     role: ReturnType<typeof signal<EventRole | null>>;
     isOwner: ReturnType<typeof signal<boolean>>;
+    batches: ReturnType<typeof signal<InvitationBatchRow[]>>;
     error: ReturnType<typeof signal<string | null>>;
     loading: ReturnType<typeof signal<boolean>>;
     load: ReturnType<typeof vi.fn>;
@@ -101,6 +104,7 @@ describe('InvitationSendPage', () => {
       event: signal<EventRow | null>(mockEvent),
       role: signal<EventRole | null>('owner'),
       isOwner: signal(true),
+      batches: signal<InvitationBatchRow[]>([]),
       error: signal<string | null>(null),
       loading: signal(false),
       load: vi.fn().mockResolvedValue(undefined),
@@ -462,6 +466,233 @@ describe('InvitationSendPage', () => {
       expect(component.current()?.id).toBe('inv-c');
       expect(component.markFailed()?.id).toBe('inv-a');
       expect(fixture.nativeElement.querySelector('.mark-failed')).toBeNull();
+    });
+  });
+
+  describe('tandas en envío en serie', () => {
+    const batch1: InvitationBatchRow = {
+      id: 'batch-1',
+      event_id: 'evt-1',
+      name: 'Tanda media',
+      rsvp_deadline: '2026-11-18T23:59:59-05:00',
+      created_at: '2026-10-02T00:00:00-05:00',
+    };
+    const batch2: InvitationBatchRow = {
+      id: 'batch-2',
+      event_id: 'evt-1',
+      name: 'Tanda final',
+      rsvp_deadline: '2026-11-24T23:59:59-05:00',
+      created_at: '2026-10-03T00:00:00-05:00',
+    };
+
+    const invFirst1 = createInvitation('inv-f1', 'Familia Primera', '+573000000001', null, null);
+    const invFirstOrphan = createInvitation(
+      'inv-f2',
+      'Familia Huérfana',
+      '+573000000002',
+      null,
+      'batch-deleted',
+    );
+    const invB1 = createInvitation('inv-b1', 'Familia Media', '+573000000003', null, batch1.id);
+    const invB2First = createInvitation('inv-b2-1', 'Familia Final 1', '+573000000004', null, batch2.id);
+    const invB2Second = createInvitation(
+      'inv-b2-2',
+      'Familia Final 2',
+      '+573000000005',
+      null,
+      batch2.id,
+    );
+    const invB2Third = createInvitation(
+      'inv-b2-3',
+      'Familia Final 3',
+      '+573000000006',
+      null,
+      batch2.id,
+    );
+    const invB2Sent = createInvitation(
+      'inv-b2-sent',
+      'Familia Final Enviada',
+      '+573000000007',
+      '2026-10-10T10:00:00-05:00',
+      batch2.id,
+    );
+    const invB2NoPhone = createInvitation(
+      'inv-b2-nophone',
+      'Familia Final Sin Tel',
+      null,
+      null,
+      batch2.id,
+    );
+
+    const allBatchInvitations = [
+      invFirst1,
+      invFirstOrphan,
+      invB1,
+      invB2First,
+      invB2Second,
+      invB2Third,
+      invB2Sent,
+      invB2NoPhone,
+    ];
+
+    it('sin tandas no muestra selector y la cola funciona igual que antes', async () => {
+      mockEventContext.batches.set([]);
+      mockInvitationsRepo.list.mockResolvedValue([invitationA, invitationB, invitationC, invitationD]);
+
+      component.ionViewWillEnter();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('ion-select')).toBeNull();
+      expect(fixture.nativeElement.textContent).not.toContain('Tanda');
+      expect(component.queue().map((i) => i.id)).toEqual(['inv-a', 'inv-c']);
+      expect(component.withPhone().map((i) => i.id)).toEqual(['inv-a', 'inv-b', 'inv-c']);
+      expect(component.sentCount()).toBe(1);
+      expect(component.withoutPhoneCount()).toBe(1);
+    });
+
+    it('con 2 tandas inicia en la más reciente y filtra cola, progreso y conteos por esa tanda', async () => {
+      mockEventContext.batches.set([batch1, batch2]);
+      mockInvitationsRepo.list.mockResolvedValue(allBatchInvitations);
+
+      component.ionViewWillEnter();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const selectEl = fixture.nativeElement.querySelector('ion-select');
+      expect(selectEl).not.toBeNull();
+      expect(component.selectedBatch()).toBe(batch2.id);
+
+      const optionTexts = Array.from(
+        fixture.nativeElement.querySelectorAll('ion-select-option'),
+      ).map((el) => (el as HTMLElement).textContent?.trim());
+      expect(optionTexts).toEqual(['Todas las tandas', 'Primera tanda', 'Tanda media', 'Tanda final']);
+
+      expect(component.withPhone().map((i) => i.id)).toEqual([
+        'inv-b2-1',
+        'inv-b2-2',
+        'inv-b2-3',
+        'inv-b2-sent',
+      ]);
+      expect(component.queue().map((i) => i.id)).toEqual(['inv-b2-1', 'inv-b2-2', 'inv-b2-3']);
+      expect(component.queue()[1].id).toBe('inv-b2-2');
+      expect(component.queue()[2].id).toBe('inv-b2-3');
+      expect(component.current()?.id).toBe('inv-b2-1');
+      expect(component.sentCount()).toBe(1);
+      expect(component.withoutPhoneCount()).toBe(1);
+      expect(component.progress()).toBeCloseTo(0.25);
+      expect(component.noPhoneLabel()).toBe(
+        '1 invitación no tiene teléfono. Compártela desde su detalle.',
+      );
+      expect(fixture.nativeElement.querySelector('.progress-label')?.textContent).toContain(
+        '1 de 4 enviadas',
+      );
+    });
+
+    it('al elegir Primera tanda incluye las de batch_id null y las de tandas inexistentes', async () => {
+      mockEventContext.batches.set([batch1, batch2]);
+      mockInvitationsRepo.list.mockResolvedValue(allBatchInvitations);
+
+      component.ionViewWillEnter();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      component.onBatchChange(new CustomEvent('ionChange', { detail: { value: 'first' } }));
+      fixture.detectChanges();
+
+      expect(component.selectedBatch()).toBe('first');
+      expect(component.queue().map((i) => i.id)).toEqual(['inv-f1', 'inv-f2']);
+      expect(component.queue()[1].id).toBe('inv-f2');
+      expect(component.withPhone().length).toBe(2);
+      expect(component.withoutPhoneCount()).toBe(0);
+      expect(component.sentCount()).toBe(0);
+    });
+
+    it('al cambiar a Todas las tandas suma las invitaciones de todas las tandas', async () => {
+      mockEventContext.batches.set([batch1, batch2]);
+      mockInvitationsRepo.list.mockResolvedValue(allBatchInvitations);
+
+      component.ionViewWillEnter();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      component.onBatchChange(new CustomEvent('ionChange', { detail: { value: 'all' } }));
+      fixture.detectChanges();
+
+      expect(component.selectedBatch()).toBe('all');
+      expect(component.withPhone().length).toBe(7);
+      expect(component.withoutPhoneCount()).toBe(1);
+      expect(component.sentCount()).toBe(1);
+      expect(component.queue().map((i) => i.id)).toEqual([
+        'inv-f1',
+        'inv-f2',
+        'inv-b1',
+        'inv-b2-1',
+        'inv-b2-2',
+        'inv-b2-3',
+      ]);
+      expect(component.progress()).toBeCloseTo(1 / 7);
+    });
+
+    it('saltar una invitación, cambiar de tanda y volver la mantiene al final de la cola', async () => {
+      mockEventContext.batches.set([batch1, batch2]);
+      mockInvitationsRepo.list.mockResolvedValue(allBatchInvitations);
+
+      component.ionViewWillEnter();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(component.current()?.id).toBe('inv-b2-1');
+      component.skipCurrent();
+      fixture.detectChanges();
+      expect(component.queue().map((i) => i.id)).toEqual(['inv-b2-2', 'inv-b2-3', 'inv-b2-1']);
+
+      component.onBatchChange(new CustomEvent('ionChange', { detail: { value: batch1.id } }));
+      fixture.detectChanges();
+      expect(component.queue().map((i) => i.id)).toEqual(['inv-b1']);
+
+      component.onBatchChange(new CustomEvent('ionChange', { detail: { value: batch2.id } }));
+      fixture.detectChanges();
+      expect(component.current()?.id).toBe('inv-b2-2');
+      expect(component.queue().map((i) => i.id)).toEqual(['inv-b2-2', 'inv-b2-3', 'inv-b2-1']);
+    });
+
+    it('si la tanda elegida se borra mientras la página está abierta vuelve a Todas las tandas', async () => {
+      mockEventContext.batches.set([batch1, batch2]);
+      mockInvitationsRepo.list.mockResolvedValue(allBatchInvitations);
+
+      component.ionViewWillEnter();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      expect(component.selectedBatch()).toBe(batch2.id);
+
+      mockEventContext.batches.set([batch1]);
+      fixture.detectChanges();
+
+      expect(component.selectedBatch()).toBe('all');
+      expect(component.withPhone().length).toBe(7);
+      expect(component.queue().map((i) => i.id)).toEqual([
+        'inv-f1',
+        'inv-f2',
+        'inv-b1',
+        'inv-b2-1',
+        'inv-b2-2',
+        'inv-b2-3',
+      ]);
+    });
+
+    it('previewText pasa la invitación de la tanda actual a whatsAppMessage', async () => {
+      mockEventContext.batches.set([batch1, batch2]);
+      mockInvitationsRepo.list.mockResolvedValue(allBatchInvitations);
+
+      component.ionViewWillEnter();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      const preview = component.previewText();
+      expect(preview).toBe('Hola A, te invitamos a nuestro evento.');
+      expect(mockInvitationActions.whatsAppMessage).toHaveBeenCalledWith(invB2First, mockEvent);
     });
   });
 });

@@ -3,6 +3,7 @@ import {
   Component,
   DestroyRef,
   computed,
+  effect,
   inject,
   input,
   signal,
@@ -18,6 +19,8 @@ import {
   IonHeader,
   IonIcon,
   IonProgressBar,
+  IonSelect,
+  IonSelectOption,
   IonSpinner,
   IonTitle,
   IonToolbar,
@@ -31,6 +34,7 @@ import {
   InvitationsRepository,
   RealtimeService,
   formatPhone,
+  latestBatchId,
 } from '../../../core';
 import { EmptyStateComponent } from '../../../shared';
 import { InvitationActionsService } from '../invitation-actions.service';
@@ -49,6 +53,8 @@ import { InvitationActionsService } from '../invitation-actions.service';
     IonTitle,
     IonContent,
     IonSpinner,
+    IonSelect,
+    IonSelectOption,
     IonProgressBar,
     IonIcon,
     IonButton,
@@ -78,18 +84,49 @@ export class InvitationSendPage implements ViewWillEnter {
   readonly undoing = signal<boolean>(false);
   readonly showPreview = signal<boolean>(false);
 
+  readonly batches = this.eventContext.batches;
+  readonly hasBatches = computed<boolean>(() => this.batches().length > 0);
+  readonly selectedBatch = signal<string>(
+    latestBatchId(this.eventContext.batches()) ?? 'all',
+  );
+
   readonly formatPhone = formatPhone;
 
   private stopRealtime: (() => void) | null = null;
   private watchedEventId: string | null = null;
   private hasLoadedOnce = false;
+  private batchFilterInitialized = false;
+
+  readonly filteredInvitations = computed<InvitationWithGuests[]>(() => {
+    const all = this.invitations();
+    const currentBatches = this.batches();
+    if (currentBatches.length === 0) {
+      return all;
+    }
+
+    const selected = this.selectedBatch();
+    if (selected === 'all') {
+      return all;
+    }
+
+    const batchIds = new Set(currentBatches.map((batch) => batch.id));
+    if (selected === 'first') {
+      return all.filter((inv) => inv.batch_id === null || !batchIds.has(inv.batch_id));
+    }
+
+    if (!batchIds.has(selected)) {
+      return all;
+    }
+
+    return all.filter((inv) => inv.batch_id === selected);
+  });
 
   readonly withPhone = computed<InvitationWithGuests[]>(() =>
-    this.invitations().filter((inv) => inv.phone !== null && inv.phone !== ''),
+    this.filteredInvitations().filter((inv) => inv.phone !== null && inv.phone !== ''),
   );
 
   readonly withoutPhoneCount = computed<number>(
-    () => this.invitations().length - this.withPhone().length,
+    () => this.filteredInvitations().length - this.withPhone().length,
   );
 
   readonly sentCount = computed<number>(
@@ -132,10 +169,38 @@ export class InvitationSendPage implements ViewWillEnter {
 
   constructor() {
     addIcons({ logoWhatsapp, checkmarkCircle, alertCircleOutline });
+
+    effect(() => {
+      const currentBatches = this.batches();
+      const selected = this.selectedBatch();
+      if (currentBatches.length === 0) {
+        if (selected !== 'all') {
+          this.selectedBatch.set('all');
+        }
+        return;
+      }
+      if (
+        selected !== 'all' &&
+        selected !== 'first' &&
+        !currentBatches.some((batch) => batch.id === selected)
+      ) {
+        this.selectedBatch.set('all');
+      }
+    });
   }
 
   ionViewWillEnter(): void {
     void this.initializePage();
+  }
+
+  onBatchChange(event: CustomEvent<{ value?: string }>): void {
+    const value = event.detail?.value;
+    if (typeof value !== 'string' || value === '') {
+      return;
+    }
+    this.selectedBatch.set(value);
+    this.batchFilterInitialized = true;
+    this.showPreview.set(false);
   }
 
   async retryLoad(): Promise<void> {
@@ -147,6 +212,8 @@ export class InvitationSendPage implements ViewWillEnter {
     ]);
     if (this.eventContext.error() && !this.error()) {
       this.error.set(this.eventContext.error());
+    } else {
+      this.applyInitialBatchSelection();
     }
   }
 
@@ -278,11 +345,14 @@ export class InvitationSendPage implements ViewWillEnter {
       return;
     }
 
+    this.batchFilterInitialized = false;
+
     if (this.watchedEventId !== null && this.watchedEventId !== eventId) {
       this.hasLoadedOnce = false;
       this.invitations.set([]);
       this.error.set(null);
       this.skippedIds.set(new Set());
+      this.selectedBatch.set('all');
       this.lastOpened.set(null);
       this.markFailed.set(null);
     }
@@ -301,6 +371,15 @@ export class InvitationSendPage implements ViewWillEnter {
 
     if (this.eventContext.error() && !this.error()) {
       this.error.set(this.eventContext.error());
+    } else {
+      this.applyInitialBatchSelection();
+    }
+  }
+
+  private applyInitialBatchSelection(): void {
+    if (!this.eventContext.error() && !this.batchFilterInitialized) {
+      this.selectedBatch.set(latestBatchId(this.batches()) ?? 'all');
+      this.batchFilterInitialized = true;
     }
   }
 

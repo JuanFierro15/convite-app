@@ -12,6 +12,21 @@
   padding: var(--space-md);
 }
 
+.batch-filter {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.batch-filter__label {
+  color: var(--ion-color-medium);
+}
+
+.batch-filter__select {
+  width: 100%;
+  min-height: 44px;
+}
+
 .progress-label {
   margin: 0;
   color: var(--ion-color-medium);
