@@ -1191,4 +1191,282 @@ describe('GuestInvitationPage', () => {
       expect(container.classList.contains('intro-reveal')).toBe(false);
     });
   });
+
+  describe('bloqueo del botón de respuesta elegida', () => {
+    function getCardRsvpButtons(cardIndex: number): {
+      acceptBtn: HTMLIonButtonElement;
+      declineBtn: HTMLIonButtonElement;
+    } {
+      const cards = fixture.nativeElement.querySelectorAll('.guest-card');
+      const card = cards[cardIndex];
+      const buttons = Array.from(
+        card.querySelectorAll('.rsvp-button'),
+      ) as HTMLIonButtonElement[];
+      const acceptBtn = buttons.find(
+        (btn) =>
+          btn.textContent?.includes('Acepto') &&
+          !btn.textContent?.includes('No acepto'),
+      )!;
+      const declineBtn = buttons.find((btn) =>
+        btn.textContent?.includes('No acepto'),
+      )!;
+      return { acceptBtn, declineBtn };
+    }
+
+    function isButtonDisabled(btn: HTMLIonButtonElement): boolean {
+      return btn.disabled ?? btn.hasAttribute('disabled');
+    }
+
+    it('deshabilita "Acepto" y deja habilitado "No acepto" cuando el invitado está en accepted', async () => {
+      const inv: GuestInvitation = {
+        ...mockIndividualInvitation,
+        guests: [{ id: 'g-1', full_name: 'Persona Ejemplo', rsvp: 'accepted' }],
+      };
+      mockGuestApi.getInvitation.mockResolvedValue(inv);
+
+      fixture = TestBed.createComponent(GuestInvitationPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('code', 'WXYZ5678LM');
+
+      await component.loadInvitation();
+      fixture.detectChanges();
+
+      const { acceptBtn, declineBtn } = getCardRsvpButtons(0);
+      expect(isButtonDisabled(acceptBtn)).toBe(true);
+      expect(acceptBtn.getAttribute('aria-pressed')).toBe('true');
+      expect(acceptBtn.classList.contains('rsvp-button--chosen')).toBe(true);
+      expect(isButtonDisabled(declineBtn)).toBe(false);
+      expect(declineBtn.getAttribute('aria-pressed')).toBe('false');
+    });
+
+    it('deshabilita "No acepto" y deja habilitado "Acepto" cuando el invitado está en declined', async () => {
+      const inv: GuestInvitation = {
+        ...mockIndividualInvitation,
+        guests: [{ id: 'g-1', full_name: 'Persona Ejemplo', rsvp: 'declined' }],
+      };
+      mockGuestApi.getInvitation.mockResolvedValue(inv);
+
+      fixture = TestBed.createComponent(GuestInvitationPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('code', 'WXYZ5678LM');
+
+      await component.loadInvitation();
+      fixture.detectChanges();
+
+      const { acceptBtn, declineBtn } = getCardRsvpButtons(0);
+      expect(isButtonDisabled(acceptBtn)).toBe(false);
+      expect(acceptBtn.getAttribute('aria-pressed')).toBe('false');
+      expect(isButtonDisabled(declineBtn)).toBe(true);
+      expect(declineBtn.getAttribute('aria-pressed')).toBe('true');
+      expect(declineBtn.classList.contains('rsvp-button--chosen')).toBe(true);
+    });
+
+    it('deja ambos botones habilitados cuando el invitado está en pending', async () => {
+      mockGuestApi.getInvitation.mockResolvedValue(mockIndividualInvitation);
+
+      fixture = TestBed.createComponent(GuestInvitationPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('code', 'WXYZ5678LM');
+
+      await component.loadInvitation();
+      fixture.detectChanges();
+
+      const { acceptBtn, declineBtn } = getCardRsvpButtons(0);
+      expect(isButtonDisabled(acceptBtn)).toBe(false);
+      expect(acceptBtn.getAttribute('aria-pressed')).toBe('false');
+      expect(isButtonDisabled(declineBtn)).toBe(false);
+      expect(declineBtn.getAttribute('aria-pressed')).toBe('false');
+    });
+
+    it('en grupo de 3 invitados (pending, accepted, declined), verifica primero, segundo y último', async () => {
+      const inv: GuestInvitation = {
+        ...mockGroupInvitation,
+        guests: [
+          { id: 'g-1', full_name: 'Ana Ejemplo', rsvp: 'pending' },
+          { id: 'g-2', full_name: 'Luis Ejemplo', rsvp: 'accepted' },
+          { id: 'g-3', full_name: 'Persona Ejemplo', rsvp: 'declined' },
+        ],
+      };
+      mockGuestApi.getInvitation.mockResolvedValue(inv);
+
+      fixture = TestBed.createComponent(GuestInvitationPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('code', 'ABCD1234JK');
+
+      await component.loadInvitation();
+      fixture.detectChanges();
+
+      const first = getCardRsvpButtons(0);
+      expect(isButtonDisabled(first.acceptBtn)).toBe(false);
+      expect(isButtonDisabled(first.declineBtn)).toBe(false);
+
+      const second = getCardRsvpButtons(1);
+      expect(isButtonDisabled(second.acceptBtn)).toBe(true);
+      expect(isButtonDisabled(second.declineBtn)).toBe(false);
+
+      const last = getCardRsvpButtons(2);
+      expect(isButtonDisabled(last.acceptBtn)).toBe(false);
+      expect(isButtonDisabled(last.declineBtn)).toBe(true);
+    });
+
+    it('deshabilita todos los botones mientras se está guardando una respuesta', async () => {
+      let resolveSave!: (value: GuestInvitation) => void;
+      const pendingSave = new Promise<GuestInvitation>((resolve) => {
+        resolveSave = resolve;
+      });
+      mockGuestApi.getInvitation.mockResolvedValue(mockGroupInvitation);
+      mockGuestApi.setRsvp.mockReturnValue(pendingSave);
+
+      fixture = TestBed.createComponent(GuestInvitationPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('code', 'ABCD1234JK');
+
+      await component.loadInvitation();
+      fixture.detectChanges();
+
+      const savePromise = component.onSelectRsvp(
+        mockGroupInvitation.guests[0],
+        'accepted',
+      );
+      fixture.detectChanges();
+
+      const first = getCardRsvpButtons(0);
+      const second = getCardRsvpButtons(1);
+      expect(isButtonDisabled(first.acceptBtn)).toBe(true);
+      expect(isButtonDisabled(first.declineBtn)).toBe(true);
+      expect(isButtonDisabled(second.acceptBtn)).toBe(true);
+      expect(isButtonDisabled(second.declineBtn)).toBe(true);
+
+      resolveSave({
+        ...mockGroupInvitation,
+        guests: [
+          { ...mockGroupInvitation.guests[0], rsvp: 'accepted' },
+          mockGroupInvitation.guests[1],
+        ],
+      });
+      await savePromise;
+      fixture.detectChanges();
+
+      const firstAfter = getCardRsvpButtons(0);
+      const secondAfter = getCardRsvpButtons(1);
+      expect(isButtonDisabled(firstAfter.acceptBtn)).toBe(true);
+      expect(isButtonDisabled(firstAfter.declineBtn)).toBe(false);
+      expect(isButtonDisabled(secondAfter.acceptBtn)).toBe(false);
+      expect(isButtonDisabled(secondAfter.declineBtn)).toBe(false);
+    });
+
+    it('onSelectRsvp no llama a setRsvp si el invitado ya tiene esa misma respuesta (accepted o declined)', async () => {
+      const inv: GuestInvitation = {
+        ...mockGroupInvitation,
+        guests: [
+          { id: 'g-1', full_name: 'Ana Ejemplo', rsvp: 'accepted' },
+          { id: 'g-2', full_name: 'Luis Ejemplo', rsvp: 'declined' },
+        ],
+      };
+      mockGuestApi.getInvitation.mockResolvedValue(inv);
+
+      fixture = TestBed.createComponent(GuestInvitationPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('code', 'ABCD1234JK');
+
+      await component.loadInvitation();
+      fixture.detectChanges();
+
+      await component.onSelectRsvp(inv.guests[0], 'accepted');
+      await component.onSelectRsvp(inv.guests[1], 'declined');
+
+      expect(mockGuestApi.setRsvp).not.toHaveBeenCalled();
+    });
+
+    it('al llamar dos veces seguidas onSelectRsvp con el mismo valor tras pasar de pending a accepted, la segunda no vuelve a llamar a setRsvp', async () => {
+      mockGuestApi.getInvitation.mockResolvedValue(mockIndividualInvitation);
+      const updatedInv: GuestInvitation = {
+        ...mockIndividualInvitation,
+        guests: [{ id: 'g-1', full_name: 'Persona Ejemplo', rsvp: 'accepted' }],
+      };
+      mockGuestApi.setRsvp.mockResolvedValue(updatedInv);
+
+      fixture = TestBed.createComponent(GuestInvitationPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('code', 'WXYZ5678LM');
+
+      await component.loadInvitation();
+      fixture.detectChanges();
+
+      await component.onSelectRsvp(
+        component.invitation()!.guests[0],
+        'accepted',
+      );
+      await component.onSelectRsvp(
+        component.invitation()!.guests[0],
+        'accepted',
+      );
+
+      expect(mockGuestApi.setRsvp).toHaveBeenCalledTimes(1);
+    });
+
+    it('cambiar de accepted a declined llama a setRsvp una vez y actualiza el bloqueo de los botones', async () => {
+      const initialInv: GuestInvitation = {
+        ...mockIndividualInvitation,
+        guests: [{ id: 'g-1', full_name: 'Persona Ejemplo', rsvp: 'accepted' }],
+      };
+      const updatedInv: GuestInvitation = {
+        ...mockIndividualInvitation,
+        guests: [{ id: 'g-1', full_name: 'Persona Ejemplo', rsvp: 'declined' }],
+      };
+      mockGuestApi.getInvitation.mockResolvedValue(initialInv);
+      mockGuestApi.setRsvp.mockResolvedValue(updatedInv);
+
+      fixture = TestBed.createComponent(GuestInvitationPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('code', 'WXYZ5678LM');
+
+      await component.loadInvitation();
+      fixture.detectChanges();
+
+      await component.onSelectRsvp(
+        component.invitation()!.guests[0],
+        'declined',
+      );
+      fixture.detectChanges();
+
+      expect(mockGuestApi.setRsvp).toHaveBeenCalledTimes(1);
+      expect(mockGuestApi.setRsvp).toHaveBeenCalledWith(
+        'WXYZ5678LM',
+        'g-1',
+        'declined',
+      );
+
+      const { acceptBtn, declineBtn } = getCardRsvpButtons(0);
+      expect(isButtonDisabled(acceptBtn)).toBe(false);
+      expect(isButtonDisabled(declineBtn)).toBe(true);
+    });
+
+    it('si falla la red al cambiar de accepted a declined, "Acepto" sigue bloqueado y "No acepto" queda habilitado para reintentar', async () => {
+      const inv: GuestInvitation = {
+        ...mockIndividualInvitation,
+        guests: [{ id: 'g-1', full_name: 'Persona Ejemplo', rsvp: 'accepted' }],
+      };
+      mockGuestApi.getInvitation.mockResolvedValue(inv);
+      mockGuestApi.setRsvp.mockRejectedValueOnce(new GuestApiError('network_error'));
+
+      fixture = TestBed.createComponent(GuestInvitationPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('code', 'WXYZ5678LM');
+
+      await component.loadInvitation();
+      fixture.detectChanges();
+
+      await component.onSelectRsvp(inv.guests[0], 'declined');
+      fixture.detectChanges();
+
+      expect(mockGuestApi.setRsvp).toHaveBeenCalledTimes(1);
+      expect(component.rsvpErrors()['g-1']).toBe(
+        guestErrorMessage('network_error', 'individual'),
+      );
+      const { acceptBtn, declineBtn } = getCardRsvpButtons(0);
+      expect(isButtonDisabled(acceptBtn)).toBe(true);
+      expect(isButtonDisabled(declineBtn)).toBe(false);
+    });
+  });
 });

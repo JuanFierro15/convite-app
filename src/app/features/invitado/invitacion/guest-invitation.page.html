@@ -135,8 +135,9 @@
                         color="success"
                         [fill]="guest.rsvp === 'accepted' ? 'solid' : 'outline'"
                         expand="block"
-                        [disabled]="savingGuestId() !== null"
+                        [disabled]="savingGuestId() !== null || guest.rsvp === 'accepted'"
                         [attr.aria-pressed]="guest.rsvp === 'accepted'"
+                        [class.rsvp-button--chosen]="guest.rsvp === 'accepted'"
                         (click)="onSelectRsvp(guest, 'accepted')"
                       >
                         @if (savingGuestId() === guest.id && savingRsvp() === 'accepted') {
@@ -152,8 +153,9 @@
                         color="danger"
                         [fill]="guest.rsvp === 'declined' ? 'solid' : 'outline'"
                         expand="block"
-                        [disabled]="savingGuestId() !== null"
+                        [disabled]="savingGuestId() !== null || guest.rsvp === 'declined'"
                         [attr.aria-pressed]="guest.rsvp === 'declined'"
+                        [class.rsvp-button--chosen]="guest.rsvp === 'declined'"
                         (click)="onSelectRsvp(guest, 'declined')"
                       >
                         @if (savingGuestId() === guest.id && savingRsvp() === 'declined') {
