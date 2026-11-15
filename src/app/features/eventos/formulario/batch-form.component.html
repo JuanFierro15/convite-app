@@ -1,0 +1,75 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar>
+    <ion-title class="text-section">
+      {{ isEditing() ? 'Editar tanda' : 'Nueva tanda' }}
+    </ion-title>
+    <ion-buttons slot="end">
+      <ion-button type="button" (click)="cancel()" aria-label="Cerrar">
+        <ion-icon slot="icon-only" name="close-outline" aria-hidden="true"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding form-content">
+  <form class="batch-form" [formGroup]="form" (ngSubmit)="save()" novalidate>
+    <div class="form-field">
+      <ion-item class="form-item">
+        <ion-input
+          label="Nombre"
+          labelPlacement="stacked"
+          formControlName="name"
+          type="text"
+          maxlength="60"
+          placeholder="Ej. Segunda tanda"
+          required
+        ></ion-input>
+      </ion-item>
+      @if (nameError; as errorMsg) {
+        <p class="text-label form-field__error" role="alert">{{ errorMsg }}</p>
+      }
+    </div>
+
+    <div class="form-field">
+      <ion-item class="form-item">
+        <ion-input
+          label="Fecha límite para responder"
+          labelPlacement="stacked"
+          formControlName="rsvp_deadline"
+          type="date"
+          required
+        ></ion-input>
+      </ion-item>
+      @if (deadlineError; as errorMsg) {
+        <p class="text-label form-field__error" role="alert">{{ errorMsg }}</p>
+      }
+    </div>
+  </form>
+</ion-content>
+
+<ion-footer class="ion-no-border form-footer footer-toolbar-padding">
+  <ion-toolbar>
+    <div class="footer-actions">
+      <ion-button
+        type="button"
+        fill="outline"
+        color="medium"
+        (click)="cancel()"
+        [disabled]="saving()"
+      >
+        Cancelar
+      </ion-button>
+      <ion-button
+        type="button"
+        color="primary"
+        (click)="save()"
+        [disabled]="saving()"
+      >
+        @if (saving()) {
+          <ion-spinner slot="start" name="crescent"></ion-spinner>
+        }
+        Guardar
+      </ion-button>
+    </div>
+  </ion-toolbar>
+</ion-footer>

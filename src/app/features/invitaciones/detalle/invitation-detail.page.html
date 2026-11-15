@@ -83,6 +83,12 @@
                 </ion-button>
               }
             </div>
+            @if (batchInfoLabel(); as batchInfo) {
+              <div class="info-meta-item batch-info-item">
+                <ion-icon name="calendar-outline" color="medium"></ion-icon>
+                <span class="text-body">{{ batchInfo }}</span>
+              </div>
+            }
           </div>
         </ion-card-content>
       </ion-card>

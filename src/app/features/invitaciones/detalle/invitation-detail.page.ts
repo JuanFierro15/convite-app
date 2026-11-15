@@ -31,6 +31,7 @@ import {
 } from '@ionic/angular';
 import { addIcons } from 'ionicons';
 import {
+  calendarOutline,
   callOutline,
   createOutline,
   keyOutline,
@@ -48,6 +49,9 @@ import {
   InvitationsRepository,
   RealtimeService,
   Rsvp,
+  batchLabel,
+  effectiveDeadline,
+  formatDayMonth,
   formatInvitationCode,
   formatPhone,
   formatShortDate,
@@ -138,8 +142,25 @@ export class InvitationDetailPage implements ViewWillEnter {
     return 'Aún no se ha enviado por WhatsApp';
   });
 
+  readonly batchInfoLabel = computed<string | null>(() => {
+    const inv = this.invitation();
+    const batches = this.eventContext.batches();
+    if (!inv || batches.length === 0) {
+      return null;
+    }
+
+    const label = batchLabel(inv.batch_id, batches);
+    const eventDeadline = this.eventContext.event()?.rsvp_deadline ?? '';
+    const deadline = effectiveDeadline(inv.batch_id, batches, eventDeadline);
+    if (!deadline) {
+      return `Tanda: ${label}`;
+    }
+    return `Tanda: ${label} · responde hasta el ${formatDayMonth(deadline)}`;
+  });
+
   constructor() {
     addIcons({
+      calendarOutline,
       createOutline,
       trashOutline,
       logoWhatsapp,

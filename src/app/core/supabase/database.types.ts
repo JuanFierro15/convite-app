@@ -391,8 +391,41 @@ export type Database = {
           },
         ]
       }
+      invitation_batches: {
+        Row: {
+          created_at: string
+          event_id: string
+          id: string
+          name: string
+          rsvp_deadline: string
+        }
+        Insert: {
+          created_at?: string
+          event_id: string
+          id?: string
+          name: string
+          rsvp_deadline: string
+        }
+        Update: {
+          created_at?: string
+          event_id?: string
+          id?: string
+          name?: string
+          rsvp_deadline?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invitation_batches_event_id_fkey"
+            columns: ["event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invitations: {
         Row: {
+          batch_id: string | null
           code: string
           created_at: string
           event_id: string
@@ -404,6 +437,7 @@ export type Database = {
           whatsapp_sent_at: string | null
         }
         Insert: {
+          batch_id?: string | null
           code?: string
           created_at?: string
           event_id: string
@@ -415,6 +449,7 @@ export type Database = {
           whatsapp_sent_at?: string | null
         }
         Update: {
+          batch_id?: string | null
           code?: string
           created_at?: string
           event_id?: string
@@ -426,6 +461,13 @@ export type Database = {
           whatsapp_sent_at?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "invitations_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "invitation_batches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "invitations_event_id_fkey"
             columns: ["event_id"]
@@ -659,6 +701,7 @@ export type Database = {
       }
       save_invitation: {
         Args: {
+          p_batch_id?: string | null
           p_event_id: string
           p_group_name: string
           p_guests: Json
@@ -666,6 +709,7 @@ export type Database = {
           p_kind?: string
           p_known_guest_ids?: string[] | null
           p_phone: string
+          p_set_batch?: boolean
         }
         Returns: Json
       }

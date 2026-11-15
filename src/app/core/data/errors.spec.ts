@@ -8,6 +8,7 @@ import {
   GiftsRepository,
   GuestApiError,
   GuestApiService,
+  InvitationBatchesRepository,
   InvitationsRepository,
   LOAD_ERROR_MESSAGE,
   RealtimeService,
@@ -30,6 +31,7 @@ describe('core exports and error translation', () => {
     expect(EventContextService).toBeDefined();
     expect(roleGuard).toBeDefined();
     expect(EventsRepository).toBeDefined();
+    expect(InvitationBatchesRepository).toBeDefined();
     expect(InvitationsRepository).toBeDefined();
     expect(GiftsRepository).toBeDefined();
     expect(BudgetRepository).toBeDefined();
@@ -186,7 +188,7 @@ describe('core exports and error translation', () => {
       );
     });
 
-    it('translates invitation_event_mismatch, guest_not_in_invitation, individual_requires_one_guest and invalid_kind to generic save message', () => {
+    it('translates invitation_event_mismatch, guest_not_in_invitation, individual_requires_one_guest, invalid_kind and batch_not_in_event to generic save message', () => {
       expect(toUserError({ message: 'invitation_event_mismatch' }).message).toBe(
         'No pudimos guardar el cambio. Inténtalo de nuevo.',
       );
@@ -199,6 +201,31 @@ describe('core exports and error translation', () => {
       expect(toUserError({ message: 'invalid_kind' }).message).toBe(
         'No pudimos guardar el cambio. Inténtalo de nuevo.',
       );
+      expect(toUserError({ message: 'batch_not_in_event' }).message).toBe(
+        'No pudimos guardar el cambio. Inténtalo de nuevo.',
+      );
+    });
+
+    it('translates invitation batch errors to exact user messages', () => {
+      expect(toUserError({ message: 'batch_deadline_after_start' }).message).toBe(
+        'La fecha límite de cada tanda debe ser anterior o igual a la fecha del evento.',
+      );
+      expect(
+        toUserError({
+          message:
+            'update or delete on table "invitation_batches" violates foreign key constraint "invitations_batch_id_fkey" on table "invitations"',
+        }).message,
+      ).toBe('Esta tanda tiene invitaciones. Muévelas a otra tanda antes de borrarla.');
+      expect(
+        toUserError({
+          message:
+            'insert or update on table "invitations" violates foreign key constraint "invitations_batch_id_fkey"',
+        }).message,
+      ).toBe('Esa tanda ya no existe. Elige otra.');
+      expect(
+        toUserError({ message: 'violates check constraint "invitation_batches_name_length"' })
+          .message,
+      ).toBe('El nombre de la tanda debe tener entre 1 y 60 caracteres.');
     });
 
     it('uses fallback when provided for unknown errors', () => {

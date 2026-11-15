@@ -10,6 +10,16 @@
   }
 }
 
+.batch-filter {
+  --background: var(--ion-color-light);
+  --border-radius: var(--radius-sm);
+  --padding-start: var(--space-md);
+  --padding-end: var(--space-md);
+  min-height: 40px;
+  margin-bottom: var(--space-xs);
+  font-size: 0.875rem;
+}
+
 .loading-container {
   display: flex;
   align-items: center;
@@ -73,6 +83,13 @@
 .summary-text {
   margin: 0;
   color: var(--ion-color-medium);
+}
+
+.invitation-meta-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
 }
 
 .send-state {

@@ -61,6 +61,7 @@ import {
   budgetCardText,
   daysUntil,
   formatTime,
+  nextDeadline,
   tasksCardText,
   toBogotaDateInput,
 } from '../../../core';
@@ -230,7 +231,15 @@ export class EventDashboardPage implements ViewWillEnter, ViewWillLeave {
 
   readonly deadlineDateText = computed<string>(() => {
     const currentEvent = this.event();
-    return currentEvent ? formatDayMonthBogota(currentEvent.rsvp_deadline) : '';
+    if (!currentEvent) {
+      return '';
+    }
+    const deadline = nextDeadline(
+      currentEvent.rsvp_deadline,
+      this.eventContext.batches(),
+      this.now(),
+    );
+    return formatDayMonthBogota(deadline);
   });
 
   private stopRealtime: (() => void) | null = null;

@@ -19,4 +19,5 @@ export interface InvitationInput {
   group_name: string;
   phone: string | null;
   guests: InvitationGuestInput[];
+  batch_id?: string | null;
 }

@@ -17,6 +17,7 @@ import {
 } from '@angular/forms';
 import { Router } from '@angular/router';
 import {
+  AlertController,
   IonBackButton,
   IonButton,
   IonButtons,
@@ -24,6 +25,7 @@ import {
   IonCardContent,
   IonContent,
   IonHeader,
+  IonIcon,
   IonInput,
   IonItem,
   IonList,
@@ -31,18 +33,25 @@ import {
   IonTextarea,
   IonTitle,
   IonToolbar,
+  ModalController,
   ToastController,
   ViewWillEnter,
 } from '@ionic/angular';
+import { addIcons } from 'ionicons';
+import { addOutline, createOutline, trashOutline } from 'ionicons/icons';
 import {
   DEFAULT_THEME,
   EventContextService,
   EventInput,
   EventsRepository,
+  FIRST_BATCH_LABEL,
+  InvitationBatchRow,
+  InvitationBatchesRepository,
   ThemeId,
   ThemeService,
   endOfDayBogota,
   formatCopInput,
+  formatDayMonth,
   fromBogotaDateTimeInput,
   parseCopInput,
   themeOptionsFor,
@@ -50,6 +59,7 @@ import {
   toBogotaDateTimeInput,
 } from '../../../core';
 import { CopInputDirective, EmptyStateComponent, ThemePickerComponent } from '../../../shared';
+import { BatchFormComponent } from './batch-form.component';
 
 function requiredTrimmedValidator(
   control: AbstractControl<string>,
@@ -132,6 +142,7 @@ function toNullableBudget(value: string | number | null | undefined): number | n
     IonInput,
     IonTextarea,
     IonButton,
+    IonIcon,
     EmptyStateComponent,
     ThemePickerComponent,
     CopInputDirective,
@@ -141,8 +152,11 @@ export class EventFormPage implements ViewWillEnter {
   private readonly fb = inject(FormBuilder);
   private readonly eventContext = inject(EventContextService);
   private readonly eventsRepo = inject(EventsRepository);
+  private readonly batchesRepo = inject(InvitationBatchesRepository);
   private readonly themeService = inject(ThemeService);
   private readonly router = inject(Router);
+  private readonly modalCtrl = inject(ModalController);
+  private readonly alertCtrl = inject(AlertController);
   private readonly toastCtrl = inject(ToastController);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -152,8 +166,16 @@ export class EventFormPage implements ViewWillEnter {
   readonly loading = signal<boolean>(false);
   readonly loadError = signal<string | null>(null);
   readonly submitting = signal<boolean>(false);
+  readonly deletingBatchId = signal<string | null>(null);
+  private openingBatch = false;
 
   readonly isEditMode = computed<boolean>(() => Boolean(this.id()));
+  readonly batches = this.eventContext.batches;
+  readonly firstBatchLabel = FIRST_BATCH_LABEL;
+  readonly firstBatchDeadlineLabel = computed<string>(() => {
+    const current = this.eventContext.event();
+    return current ? formatDayMonth(current.rsvp_deadline) : '';
+  });
 
   readonly pageTitle = computed<string>(() =>
     this.isEditMode() ? 'Editar evento' : 'Nuevo evento',
@@ -185,6 +207,8 @@ export class EventFormPage implements ViewWillEnter {
   );
 
   constructor() {
+    addIcons({ addOutline, createOutline, trashOutline });
+
     this.form.controls.theme_id.valueChanges
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe((themeId) => {
@@ -205,6 +229,100 @@ export class EventFormPage implements ViewWillEnter {
     const eventId = this.id();
     if (eventId) {
       void this.loadForEdit(eventId);
+    }
+  }
+
+  formatBatchDeadline(rsvpDeadline: string): string {
+    return formatDayMonth(rsvpDeadline);
+  }
+
+  async openBatchModal(batch?: InvitationBatchRow): Promise<void> {
+    const eventId = this.id();
+    const currentEvent = this.eventContext.event();
+    if (!eventId || !currentEvent || this.deletingBatchId() !== null || this.openingBatch) {
+      return;
+    }
+    this.openingBatch = true;
+    try {
+      await this.presentBatchModal(eventId, currentEvent.starts_at, batch);
+    } finally {
+      this.openingBatch = false;
+    }
+  }
+
+  private async presentBatchModal(
+    eventId: string,
+    eventStartsAt: string,
+    batch?: InvitationBatchRow,
+  ): Promise<void> {
+    const modal = await this.modalCtrl.create({
+      component: BatchFormComponent,
+      componentProps: {
+        eventId,
+        batch,
+        eventStartsAt,
+        existingBatchCount: this.batches().length,
+      },
+      breakpoints: [0, 0.9, 1],
+      initialBreakpoint: 0.9,
+      expandToScroll: false,
+    });
+
+    await modal.present();
+    const { role, data } = await modal.onWillDismiss<InvitationBatchRow>();
+    if (role === 'saved' && data) {
+      const current = this.eventContext.batches();
+      const exists = current.some((item) => item.id === data.id);
+      const next = exists
+        ? current.map((item) => (item.id === data.id ? data : item))
+        : [...current, data];
+      this.eventContext.setBatches(next);
+    }
+  }
+
+  async confirmDeleteBatch(batch: InvitationBatchRow): Promise<void> {
+    if (this.deletingBatchId() !== null) {
+      return;
+    }
+
+    const alert = await this.alertCtrl.create({
+      header: `¿Borrar la tanda ${batch.name}?`,
+      message: 'Solo se puede borrar si no tiene invitaciones.',
+      cssClass: 'convite-alert',
+      buttons: [
+        {
+          text: 'Cancelar',
+          role: 'cancel',
+          cssClass: 'convite-alert__cancel',
+        },
+        {
+          text: 'Borrar',
+          role: 'destructive',
+          cssClass: 'convite-alert__confirm',
+        },
+      ],
+    });
+
+    await alert.present();
+    const { role } = await alert.onDidDismiss();
+    if (role !== 'destructive') {
+      return;
+    }
+
+    this.deletingBatchId.set(batch.id);
+    try {
+      await this.batchesRepo.remove(batch.id);
+      this.eventContext.setBatches(
+        this.eventContext.batches().filter((item) => item.id !== batch.id),
+      );
+    } catch (err) {
+      const message =
+        err instanceof Error && err.message
+          ? err.message
+          : 'No pudimos borrar la tanda. Inténtalo de nuevo.';
+      await this.showErrorToast(message);
+    } finally {
+      this.deletingBatchId.set(null);
     }
   }
 

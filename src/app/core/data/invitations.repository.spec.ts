@@ -43,6 +43,7 @@ describe('InvitationsRepository', () => {
         data: {
           id: 'inv-1',
           event_id: 'event-1',
+          batch_id: null,
           group_name: 'Familia Ejemplo',
           kind: 'group',
           phone: '+573001234567',
@@ -81,6 +82,8 @@ describe('InvitationsRepository', () => {
         ],
         p_kind: 'group',
         p_known_guest_ids: ['guest-1', 'guest-old'],
+        p_batch_id: null,
+        p_set_batch: false,
       });
       expect(result.id).toBe('inv-1');
       expect(result.guests).toHaveLength(1);
@@ -91,6 +94,7 @@ describe('InvitationsRepository', () => {
         data: {
           id: 'inv-new',
           event_id: 'event-1',
+          batch_id: null,
           group_name: 'Familia Ejemplo',
           kind: 'group',
           phone: '+573001234567',
@@ -109,6 +113,54 @@ describe('InvitationsRepository', () => {
         'save_invitation',
         expect.objectContaining({
           p_known_guest_ids: [],
+          p_batch_id: null,
+          p_set_batch: false,
+        }),
+      );
+    });
+
+    it('envía p_set_batch y p_batch_id según el valor de batch_id', async () => {
+      mockSupabase.client.rpc.mockResolvedValue({
+        data: {
+          id: 'inv-1',
+          event_id: 'event-1',
+          batch_id: null,
+          group_name: 'Familia Ejemplo',
+          kind: 'group',
+          phone: null,
+          code: 'CODE1',
+          created_at: '2026-10-25T00:00:00Z',
+          updated_at: '2026-10-25T00:00:00Z',
+          whatsapp_sent_at: null,
+          guests: [],
+        },
+        error: null,
+      });
+
+      await repository.save('event-1', 'inv-1', { ...input, phone: null, batch_id: undefined });
+      expect(mockSupabase.client.rpc).toHaveBeenLastCalledWith(
+        'save_invitation',
+        expect.objectContaining({
+          p_batch_id: null,
+          p_set_batch: false,
+        }),
+      );
+
+      await repository.save('event-1', 'inv-1', { ...input, phone: null, batch_id: null });
+      expect(mockSupabase.client.rpc).toHaveBeenLastCalledWith(
+        'save_invitation',
+        expect.objectContaining({
+          p_batch_id: null,
+          p_set_batch: true,
+        }),
+      );
+
+      await repository.save('event-1', 'inv-1', { ...input, phone: null, batch_id: 'batch-2' });
+      expect(mockSupabase.client.rpc).toHaveBeenLastCalledWith(
+        'save_invitation',
+        expect.objectContaining({
+          p_batch_id: 'batch-2',
+          p_set_batch: true,
         }),
       );
     });
@@ -118,6 +170,7 @@ describe('InvitationsRepository', () => {
         data: {
           id: 'inv-1',
           event_id: 'event-1',
+          batch_id: null,
           group_name: 'Familia Ejemplo',
           kind: 'group',
           phone: null,
@@ -160,12 +213,14 @@ describe('InvitationsRepository', () => {
         error: { message: 'invitation_event_mismatch' },
       });
 
-      await expect(repository.save('event-1', 'inv-1', input)).rejects.toThrow();
+      await expect(repository.save('event-1', 'inv-1', input)).rejects.toThrow(
+        'No pudimos guardar el cambio. Inténtalo de nuevo.',
+      );
     });
   });
 
   describe('list', () => {
-    it('lista y ordena alfabéticamente por group_name', async () => {
+    it('lista, copia batch_id y ordena alfabéticamente por group_name', async () => {
       const mockQuery = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockResolvedValue({
@@ -173,6 +228,7 @@ describe('InvitationsRepository', () => {
             {
               id: 'inv-b',
               event_id: 'event-1',
+              batch_id: 'batch-2',
               group_name: 'Familia Zapata',
               kind: 'group',
               phone: null,
@@ -185,6 +241,7 @@ describe('InvitationsRepository', () => {
             {
               id: 'inv-a',
               event_id: 'event-1',
+              batch_id: null,
               group_name: 'Familia Álvarez',
               kind: 'group',
               phone: null,
@@ -202,7 +259,38 @@ describe('InvitationsRepository', () => {
 
       const items = await repository.list('event-1');
       expect(items[0].group_name).toBe('Familia Álvarez');
+      expect(items[0].batch_id).toBeNull();
       expect(items[1].group_name).toBe('Familia Zapata');
+      expect(items[1].batch_id).toBe('batch-2');
+    });
+  });
+
+  describe('get', () => {
+    it('copia batch_id al consultar una invitación', async () => {
+      const mockQuery = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({
+          data: {
+            id: 'inv-1',
+            event_id: 'event-1',
+            batch_id: 'batch-1',
+            group_name: 'Familia Ejemplo',
+            kind: 'group',
+            phone: null,
+            code: 'CODE1',
+            created_at: '2026-10-25T00:00:00Z',
+            updated_at: '2026-10-25T00:00:00Z',
+            whatsapp_sent_at: null,
+            guests: [],
+          },
+          error: null,
+        }),
+      };
+      mockSupabase.client.from.mockReturnValue(mockQuery);
+
+      const item = await repository.get('inv-1');
+      expect(item?.batch_id).toBe('batch-1');
     });
   });
 

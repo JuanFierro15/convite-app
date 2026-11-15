@@ -3,6 +3,7 @@ import {
   Component,
   DestroyRef,
   computed,
+  effect,
   inject,
   input,
   signal,
@@ -26,12 +27,15 @@ import {
   IonSearchbar,
   IonSegment,
   IonSegmentButton,
+  IonSelect,
+  IonSelectOption,
   IonSpinner,
   IonTitle,
   IonToolbar,
   ModalController,
   SearchbarCustomEvent,
   SegmentCustomEvent,
+  SelectCustomEvent,
   ViewWillEnter,
 } from '@ionic/angular';
 import { addIcons } from 'ionicons';
@@ -45,11 +49,13 @@ import {
 import {
   AuthService,
   EventContextService,
+  FIRST_BATCH_LABEL,
   GuestRow,
   InvitationStatus,
   InvitationWithGuests,
   InvitationsRepository,
   RealtimeService,
+  batchLabel,
   invitationStatus,
   normalizeSearchText,
   paginate,
@@ -111,6 +117,8 @@ function formatInvitationSummary(guests: readonly GuestRow[]): string {
     IonSearchbar,
     IonSegment,
     IonSegmentButton,
+    IonSelect,
+    IonSelectOption,
     IonLabel,
     IonContent,
     IonCard,
@@ -144,6 +152,21 @@ export class InvitationListPage implements ViewWillEnter {
   readonly error = signal<string | null>(null);
   readonly searchQuery = signal<string>('');
   readonly selectedFilter = signal<InvitationFilter>('all');
+  readonly selectedBatchFilter = signal<string>('all');
+
+  readonly batches = this.eventContext.batches;
+  readonly firstBatchLabel = FIRST_BATCH_LABEL;
+  readonly showBatchFilter = computed<boolean>(() => this.batches().length > 0);
+  readonly effectiveBatchFilter = computed<string>(() => {
+    const current = this.selectedBatchFilter();
+    if (current === 'all' || current === 'first') {
+      return current;
+    }
+    return this.batches().some((batch) => batch.id === current) ? current : 'all';
+  });
+  readonly showBatchBadges = computed<boolean>(
+    () => this.batches().length > 0 && this.effectiveBatchFilter() === 'all',
+  );
 
   private stopRealtime: (() => void) | null = null;
   private watchedEventId: string | null = null;
@@ -162,9 +185,30 @@ export class InvitationListPage implements ViewWillEnter {
     })),
   );
 
+  readonly batchFilteredItems = computed<InvitationListItem[]>(() => {
+    const items = this.mappedItems();
+    const batches = this.batches();
+    if (batches.length === 0) {
+      return items;
+    }
+
+    const batchFilter = this.effectiveBatchFilter();
+    if (batchFilter === 'all') {
+      return items;
+    }
+    if (batchFilter === 'first') {
+      const batchIds = new Set(batches.map((batch) => batch.id));
+      return items.filter(
+        ({ invitation }) =>
+          invitation.batch_id === null || !batchIds.has(invitation.batch_id),
+      );
+    }
+    return items.filter(({ invitation }) => invitation.batch_id === batchFilter);
+  });
+
   readonly searchedItems = computed<InvitationListItem[]>(() => {
     const query = normalizeSearchText(this.searchQuery()).trim();
-    const items = this.mappedItems();
+    const items = this.batchFilteredItems();
     if (!query) {
       return items;
     }
@@ -249,6 +293,17 @@ export class InvitationListPage implements ViewWillEnter {
       'chevron-back-outline': chevronBackOutline,
       'chevron-forward-outline': chevronForwardOutline,
     });
+
+    effect(() => {
+      const current = this.selectedBatchFilter();
+      if (current !== 'all' && current !== 'first') {
+        const exists = this.batches().some((batch) => batch.id === current);
+        if (!exists) {
+          this.selectedBatchFilter.set('all');
+          this.currentPage.set(1);
+        }
+      }
+    });
   }
 
   ionViewWillEnter(): void {
@@ -275,6 +330,18 @@ export class InvitationListPage implements ViewWillEnter {
       this.selectedFilter.set(value);
       this.currentPage.set(1);
     }
+  }
+
+  onBatchFilterChange(event: SelectCustomEvent): void {
+    const value = event.detail.value;
+    if (typeof value === 'string' && value.length > 0) {
+      this.selectedBatchFilter.set(value);
+      this.currentPage.set(1);
+    }
+  }
+
+  itemBatchLabel(batchId: string | null): string {
+    return batchLabel(batchId, this.batches());
   }
 
   goToPreviousPage(): void {
@@ -380,6 +447,7 @@ export class InvitationListPage implements ViewWillEnter {
     if (this.watchedEventId !== null && this.watchedEventId !== eventId) {
       this.hasLoadedOnce = false;
       this.invitations.set([]);
+      this.selectedBatchFilter.set('all');
       this.error.set(null);
     }
 

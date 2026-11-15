@@ -3,9 +3,11 @@ import { Capacitor } from '@capacitor/core';
 import { Share } from '@capacitor/share';
 import { AlertController, ToastController } from '@ionic/angular';
 import {
+  EventContextService,
   EventRow,
   InvitationRow,
   InvitationsRepository,
+  effectiveDeadline,
   invitationMessage,
   toInvitationKind,
   whatsappUrl,
@@ -13,12 +15,13 @@ import {
 
 @Injectable({ providedIn: 'root' })
 export class InvitationActionsService {
+  private readonly eventContext = inject(EventContextService);
   private readonly invitationsRepository = inject(InvitationsRepository);
   private readonly alertController = inject(AlertController);
   private readonly toastController = inject(ToastController);
 
   whatsAppMessage(
-    invitation: Pick<InvitationRow, 'group_name' | 'code' | 'kind'>,
+    invitation: Pick<InvitationRow, 'group_name' | 'code' | 'kind' | 'batch_id'>,
     event: Pick<EventRow, 'name' | 'starts_at' | 'rsvp_deadline'>,
   ): string {
     return invitationMessage({
@@ -26,13 +29,17 @@ export class InvitationActionsService {
       groupName: invitation.group_name,
       eventName: event.name,
       startsAt: event.starts_at,
-      rsvpDeadline: event.rsvp_deadline,
+      rsvpDeadline: effectiveDeadline(
+        invitation.batch_id,
+        this.eventContext.batches(),
+        event.rsvp_deadline,
+      ),
       link: this.invitationsRepository.guestLink(invitation.code),
     });
   }
 
   async shareWhatsApp(
-    invitation: Pick<InvitationRow, 'id' | 'group_name' | 'phone' | 'code' | 'kind'>,
+    invitation: Pick<InvitationRow, 'id' | 'group_name' | 'phone' | 'code' | 'kind' | 'batch_id'>,
     event: Pick<EventRow, 'name' | 'starts_at' | 'rsvp_deadline'>,
     options: { notifyMarkFailure?: boolean; toastAnchor?: string } = {},
   ): Promise<{ opened: boolean; marked: boolean }> {
