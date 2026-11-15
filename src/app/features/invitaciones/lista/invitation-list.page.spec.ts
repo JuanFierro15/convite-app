@@ -7,6 +7,7 @@ import {
   EventContextService,
   EventRole,
   EventRow,
+  InvitationBatchRow,
   InvitationWithGuests,
   InvitationsRepository,
   RealtimeService,
@@ -31,6 +32,7 @@ describe('InvitationListPage', () => {
     event: ReturnType<typeof signal<EventRow | null>>;
     role: ReturnType<typeof signal<EventRole | null>>;
     isOwner: ReturnType<typeof signal<boolean>>;
+    batches: ReturnType<typeof signal<InvitationBatchRow[]>>;
     error: ReturnType<typeof signal<string | null>>;
     loading: ReturnType<typeof signal<boolean>>;
     load: ReturnType<typeof vi.fn>;
@@ -148,6 +150,7 @@ describe('InvitationListPage', () => {
       event: signal(null),
       role: signal('owner'),
       isOwner: signal(true),
+      batches: signal<InvitationBatchRow[]>([]),
       error: signal(null),
       loading: signal(false),
       load: vi.fn().mockResolvedValue(undefined),
@@ -536,6 +539,215 @@ describe('InvitationListPage', () => {
       fixture.detectChanges();
 
       expect(component.totalsLabel()).toBe('25 invitaciones · 25 personas');
+    });
+  });
+
+  describe('filtro por tanda', () => {
+    const batchTwo: InvitationBatchRow = {
+      id: 'batch-2',
+      event_id: 'evt-123',
+      name: 'Segunda tanda',
+      rsvp_deadline: '2026-11-20T23:59:59-05:00',
+      created_at: '2026-11-01T10:00:00-05:00',
+    };
+
+    const batchThree: InvitationBatchRow = {
+      id: 'batch-3',
+      event_id: 'evt-123',
+      name: 'Tercera tanda',
+      rsvp_deadline: '2026-11-25T23:59:59-05:00',
+      created_at: '2026-11-02T10:00:00-05:00',
+    };
+
+    function makeInvitation(
+      id: string,
+      groupName: string,
+      batchId: string | null,
+      rsvp: 'pending' | 'accepted' | 'declined',
+      phone: string | null = '+573000000001',
+      sentAt: string | null = null,
+    ): InvitationWithGuests {
+      return {
+        id,
+        event_id: 'evt-123',
+        batch_id: batchId,
+        group_name: groupName,
+        kind: 'group',
+        phone,
+        code: `C-${id}`,
+        created_at: '2026-10-01T00:00:00-05:00',
+        updated_at: '2026-10-01T00:00:00-05:00',
+        whatsapp_sent_at: sentAt,
+        guests: [
+          {
+            id: `g-${id}`,
+            invitation_id: id,
+            event_id: 'evt-123',
+            full_name: `Integrante ${groupName}`,
+            rsvp,
+            rsvp_updated_at: null,
+            arrived_at: null,
+            arrived_by: null,
+            sort_order: 0,
+            created_at: '2026-10-01T00:00:00-05:00',
+          },
+        ],
+      };
+    }
+
+    it('sin tandas no muestra el selector ni etiquetas de tanda en las cards', () => {
+      mockEventContext.batches.set([]);
+      component.invitations.set([invWithoutSend, invSent]);
+      component.loading.set(false);
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('ion-select.batch-filter')).toBeNull();
+      expect(fixture.nativeElement.querySelectorAll('.batch-badge').length).toBe(0);
+    });
+
+    it('con 3 invitaciones en primera tanda y 2 en segunda actualiza conteos, totales, badges y mantiene pendingSendCount', () => {
+      mockEventContext.batches.set([batchTwo, batchThree]);
+      const items: InvitationWithGuests[] = [
+        makeInvitation('inv-p1', 'Familia Alfa', null, 'pending', '+573001111111', null),
+        makeInvitation('inv-p2', 'Familia Beta', null, 'accepted', '+573002222222', null),
+        makeInvitation('inv-p3', 'Familia Gamma', null, 'declined', null, null),
+        makeInvitation('inv-s1', 'Familia Delta', 'batch-2', 'pending', '+573003333333', null),
+        makeInvitation('inv-s2', 'Familia Epsilon', 'batch-2', 'accepted', null, null),
+      ];
+      component.invitations.set(items);
+      component.loading.set(false);
+      fixture.detectChanges();
+
+      const select = fixture.nativeElement.querySelector('ion-select.batch-filter');
+      expect(select).not.toBeNull();
+      const options = Array.from(
+        select.querySelectorAll('ion-select-option'),
+      ) as HTMLElement[];
+      expect(options.map((opt) => opt.textContent?.trim())).toEqual([
+        'Todas las tandas',
+        'Primera tanda',
+        'Segunda tanda',
+        'Tercera tanda',
+      ]);
+
+      // En "Todas las tandas" cada card muestra su etiqueta de tanda
+      const badges = Array.from(fixture.nativeElement.querySelectorAll('.batch-badge')).map(
+        (el: any) => el.textContent?.trim(),
+      );
+      expect(badges).toEqual([
+        'Primera tanda',
+        'Primera tanda',
+        'Primera tanda',
+        'Segunda tanda',
+        'Segunda tanda',
+      ]);
+      expect(component.pendingSendCount()).toBe(3);
+
+      // Filtrar por Primera tanda
+      component.onBatchFilterChange({ detail: { value: 'first' } } as never);
+      fixture.detectChanges();
+
+      expect(component.filterCounts()).toEqual({
+        all: 3,
+        pending: 1,
+        partial: 0,
+        accepted: 1,
+        declined: 1,
+      });
+      expect(component.totalsLabel()).toBe('3 invitaciones · 3 personas');
+      expect(component.filteredItems().length).toBe(3);
+      expect(fixture.nativeElement.querySelectorAll('.batch-badge').length).toBe(0);
+      expect(component.pendingSendCount()).toBe(3);
+
+      // Filtrar por Segunda tanda
+      component.onBatchFilterChange({ detail: { value: 'batch-2' } } as never);
+      fixture.detectChanges();
+
+      expect(component.filterCounts()).toEqual({
+        all: 2,
+        pending: 1,
+        partial: 0,
+        accepted: 1,
+        declined: 0,
+      });
+      expect(component.totalsLabel()).toBe('2 invitaciones · 2 personas');
+      expect(component.filteredItems().map((item) => item.invitation.id)).toEqual([
+        'inv-s1',
+        'inv-s2',
+      ]);
+      expect(component.pendingSendCount()).toBe(3);
+    });
+
+    it('combina filtro de tanda, búsqueda y filtro de estado', () => {
+      mockEventContext.batches.set([batchTwo]);
+      component.invitations.set([
+        makeInvitation('inv-1', 'Familia Castro', null, 'accepted'),
+        makeInvitation('inv-2', 'Familia Castro', 'batch-2', 'pending'),
+        makeInvitation('inv-3', 'Familia Castro', 'batch-2', 'accepted'),
+        makeInvitation('inv-4', 'Familia López', 'batch-2', 'accepted'),
+      ]);
+      component.loading.set(false);
+      fixture.detectChanges();
+
+      component.onBatchFilterChange({ detail: { value: 'batch-2' } } as never);
+      component.onSearchInput({ detail: { value: 'Castro' } } as never);
+      expect(component.filterCounts()).toEqual({
+        all: 2,
+        pending: 1,
+        partial: 0,
+        accepted: 1,
+        declined: 0,
+      });
+
+      component.onFilterChange({ detail: { value: 'accepted' } } as never);
+      fixture.detectChanges();
+
+      expect(component.filteredItems().map((item) => item.invitation.id)).toEqual(['inv-3']);
+      expect(component.totalsLabel()).toBe('1 invitación · 1 persona');
+    });
+
+    it('cambiar el filtro de tanda estando en la página 2 vuelve a la página 1', () => {
+      mockEventContext.batches.set([batchTwo]);
+      const manyInvitations = Array.from({ length: 15 }, (_, idx) =>
+        makeInvitation(
+          `inv-page-${idx + 1}`,
+          `Familia Pagina ${idx + 1}`,
+          idx >= 8 ? 'batch-2' : null,
+          'pending',
+        ),
+      );
+      component.invitations.set(manyInvitations);
+      component.loading.set(false);
+      fixture.detectChanges();
+
+      component.goToNextPage();
+      expect(component.currentPage()).toBe(2);
+
+      component.onBatchFilterChange({ detail: { value: 'batch-2' } } as never);
+      expect(component.currentPage()).toBe(1);
+    });
+
+    it('si la tanda filtrada desaparece de batches(), el filtro vuelve a "Todas las tandas"', () => {
+      mockEventContext.batches.set([batchTwo, batchThree]);
+      component.invitations.set([
+        makeInvitation('inv-1', 'Familia Uno', null, 'pending'),
+        makeInvitation('inv-2', 'Familia Dos', 'batch-2', 'pending'),
+        makeInvitation('inv-3', 'Familia Tres', 'batch-3', 'pending'),
+      ]);
+      component.loading.set(false);
+      fixture.detectChanges();
+
+      component.onBatchFilterChange({ detail: { value: 'batch-2' } } as never);
+      fixture.detectChanges();
+      expect(component.filteredItems().map((item) => item.invitation.id)).toEqual(['inv-2']);
+
+      // Se borra batch-2
+      mockEventContext.batches.set([batchThree]);
+      fixture.detectChanges();
+
+      expect(component.selectedBatchFilter()).toBe('all');
+      expect(component.effectiveBatchFilter()).toBe('all');
+      expect(component.filteredItems().length).toBe(3);
     });
   });
 });

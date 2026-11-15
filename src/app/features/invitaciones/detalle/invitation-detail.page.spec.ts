@@ -7,6 +7,7 @@ import {
   EventContextService,
   EventRole,
   EventRow,
+  InvitationBatchRow,
   InvitationWithGuests,
   InvitationsRepository,
   RealtimeService,
@@ -26,6 +27,7 @@ describe('InvitationDetailPage', () => {
     event: ReturnType<typeof signal<EventRow | null>>;
     role: ReturnType<typeof signal<EventRole | null>>;
     isOwner: ReturnType<typeof signal<boolean>>;
+    batches: ReturnType<typeof signal<InvitationBatchRow[]>>;
     error: ReturnType<typeof signal<string | null>>;
     loading: ReturnType<typeof signal<boolean>>;
     load: ReturnType<typeof vi.fn>;
@@ -95,6 +97,7 @@ describe('InvitationDetailPage', () => {
       event: signal(null),
       role: signal('owner'),
       isOwner: signal(true),
+      batches: signal<InvitationBatchRow[]>([]),
       error: signal(null),
       loading: signal(false),
       load: vi.fn().mockResolvedValue(undefined),
@@ -253,6 +256,68 @@ describe('InvitationDetailPage', () => {
 
       const buttonValues = buttons.map((btn) => btn.getAttribute('value'));
       expect(buttonValues).toEqual(['accepted', 'pending', 'declined']);
+    });
+  });
+
+  describe('información de tanda', () => {
+    const batchSecond: InvitationBatchRow = {
+      id: 'batch-2',
+      event_id: 'evt-123',
+      name: 'Segunda tanda',
+      rsvp_deadline: '2026-11-20T23:59:59-05:00',
+      created_at: '2026-11-01T10:00:00-05:00',
+    };
+
+    const batchThird: InvitationBatchRow = {
+      id: 'batch-3',
+      event_id: 'evt-123',
+      name: 'Última tanda',
+      rsvp_deadline: '2026-11-25T23:59:59-05:00',
+      created_at: '2026-11-02T10:00:00-05:00',
+    };
+
+    it('sin tandas no muestra la fila de tanda', () => {
+      mockEventContext.batches.set([]);
+      mockEventContext.event.set({
+        id: 'evt-123',
+        name: 'Baby Shower',
+        starts_at: '2026-11-29T15:00:00-05:00',
+        rsvp_deadline: '2026-11-15T23:59:59-05:00',
+      } as EventRow);
+      component.invitation.set(sampleInvitation);
+      component.loading.set(false);
+      fixture.detectChanges();
+
+      expect(fixture.nativeElement.querySelector('.batch-info-item')).toBeNull();
+    });
+
+    it('con tandas muestra la fecha de su tanda y no la del evento', () => {
+      mockEventContext.event.set({
+        id: 'evt-123',
+        name: 'Baby Shower',
+        starts_at: '2026-11-29T15:00:00-05:00',
+        rsvp_deadline: '2026-11-15T23:59:59-05:00',
+      } as EventRow);
+      mockEventContext.batches.set([batchSecond, batchThird]);
+      component.invitation.set({ ...sampleInvitation, batch_id: 'batch-3' });
+      component.loading.set(false);
+      fixture.detectChanges();
+
+      const row = fixture.nativeElement.querySelector('.batch-info-item');
+      expect(row).not.toBeNull();
+      expect(row.textContent?.trim()).toBe(
+        'Tanda: Última tanda · responde hasta el 25 de noviembre',
+      );
+      expect(row.textContent).not.toContain('15 de noviembre');
+
+      // También verifica primera tanda cuando batch_id es null
+      component.invitation.set({ ...sampleInvitation, batch_id: null });
+      fixture.detectChanges();
+
+      const firstRow = fixture.nativeElement.querySelector('.batch-info-item');
+      expect(firstRow?.textContent?.trim()).toBe(
+        'Tanda: Primera tanda · responde hasta el 15 de noviembre',
+      );
     });
   });
 });

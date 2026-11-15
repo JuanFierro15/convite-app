@@ -34,6 +34,8 @@ import {
   IonReorderGroup,
   IonSegment,
   IonSegmentButton,
+  IonSelect,
+  IonSelectOption,
   IonSpinner,
   IonTitle,
   IonToolbar,
@@ -44,6 +46,8 @@ import {
 import { addIcons } from 'ionicons';
 import { closeOutline, personAddOutline, trashOutline } from 'ionicons/icons';
 import {
+  EventContextService,
+  FIRST_BATCH_LABEL,
   InvitationGuestInput,
   InvitationInput,
   InvitationKind,
@@ -52,7 +56,9 @@ import {
   PhoneStatus,
   caretForDigits,
   countDigitsBefore,
+  formatDayMonth,
   formatPhone,
+  latestBatchId,
   newId,
   parsePhoneInput,
   toInvitationKind,
@@ -110,6 +116,8 @@ function minOneGuestValidator(control: AbstractControl): ValidationErrors | null
     IonSpinner,
     IonSegment,
     IonSegmentButton,
+    IonSelect,
+    IonSelectOption,
     IonLabel,
   ],
 })
@@ -117,6 +125,7 @@ export class InvitationFormComponent implements OnInit, OnDestroy {
   private readonly fb = inject(FormBuilder);
   private readonly modalController = inject(ModalController);
   private readonly alertController = inject(AlertController);
+  private readonly eventContext = inject(EventContextService);
   private readonly invitationsRepository = inject(InvitationsRepository);
   private readonly invitationActions = inject(InvitationActionsService);
 
@@ -130,6 +139,23 @@ export class InvitationFormComponent implements OnInit, OnDestroy {
   readonly kind = signal<InvitationKind>('group');
   readonly phoneStatus = signal<PhoneStatus>('empty');
   readonly duplicatePhoneWarning = signal<string | null>(null);
+
+  readonly batches = this.eventContext.batches;
+  readonly showBatchSelect = computed<boolean>(() => this.batches().length > 0);
+  readonly batchOptions = computed(() => {
+    const eventDeadline = this.eventContext.event()?.rsvp_deadline;
+    const firstLabel = eventDeadline
+      ? `${FIRST_BATCH_LABEL} · ${formatDayMonth(eventDeadline)}`
+      : FIRST_BATCH_LABEL;
+
+    return [
+      { value: 'first', label: firstLabel },
+      ...this.batches().map((batch) => ({
+        value: batch.id,
+        label: `${batch.name} · ${formatDayMonth(batch.rsvp_deadline)}`,
+      })),
+    ];
+  });
 
   private invitationId = '';
   private initialSnapshot = '';
@@ -148,6 +174,7 @@ export class InvitationFormComponent implements OnInit, OnDestroy {
   readonly form = this.fb.nonNullable.group({
     kind: this.fb.nonNullable.control<InvitationKind>('group'),
     group_name: ['', [Validators.required, Validators.maxLength(120), notBlankValidator]],
+    batch_id: ['first'],
     phone: ['', [phoneValidator]],
     guests: this.fb.array<GuestFormGroup>([], [minOneGuestValidator]),
   });
@@ -202,10 +229,27 @@ export class InvitationFormComponent implements OnInit, OnDestroy {
       this.guestsArray.push(this.createGuestControl(''));
     }
 
+    this.form.controls.batch_id.setValue(this.resolveInitialBatchValue(existing));
+
     this.initialSnapshot = this.snapshot();
     if (this.discardGuard) {
       this.discardGuard.hasChanges = () => this.hasChanges();
     }
+  }
+
+  private resolveInitialBatchValue(existing?: InvitationWithGuests): string {
+    const batches = this.batches();
+    if (batches.length === 0) {
+      return 'first';
+    }
+    if (existing) {
+      const existingBatchId = existing.batch_id;
+      if (existingBatchId && batches.some((batch) => batch.id === existingBatchId)) {
+        return existingBatchId;
+      }
+      return 'first';
+    }
+    return latestBatchId(batches) ?? 'first';
   }
 
   hasChanges(): boolean {
@@ -218,6 +262,7 @@ export class InvitationFormComponent implements OnInit, OnDestroy {
   private snapshot(): string {
     const rawKind = this.kind();
     const groupName = this.form.controls.group_name.value.trim();
+    const batchId = this.showBatchSelect() ? this.form.controls.batch_id.value : 'first';
     const phoneRaw = this.form.controls.phone.value ?? '';
     const phoneDigits = phoneRaw.replace(/\D/g, '');
     const guestNames =
@@ -228,6 +273,7 @@ export class InvitationFormComponent implements OnInit, OnDestroy {
     return JSON.stringify({
       kind: rawKind,
       groupName,
+      batchId,
       phoneDigits,
       guestNames,
     });
@@ -534,6 +580,9 @@ export class InvitationFormComponent implements OnInit, OnDestroy {
       phone: raw.phone.trim() ? raw.phone : null,
       guests: guestsPayload,
     };
+    if (this.showBatchSelect()) {
+      payload.batch_id = raw.batch_id === 'first' ? null : raw.batch_id;
+    }
 
     const targetEventId = this.invitation ? this.invitation.event_id : this.eventId;
 

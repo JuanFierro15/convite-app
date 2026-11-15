@@ -18,6 +18,22 @@
       (ionInput)="onSearchInput($event)"
     ></ion-searchbar>
 
+    @if (showBatchFilter()) {
+      <ion-select
+        class="batch-filter"
+        label="Tanda"
+        interface="popover"
+        [value]="effectiveBatchFilter()"
+        (ionChange)="onBatchFilterChange($event)"
+      >
+        <ion-select-option value="all">Todas las tandas</ion-select-option>
+        <ion-select-option value="first">{{ firstBatchLabel }}</ion-select-option>
+        @for (batch of batches(); track batch.id) {
+          <ion-select-option [value]="batch.id">{{ batch.name }}</ion-select-option>
+        }
+      </ion-select>
+    }
+
     <ion-segment
       scrollable="true"
       [value]="selectedFilter()"
@@ -94,15 +110,23 @@
 
                 <p class="text-body summary-text">{{ item.summary }}</p>
 
-                <p
-                  class="text-label send-state"
-                  [class.send-state--sent]="item.invitation.whatsapp_sent_at !== null"
-                >
-                  @if (item.invitation.whatsapp_sent_at !== null) {
-                    <ion-icon name="checkmark-circle" aria-hidden="true"></ion-icon>
+                <div class="invitation-meta-row">
+                  <p
+                    class="text-label send-state"
+                    [class.send-state--sent]="item.invitation.whatsapp_sent_at !== null"
+                  >
+                    @if (item.invitation.whatsapp_sent_at !== null) {
+                      <ion-icon name="checkmark-circle" aria-hidden="true"></ion-icon>
+                    }
+                    {{ sendStateLabel(item.invitation) }}
+                  </p>
+
+                  @if (showBatchBadges()) {
+                    <span class="badge-soft-medium text-label batch-badge">
+                      {{ itemBatchLabel(item.invitation.batch_id) }}
+                    </span>
                   }
-                  {{ sendStateLabel(item.invitation) }}
-                </p>
+                </div>
 
                 @if (item.invitation.guests.length > 0) {
                   <div class="guests-chips">

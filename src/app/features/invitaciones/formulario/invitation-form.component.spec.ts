@@ -1,6 +1,12 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { signal } from '@angular/core';
 import { AlertController, IonInput, ModalController } from '@ionic/angular';
-import { InvitationsRepository } from '../../../core';
+import {
+  EventContextService,
+  EventRow,
+  InvitationBatchRow,
+  InvitationsRepository,
+} from '../../../core';
 import { InvitationActionsService } from '../invitation-actions.service';
 import { DiscardGuard } from './discard-guard';
 import { InvitationFormComponent } from './invitation-form.component';
@@ -8,6 +14,11 @@ import { InvitationFormComponent } from './invitation-form.component';
 describe('InvitationFormComponent', () => {
   let fixture: ComponentFixture<InvitationFormComponent>;
   let component: InvitationFormComponent;
+  let mockEventContext: {
+    event: ReturnType<typeof signal<EventRow | null>>;
+    batches: ReturnType<typeof signal<InvitationBatchRow[]>>;
+    load: ReturnType<typeof vi.fn>;
+  };
   let mockInvitationsRepo: {
     save: ReturnType<typeof vi.fn>;
     findPhoneInEvent: ReturnType<typeof vi.fn>;
@@ -16,9 +27,37 @@ describe('InvitationFormComponent', () => {
   let mockAlertCtrl: { create: ReturnType<typeof vi.fn> };
   let mockActionsService: { showError: ReturnType<typeof vi.fn> };
 
+  const sampleEvent = {
+    id: 'event-1',
+    name: 'Baby Shower Ejemplo',
+    starts_at: '2026-11-29T15:00:00-05:00',
+    rsvp_deadline: '2026-11-15T23:59:59-05:00',
+  } as EventRow;
+
+  const batchSecond: InvitationBatchRow = {
+    id: 'batch-2',
+    event_id: 'event-1',
+    name: 'Segunda tanda',
+    rsvp_deadline: '2026-11-20T23:59:59-05:00',
+    created_at: '2026-11-01T10:00:00-05:00',
+  };
+
+  const batchThird: InvitationBatchRow = {
+    id: 'batch-3',
+    event_id: 'event-1',
+    name: 'Última tanda',
+    rsvp_deadline: '2026-11-25T23:59:59-05:00',
+    created_at: '2026-11-02T10:00:00-05:00',
+  };
+
   beforeEach(async () => {
     vi.useFakeTimers();
 
+    mockEventContext = {
+      event: signal(sampleEvent),
+      batches: signal<InvitationBatchRow[]>([]),
+      load: vi.fn().mockResolvedValue(undefined),
+    };
     mockInvitationsRepo = {
       save: vi.fn().mockResolvedValue({
         id: 'inv-1',
@@ -49,6 +88,7 @@ describe('InvitationFormComponent', () => {
     await TestBed.configureTestingModule({
       imports: [InvitationFormComponent],
       providers: [
+        { provide: EventContextService, useValue: mockEventContext },
         { provide: InvitationsRepository, useValue: mockInvitationsRepo },
         { provide: ModalController, useValue: mockModalCtrl },
         { provide: AlertController, useValue: mockAlertCtrl },
@@ -485,6 +525,165 @@ describe('InvitationFormComponent', () => {
       expect(mockGuard.hasChanges()).toBe(true);
 
       component.form.controls.group_name.setValue('');
+      expect(mockGuard.hasChanges()).toBe(false);
+    });
+  });
+
+  describe('selector de tanda', () => {
+    it('sin tandas oculta el selector y save recibe batch_id undefined sin recargar el contexto', async () => {
+      mockEventContext.batches.set([]);
+      fixture.detectChanges();
+
+      const select = fixture.nativeElement.querySelector('ion-select.batch-select');
+      expect(select).toBeNull();
+
+      component.form.controls.group_name.setValue('Familia Sin Tanda');
+      component.guestsArray.at(0).controls.full_name.setValue('Persona Uno');
+      await component.save();
+
+      expect(mockInvitationsRepo.save).toHaveBeenCalledTimes(1);
+      const savedPayload = mockInvitationsRepo.save.mock.calls[0][2];
+      expect(savedPayload.batch_id).toBeUndefined();
+      expect(mockEventContext.load).not.toHaveBeenCalled();
+    });
+
+    it('con 2 tandas muestra opciones ordenadas y al crear propone la más reciente', async () => {
+      mockEventContext.batches.set([batchSecond, batchThird]);
+      fixture.detectChanges();
+
+      const select = fixture.nativeElement.querySelector('ion-select.batch-select');
+      expect(select).not.toBeNull();
+      expect(select.getAttribute('interface')).toBe('popover');
+      expect(select.getAttribute('labelPlacement')).toBe('stacked');
+
+      const options = Array.from(
+        fixture.nativeElement.querySelectorAll('ion-select.batch-select ion-select-option'),
+      ) as HTMLElement[];
+      expect(options.map((opt) => opt.textContent?.trim())).toEqual([
+        'Primera tanda · 15 de noviembre',
+        'Segunda tanda · 20 de noviembre',
+        'Última tanda · 25 de noviembre',
+      ]);
+
+      expect(component.form.controls.batch_id.value).toBe('batch-3');
+
+      component.form.controls.group_name.setValue('Familia Reciente');
+      component.guestsArray.at(0).controls.full_name.setValue('Persona Reciente');
+      await component.save();
+
+      expect(mockInvitationsRepo.save.mock.calls[0][2].batch_id).toBe('batch-3');
+    });
+
+    it('al editar una invitación de la primera tanda muestra "Primera tanda" y guarda null', async () => {
+      mockEventContext.batches.set([batchSecond, batchThird]);
+      component.invitation = {
+        id: 'inv-first',
+        event_id: 'event-1',
+        batch_id: null,
+        group_name: 'Familia Primera',
+        kind: 'group',
+        phone: null,
+        code: 'PRI123',
+        created_at: '2026-10-25T00:00:00Z',
+        updated_at: '2026-10-25T00:00:00Z',
+        whatsapp_sent_at: null,
+        guests: [
+          {
+            id: 'g-1',
+            invitation_id: 'inv-first',
+            event_id: 'event-1',
+            full_name: 'Persona Primera',
+            rsvp: 'pending',
+            rsvp_updated_at: null,
+            arrived_at: null,
+            arrived_by: null,
+            sort_order: 0,
+            created_at: '2026-10-25T00:00:00Z',
+          },
+        ],
+      };
+
+      fixture.detectChanges();
+
+      expect(component.form.controls.batch_id.value).toBe('first');
+      const firstOption = fixture.nativeElement.querySelector(
+        'ion-select.batch-select ion-select-option',
+      );
+      expect(firstOption?.textContent?.trim()).toContain('Primera tanda');
+
+      await component.save();
+      expect(mockInvitationsRepo.save.mock.calls[0][2].batch_id).toBeNull();
+    });
+
+    it('permite elegir la segunda tanda y la última y guarda su id', async () => {
+      mockEventContext.batches.set([batchSecond, batchThird]);
+      fixture.detectChanges();
+
+      component.form.controls.group_name.setValue('Familia Cambio');
+      component.guestsArray.at(0).controls.full_name.setValue('Persona Cambio');
+
+      component.form.controls.batch_id.setValue('batch-2');
+      await component.save();
+      expect(mockInvitationsRepo.save.mock.calls[0][2].batch_id).toBe('batch-2');
+
+      component.form.controls.batch_id.setValue('batch-3');
+      await component.save();
+      expect(mockInvitationsRepo.save.mock.calls[1][2].batch_id).toBe('batch-3');
+    });
+
+    it('al editar una invitación con un batch_id inexistente muestra "Primera tanda"', () => {
+      mockEventContext.batches.set([batchSecond, batchThird]);
+      component.invitation = {
+        id: 'inv-orphan',
+        event_id: 'event-1',
+        batch_id: 'batch-deleted',
+        group_name: 'Familia Huérfana',
+        kind: 'group',
+        phone: null,
+        code: 'ORP123',
+        created_at: '2026-10-25T00:00:00Z',
+        updated_at: '2026-10-25T00:00:00Z',
+        whatsapp_sent_at: null,
+        guests: [
+          {
+            id: 'g-o1',
+            invitation_id: 'inv-orphan',
+            event_id: 'event-1',
+            full_name: 'Persona Huérfana',
+            rsvp: 'pending',
+            rsvp_updated_at: null,
+            arrived_at: null,
+            arrived_by: null,
+            sort_order: 0,
+            created_at: '2026-10-25T00:00:00Z',
+          },
+        ],
+      };
+
+      fixture.detectChanges();
+
+      expect(component.form.controls.batch_id.value).toBe('first');
+    });
+
+    it('cambiar solo la tanda activa la guardia de descarte y volver a la inicial la desactiva', () => {
+      mockEventContext.batches.set([batchSecond, batchThird]);
+      const mockGuard: DiscardGuard = {
+        hasChanges: () => false,
+        canDismiss: vi.fn().mockResolvedValue(true),
+      };
+      component.discardGuard = mockGuard;
+
+      fixture.detectChanges();
+
+      expect(component.hasChanges()).toBe(false);
+      expect(mockGuard.hasChanges()).toBe(false);
+
+      component.form.controls.batch_id.setValue('batch-2');
+      expect(component.hasChanges()).toBe(true);
+      expect(mockGuard.hasChanges()).toBe(true);
+
+      component.form.controls.batch_id.setValue('batch-3');
+      expect(component.hasChanges()).toBe(false);
       expect(mockGuard.hasChanges()).toBe(false);
     });
   });
