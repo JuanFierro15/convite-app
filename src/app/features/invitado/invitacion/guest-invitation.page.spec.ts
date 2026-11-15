@@ -1441,5 +1441,32 @@ describe('GuestInvitationPage', () => {
       expect(isButtonDisabled(acceptBtn)).toBe(false);
       expect(isButtonDisabled(declineBtn)).toBe(true);
     });
+
+    it('si falla la red al cambiar de accepted a declined, "Acepto" sigue bloqueado y "No acepto" queda habilitado para reintentar', async () => {
+      const inv: GuestInvitation = {
+        ...mockIndividualInvitation,
+        guests: [{ id: 'g-1', full_name: 'Persona Ejemplo', rsvp: 'accepted' }],
+      };
+      mockGuestApi.getInvitation.mockResolvedValue(inv);
+      mockGuestApi.setRsvp.mockRejectedValueOnce(new GuestApiError('network_error'));
+
+      fixture = TestBed.createComponent(GuestInvitationPage);
+      component = fixture.componentInstance;
+      fixture.componentRef.setInput('code', 'WXYZ5678LM');
+
+      await component.loadInvitation();
+      fixture.detectChanges();
+
+      await component.onSelectRsvp(inv.guests[0], 'declined');
+      fixture.detectChanges();
+
+      expect(mockGuestApi.setRsvp).toHaveBeenCalledTimes(1);
+      expect(component.rsvpErrors()['g-1']).toBe(
+        guestErrorMessage('network_error', 'individual'),
+      );
+      const { acceptBtn, declineBtn } = getCardRsvpButtons(0);
+      expect(isButtonDisabled(acceptBtn)).toBe(true);
+      expect(isButtonDisabled(declineBtn)).toBe(false);
+    });
   });
 });
