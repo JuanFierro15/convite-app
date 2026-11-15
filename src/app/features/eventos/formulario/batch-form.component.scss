@@ -1,0 +1,53 @@
+.form-content {
+  --padding-start: var(--space-md);
+  --padding-end: var(--space-md);
+  --padding-top: var(--space-md);
+  --padding-bottom: var(--space-lg);
+}
+
+.batch-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+
+  &__error {
+    margin: 0;
+    padding: 0 var(--space-sm);
+    color: var(--ion-color-danger);
+  }
+}
+
+.form-item {
+  --background: var(--ion-item-background);
+  --border-radius: var(--radius-md);
+  --padding-start: var(--space-sm);
+  --inner-padding-end: var(--space-sm);
+  border: 1px solid var(--ion-border-color);
+  border-radius: var(--radius-md);
+}
+
+.form-footer {
+  ion-toolbar {
+    --background: var(--ion-background-color);
+    --border-color: var(--ion-color-light-shade);
+    border-top: 1px solid var(--ion-color-light-shade);
+    padding: var(--space-xs) var(--space-md);
+  }
+}
+
+.footer-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-sm);
+
+  ion-button {
+    margin: 0;
+    min-height: 44px;
+  }
+}

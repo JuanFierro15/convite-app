@@ -232,6 +232,73 @@
         </ion-card-content>
       </ion-card>
 
+      @if (isEditMode()) {
+        <ion-card class="form-card batches-card">
+          <ion-card-content class="form-card__content batches-card__content">
+            <div class="batches-card__header">
+              <h2 class="text-section batches-card__title">Tandas de invitaciones</h2>
+              <p class="text-label batches-card__help">
+                Cada tanda tiene su propia fecha límite. Las invitaciones nuevas quedan en la tanda más reciente.
+              </p>
+            </div>
+
+            <div class="batches-list">
+              <div class="batch-row batch-row--first">
+                <div class="batch-row__info">
+                  <span class="text-name batch-row__name">{{ firstBatchLabel }}</span>
+                  <span class="text-label batch-row__date">{{ firstBatchDeadlineLabel() }}</span>
+                </div>
+              </div>
+
+              @for (batch of batches(); track batch.id) {
+                <div class="batch-row">
+                  <div class="batch-row__info">
+                    <span class="text-name batch-row__name">{{ batch.name }}</span>
+                    <span class="text-label batch-row__date">{{ formatBatchDeadline(batch.rsvp_deadline) }}</span>
+                  </div>
+                  <div class="batch-row__actions">
+                    <ion-button
+                      type="button"
+                      fill="clear"
+                      color="medium"
+                      class="batch-row__action-btn"
+                      [disabled]="deletingBatchId() !== null"
+                      (click)="openBatchModal(batch)"
+                      [attr.aria-label]="'Editar tanda ' + batch.name"
+                    >
+                      <ion-icon slot="icon-only" name="create-outline" aria-hidden="true"></ion-icon>
+                    </ion-button>
+                    <ion-button
+                      type="button"
+                      fill="clear"
+                      color="danger"
+                      class="batch-row__action-btn"
+                      [disabled]="deletingBatchId() !== null"
+                      (click)="confirmDeleteBatch(batch)"
+                      [attr.aria-label]="'Borrar tanda ' + batch.name"
+                    >
+                      <ion-icon slot="icon-only" name="trash-outline" aria-hidden="true"></ion-icon>
+                    </ion-button>
+                  </div>
+                </div>
+              }
+            </div>
+
+            <ion-button
+              type="button"
+              fill="outline"
+              color="primary"
+              expand="block"
+              [disabled]="deletingBatchId() !== null"
+              (click)="openBatchModal()"
+            >
+              <ion-icon slot="start" name="add-outline" aria-hidden="true"></ion-icon>
+              Agregar tanda
+            </ion-button>
+          </ion-card-content>
+        </ion-card>
+      }
+
       <div class="form-actions">
         <ion-button
           type="submit"
