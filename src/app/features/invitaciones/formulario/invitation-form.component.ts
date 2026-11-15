@@ -580,7 +580,15 @@ export class InvitationFormComponent implements OnInit, OnDestroy {
       phone: raw.phone.trim() ? raw.phone : null,
       guests: guestsPayload,
     };
-    if (this.showBatchSelect()) {
+    // Si este celular aún no conoce la tanda guardada (creada desde otro), no se
+    // mueve a la primera tanda a menos que el usuario cambie el selector.
+    const existingBatchId = this.invitation?.batch_id ?? null;
+    const unknownExistingBatch =
+      existingBatchId !== null && !this.batches().some((batch) => batch.id === existingBatchId);
+    if (
+      this.showBatchSelect() &&
+      !(unknownExistingBatch && !this.form.controls.batch_id.dirty)
+    ) {
       payload.batch_id = raw.batch_id === 'first' ? null : raw.batch_id;
     }
 

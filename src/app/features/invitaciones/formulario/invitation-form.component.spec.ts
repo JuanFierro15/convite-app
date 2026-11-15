@@ -631,7 +631,7 @@ describe('InvitationFormComponent', () => {
       expect(mockInvitationsRepo.save.mock.calls[1][2].batch_id).toBe('batch-3');
     });
 
-    it('al editar una invitación con un batch_id inexistente muestra "Primera tanda"', () => {
+    it('al editar una invitación con un batch_id inexistente muestra "Primera tanda" y no la mueve si no se toca el selector', async () => {
       mockEventContext.batches.set([batchSecond, batchThird]);
       component.invitation = {
         id: 'inv-orphan',
@@ -663,6 +663,14 @@ describe('InvitationFormComponent', () => {
       fixture.detectChanges();
 
       expect(component.form.controls.batch_id.value).toBe('first');
+
+      await component.save();
+      expect(mockInvitationsRepo.save.mock.calls[0][2].batch_id).toBeUndefined();
+
+      component.form.controls.batch_id.setValue('first');
+      component.form.controls.batch_id.markAsDirty();
+      await component.save();
+      expect(mockInvitationsRepo.save.mock.calls[1][2].batch_id).toBeNull();
     });
 
     it('cambiar solo la tanda activa la guardia de descarte y volver a la inicial la desactiva', () => {
