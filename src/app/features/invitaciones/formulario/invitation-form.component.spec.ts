@@ -631,6 +631,27 @@ describe('InvitationFormComponent', () => {
       expect(mockInvitationsRepo.save.mock.calls[1][2].batch_id).toBe('batch-3');
     });
 
+    it('si la tanda elegida ya no existe recarga las tandas con force y propone la más reciente', async () => {
+      mockEventContext.batches.set([batchSecond, batchThird]);
+      fixture.detectChanges();
+      component.form.controls.group_name.setValue('Familia Cambio');
+      component.guestsArray.at(0).controls.full_name.setValue('Persona Cambio');
+      component.form.controls.batch_id.setValue('batch-3');
+
+      const gone = new Error('Esa tanda ya no existe. Elige otra.');
+      mockInvitationsRepo.save.mockRejectedValueOnce(gone);
+      mockEventContext.load.mockImplementationOnce(async () => {
+        mockEventContext.batches.set([batchSecond]);
+      });
+
+      await component.save();
+
+      expect(mockActionsService.showError).toHaveBeenCalledWith(gone);
+      expect(mockEventContext.load).toHaveBeenCalledWith('event-1', { force: true });
+      expect(component.form.controls.batch_id.value).toBe('batch-2');
+      expect(component.saving()).toBe(false);
+    });
+
     it('al editar una invitación con un batch_id inexistente muestra "Primera tanda" y no la mueve si no se toca el selector', async () => {
       mockEventContext.batches.set([batchSecond, batchThird]);
       component.invitation = {

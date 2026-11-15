@@ -1293,3 +1293,33 @@ test(
     }
   }
 );
+
+test(
+  '15. save_invitation con una tanda inexistente falla por llave foránea al insertar en invitations',
+  { timeout: TEST_TIMEOUT_MS },
+  async () => {
+    const { error, invitationId } = await createInvitationWithGuest(ctx.ownerClient, {
+      eventId: ctx.eventMain.id,
+      groupName: 'Familia Ejemplo Tanda Borrada',
+      phone: '+573000000099',
+      batchId: crypto.randomUUID(),
+      setBatch: true,
+    });
+
+    try {
+      assert.ok(error, 'Debe fallar al asignar una tanda que no existe');
+      assert.equal(error.code, '23503');
+      assert.match(error.message, /insert or update on table "invitations"/);
+      assert.match(error.message, /invitations_batch_id_fkey/);
+
+      const { data: saved } = await ctx.adminClient
+        .from('invitations')
+        .select('id')
+        .eq('id', invitationId)
+        .maybeSingle();
+      assert.equal(saved, null, 'La invitación no debe quedar guardada');
+    } finally {
+      await cleanupRows({ invitationIds: [invitationId] });
+    }
+  }
+);

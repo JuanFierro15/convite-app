@@ -364,8 +364,9 @@ export class InvitationSendPage implements ViewWillEnter {
 
     this.ensureRealtime(eventId);
 
+    // force: las tandas no llegan por Realtime y el mensaje usa la fecha de cada tanda.
     await Promise.all([
-      this.eventContext.load(eventId),
+      this.eventContext.load(eventId, { force: true }),
       this.loadInvitations(),
     ]);
 
@@ -413,7 +414,10 @@ export class InvitationSendPage implements ViewWillEnter {
     }
 
     try {
-      const items = await this.invitationsRepository.list(eventId);
+      const [items] = await Promise.all([
+        this.invitationsRepository.list(eventId),
+        this.eventContext.load(eventId, { force: true }),
+      ]);
       this.invitations.set(items);
     } catch {
       // Ignoramos error en segundo plano

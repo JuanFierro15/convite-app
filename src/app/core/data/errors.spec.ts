@@ -211,9 +211,17 @@ describe('core exports and error translation', () => {
         'La fecha límite de cada tanda debe ser anterior o igual a la fecha del evento.',
       );
       expect(
-        toUserError({ message: 'violates foreign key constraint "invitations_batch_id_fkey"' })
-          .message,
+        toUserError({
+          message:
+            'update or delete on table "invitation_batches" violates foreign key constraint "invitations_batch_id_fkey" on table "invitations"',
+        }).message,
       ).toBe('Esta tanda tiene invitaciones. Muévelas a otra tanda antes de borrarla.');
+      expect(
+        toUserError({
+          message:
+            'insert or update on table "invitations" violates foreign key constraint "invitations_batch_id_fkey"',
+        }).message,
+      ).toBe('Esa tanda ya no existe. Elige otra.');
       expect(
         toUserError({ message: 'violates check constraint "invitation_batches_name_length"' })
           .message,

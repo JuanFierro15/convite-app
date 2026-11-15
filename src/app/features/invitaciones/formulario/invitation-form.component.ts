@@ -46,6 +46,7 @@ import {
 import { addIcons } from 'ionicons';
 import { closeOutline, personAddOutline, trashOutline } from 'ionicons/icons';
 import {
+  BATCH_GONE_MESSAGE,
   EventContextService,
   FIRST_BATCH_LABEL,
   InvitationGuestInput,
@@ -604,6 +605,11 @@ export class InvitationFormComponent implements OnInit, OnDestroy {
       await this.modalController.dismiss(saved, 'saved');
     } catch (err) {
       await this.invitationActions.showError(err);
+      if (err instanceof Error && err.message === BATCH_GONE_MESSAGE) {
+        await this.eventContext.load(targetEventId, { force: true });
+        this.form.controls.batch_id.setValue(latestBatchId(this.batches()) ?? 'first');
+        this.form.controls.batch_id.markAsDirty();
+      }
     } finally {
       this.saving.set(false);
     }

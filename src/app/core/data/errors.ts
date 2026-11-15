@@ -2,6 +2,7 @@ import { CONNECTION_ERROR_MESSAGE } from '../utils/messages';
 
 const DEFAULT_USER_ERROR_MESSAGE = 'No pudimos guardar el cambio. Inténtalo de nuevo.';
 export const LOAD_ERROR_MESSAGE = 'No pudimos cargar la información. Inténtalo de nuevo.';
+export const BATCH_GONE_MESSAGE = 'Esa tanda ya no existe. Elige otra.';
 
 const CONNECTION_SUBSTRINGS = [
   'TimeoutError',
@@ -152,6 +153,15 @@ export function toUserError(error: unknown, fallback?: string): Error {
     return new Error(
       'La fecha límite de cada tanda debe ser anterior o igual a la fecha del evento.',
     );
+  }
+
+  // La misma llave foránea falla al guardar una invitación con una tanda ya borrada
+  // (insert or update on "invitations") y al borrar una tanda con invitaciones.
+  if (
+    combined.includes('invitations_batch_id_fkey') &&
+    combined.includes('insert or update on table "invitations"')
+  ) {
+    return new Error(BATCH_GONE_MESSAGE);
   }
 
   if (combined.includes('invitations_batch_id_fkey')) {

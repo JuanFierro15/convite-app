@@ -167,6 +167,7 @@ export class EventFormPage implements ViewWillEnter {
   readonly loadError = signal<string | null>(null);
   readonly submitting = signal<boolean>(false);
   readonly deletingBatchId = signal<string | null>(null);
+  private openingBatch = false;
 
   readonly isEditMode = computed<boolean>(() => Boolean(this.id()));
   readonly batches = this.eventContext.batches;
@@ -238,16 +239,28 @@ export class EventFormPage implements ViewWillEnter {
   async openBatchModal(batch?: InvitationBatchRow): Promise<void> {
     const eventId = this.id();
     const currentEvent = this.eventContext.event();
-    if (!eventId || !currentEvent || this.deletingBatchId() !== null) {
+    if (!eventId || !currentEvent || this.deletingBatchId() !== null || this.openingBatch) {
       return;
     }
+    this.openingBatch = true;
+    try {
+      await this.presentBatchModal(eventId, currentEvent.starts_at, batch);
+    } finally {
+      this.openingBatch = false;
+    }
+  }
 
+  private async presentBatchModal(
+    eventId: string,
+    eventStartsAt: string,
+    batch?: InvitationBatchRow,
+  ): Promise<void> {
     const modal = await this.modalCtrl.create({
       component: BatchFormComponent,
       componentProps: {
         eventId,
         batch,
-        eventStartsAt: currentEvent.starts_at,
+        eventStartsAt,
         existingBatchCount: this.batches().length,
       },
       breakpoints: [0, 0.9, 1],

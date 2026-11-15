@@ -265,6 +265,15 @@ describe('EventFormPage', () => {
     expect(rows[0].querySelectorAll('ion-button').length).toBe(0);
   });
 
+  it('un doble toque en Agregar tanda abre un solo modal', async () => {
+    await enterEditMode([]);
+    await Promise.all([component.openBatchModal(), component.openBatchModal()]);
+    expect(mockModalCtrl.create).toHaveBeenCalledTimes(1);
+
+    await component.openBatchModal();
+    expect(mockModalCtrl.create).toHaveBeenCalledTimes(2);
+  });
+
   it('muestra filas en orden con 0, 1 y 3 tandas y abre el modal para editar la segunda y la última', async () => {
     await enterEditMode([]);
     let rows = (fixture.nativeElement as HTMLElement).querySelectorAll('.batch-row');

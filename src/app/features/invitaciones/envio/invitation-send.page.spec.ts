@@ -342,7 +342,7 @@ describe('InvitationSendPage', () => {
     component.ionViewWillEnter();
     await fixture.whenStable();
 
-    expect(mockEventContext.load).toHaveBeenCalledWith('evt-1');
+    expect(mockEventContext.load).toHaveBeenCalledWith('evt-1', { force: true });
     expect(mockInvitationsRepo.list).toHaveBeenCalledWith('evt-1');
     expect(mockRealtime.watch).toHaveBeenCalledWith(
       'evt-1',
