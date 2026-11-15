@@ -246,6 +246,11 @@ p {
   --background: var(--ion-card-background);
 }
 
+// Clase propia: Ionic pasa aria-pressed al botón interno y lo quita del host.
+.rsvp-button--chosen.button-disabled {
+  opacity: 1;
+}
+
 .confirmation-card {
   background-color: var(--ion-color-light);
 }

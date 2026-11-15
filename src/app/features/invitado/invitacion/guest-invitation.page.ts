@@ -401,6 +401,9 @@ export class GuestInvitationPage implements OnInit, ViewWillEnter {
     if (!inv || !inv.can_respond || this.savingGuestId() !== null) {
       return;
     }
+    if (guest.rsvp === value) {
+      return;
+    }
     this.clearRsvpError(guest.id);
     this.savingGuestId.set(guest.id);
     this.savingRsvp.set(value);
