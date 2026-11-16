@@ -82,6 +82,11 @@
                   "output": "assets/video"
                 },
                 {
+                  "glob": "**/*",
+                  "input": "src/web/og",
+                  "output": "assets/og"
+                },
+                {
                   "glob": "_headers",
                   "input": "src/web",
                   "output": "."
