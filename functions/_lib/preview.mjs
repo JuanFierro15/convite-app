@@ -1,3 +1,5 @@
+import { PREVIEW_TIMEOUT_MS } from './config.mjs';
+
 export const GENERIC_TITLE = 'Tienes una invitación';
 export const GENERIC_DESCRIPTION = 'Abre el enlace para ver los detalles y confirmar tu asistencia.';
 export const DEFAULT_THEME = 'baby-shower';
@@ -12,7 +14,6 @@ export const SECURITY_HEADERS = {
 };
 
 const BOGOTA_TIME_ZONE = 'America/Bogota';
-const DEFAULT_TIMEOUT_MS = 1500;
 const INVITATION_CTA = 'Abre el enlace para ver tu invitación y confirmar.';
 
 const bogotaDateFormatter = new Intl.DateTimeFormat('es-CO', {
@@ -68,8 +69,6 @@ function formatEventDateTime(startsAt) {
   return `${formattedDate}, ${formattedTime}`;
 }
 
-/** Igual que el SQL: quita todo lo que no sea [A-Za-z0-9] y pasa a mayúsculas.
- *  Devuelve null si el resultado tiene menos de 6 o más de 16 caracteres, o si raw no es texto. */
 export function normalizeCode(raw) {
   if (typeof raw !== 'string') {
     return null;
@@ -81,21 +80,20 @@ export function normalizeCode(raw) {
   return normalized;
 }
 
-/** Recorta a max caracteres: si text.length <= max lo deja igual; si no, toma los primeros max-1 (sin espacios al final) y agrega '…' (resultado de largo <= max). */
 export function truncate(text, max) {
-  if (typeof text !== 'string' || max <= 0) {
+  if (typeof text !== 'string' || !(max > 0)) {
     return '';
   }
-  if (text.length <= max) {
+  const chars = Array.from(text);
+  if (chars.length <= max) {
     return text;
   }
   if (max === 1) {
     return '…';
   }
-  return `${text.slice(0, max - 1).trimEnd()}…`;
+  return `${chars.slice(0, max - 1).join('').trimEnd()}…`;
 }
 
-/** { title, description, image, url } genérico. image = `${origin}/assets/og/baby-shower.v1.jpg`; url = `${origin}/i/${code}` si code, si no `${origin}/`. */
 export function genericPreview(origin, code) {
   return {
     title: GENERIC_TITLE,
@@ -105,8 +103,6 @@ export function genericPreview(origin, code) {
   };
 }
 
-/** Arma la tarjeta a partir del JSON de get_invitation. Usa SOLO payload.event (name, theme_id, starts_at, venue_name, city).
- *  NUNCA lee payload.invitation ni payload.guests. Si payload no tiene event.name texto no vacío, devuelve genericPreview(origin, code). */
 export function buildPreview(payload, origin, code) {
   const event = payload && typeof payload === 'object' ? payload.event : null;
   if (!event || typeof event !== 'object') {
@@ -144,11 +140,10 @@ export function buildPreview(payload, origin, code) {
   };
 }
 
-/** Llama a la RPC y devuelve la tarjeta; nunca lanza. */
 export async function fetchInvitationPreview(
   rawCode,
   origin,
-  { fetchImpl = fetch, timeoutMs = DEFAULT_TIMEOUT_MS, supabaseUrl, publishableKey } = {}
+  { fetchImpl = fetch, timeoutMs = PREVIEW_TIMEOUT_MS, supabaseUrl, publishableKey } = {}
 ) {
   const code = normalizeCode(rawCode);
   if (!code) {
@@ -170,7 +165,7 @@ export async function fetchInvitationPreview(
   const effectiveTimeout =
     typeof timeoutMs === 'number' && Number.isFinite(timeoutMs) && timeoutMs >= 0
       ? timeoutMs
-      : DEFAULT_TIMEOUT_MS;
+      : PREVIEW_TIMEOUT_MS;
   let timerId;
 
   const timeoutPromise = new Promise((resolve) => {

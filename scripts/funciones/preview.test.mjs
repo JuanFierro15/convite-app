@@ -1,5 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
 
 import {
   GENERIC_TITLE,
@@ -19,6 +21,39 @@ import {
 const ORIGIN = 'https://convite-4v8.pages.dev';
 const SUPABASE_URL = 'https://supabase.convite.test';
 const PUBLISHABLE_KEY = 'sb_publishable_ejemplo_test';
+
+function parseRootHeadersFile() {
+  const raw = fs.readFileSync(path.resolve('src/web/_headers'), 'utf8');
+  const lines = raw.split(/\r?\n/);
+  const headers = {};
+  let inRootBlock = false;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!inRootBlock) {
+      if (trimmed === '/*') {
+        inRootBlock = true;
+      }
+      continue;
+    }
+
+    if (trimmed === '' || !/^\s/.test(line)) {
+      break;
+    }
+    if (trimmed.startsWith('!') || trimmed.startsWith('#')) {
+      continue;
+    }
+
+    const colonIndex = trimmed.indexOf(':');
+    if (colonIndex > 0) {
+      const name = trimmed.slice(0, colonIndex).trim();
+      const value = trimmed.slice(colonIndex + 1).trim();
+      headers[name] = value;
+    }
+  }
+
+  return headers;
+}
 
 function createFetchRecorder(handler) {
   const calls = [];
@@ -57,6 +92,28 @@ test('truncate: conserva textos dentro del limite y recorta con puntos suspensiv
 
   assert.equal(truncate('Convite', TITLE_MAX), 'Convite');
   assert.equal(truncate('Hola mundo', 6), 'Hola…');
+
+  assert.equal(truncate('Convite', 1), '…');
+  assert.equal(truncate('A', 1), 'A');
+  assert.equal(truncate('😀A', 1), '…');
+  assert.equal(truncate('Convite', 0), '');
+  assert.equal(truncate('Convite', -1), '');
+
+  const validSurrogatePattern = /^([^\uD800-\uDFFF]|[\uD800-\uDBFF][\uDC00-\uDFFF])*$/;
+  const emojiAt79 = `${'A'.repeat(79)}😀B`;
+  assert.equal(Array.from(emojiAt79).length, 81);
+  const truncatedEmojiAt79 = truncate(emojiAt79, TITLE_MAX);
+  assert.equal(Array.from(truncatedEmojiAt79).length, TITLE_MAX);
+  assert.equal(truncatedEmojiAt79.endsWith('…'), true);
+  assert.equal(validSurrogatePattern.test(truncatedEmojiAt79), true);
+  assert.equal(truncatedEmojiAt79, `${'A'.repeat(79)}…`);
+
+  const emojiAt78 = `${'A'.repeat(78)}😀BC`;
+  assert.equal(Array.from(emojiAt78).length, 81);
+  const truncatedEmojiAt78 = truncate(emojiAt78, TITLE_MAX);
+  assert.equal(Array.from(truncatedEmojiAt78).length, TITLE_MAX);
+  assert.equal(validSurrogatePattern.test(truncatedEmojiAt78), true);
+  assert.equal(truncatedEmojiAt78, `${'A'.repeat(78)}😀…`);
 });
 
 test('genericPreview: arma la tarjeta generica con o sin codigo', () => {
@@ -75,11 +132,11 @@ test('genericPreview: arma la tarjeta generica con o sin codigo', () => {
   });
 });
 
-test('buildPreview: nunca incluye datos de invitation ni guests en la salida', () => {
+test('buildPreview: nunca incluye datos privados ni de invitation o guests en la salida', () => {
   const payload = {
     invitation: {
-      id: 'inv-1',
-      group_name: 'Familia Secreta',
+      id: 'inv-privada-001',
+      group_name: 'Familia Secreta Privada',
       code: 'ABCDEFGHJK',
       kind: 'group',
     },
@@ -88,14 +145,36 @@ test('buildPreview: nunca incluye datos de invitation ni guests en la salida', (
       theme_id: 'baby-shower',
       starts_at: '2026-11-29T20:00:00Z',
       venue_name: 'Salón Las Palmas',
+      venue_address: 'Calle Ficticia 123 Secreta',
       city: 'Neiva',
+      map_url: 'https://mapa.convite.test/ubicacion-secreta',
+      welcome_message: 'Mensaje privado de bienvenida secreto',
+      rsvp_deadline: '2026-11-20T23:59:59Z',
     },
-    guests: [{ id: 'g-1', full_name: 'Persona Secreta', rsvp: 'pending' }],
+    guests: [{ id: 'g-1', full_name: 'Persona Secreta Privada', rsvp: 'pending' }],
+    can_respond: true,
+    gifts_open: true,
   };
 
   const result = buildPreview(payload, ORIGIN, 'ABCDEFGHJK');
-  assert.equal(JSON.stringify(result).includes('Secreta'), false);
-  assert.equal(result.title, 'Baby Shower Ejemplo');
+  assert.deepEqual(result, {
+    title: 'Baby Shower Ejemplo',
+    description:
+      'Domingo 29 de noviembre, 3:00 p. m. · Salón Las Palmas, Neiva. Abre el enlace para ver tu invitación y confirmar.',
+    image: `${ORIGIN}/assets/og/baby-shower.v1.jpg`,
+    url: `${ORIGIN}/i/ABCDEFGHJK`,
+  });
+
+  const serialized = JSON.stringify(result);
+  for (const sensitive of [
+    payload.invitation.group_name,
+    payload.guests[0].full_name,
+    payload.event.venue_address,
+    payload.event.map_url,
+    payload.event.welcome_message,
+  ]) {
+    assert.equal(serialized.includes(sensitive), false);
+  }
 });
 
 test('buildPreview: combina venue_name y city segun existan o falten', () => {
@@ -233,22 +312,42 @@ test('buildPreview: maneja starts_at invalido con y sin lugar, y recorta descrip
     'Salón Las Palmas, Neiva. Abre el enlace para ver tu invitación y confirmar.'
   );
 
-  const longVenue = 'Salón '.repeat(40);
-  const longDesc = buildPreview(
+  const venue103 = 'V'.repeat(103);
+  const exact200 = buildPreview(
     {
       event: {
         name: 'Baby Shower Ejemplo',
         theme_id: 'baby-shower',
         starts_at: '2026-11-29T20:00:00Z',
-        venue_name: longVenue,
+        venue_name: venue103,
         city: 'Neiva',
       },
     },
     ORIGIN,
     'ABCDEFGHJK'
   );
-  assert.equal(longDesc.description.length <= DESCRIPTION_MAX, true);
-  assert.equal(longDesc.description.endsWith('…'), true);
+  const expected200 = `Domingo 29 de noviembre, 3:00 p. m. · ${venue103}, Neiva. Abre el enlace para ver tu invitación y confirmar.`;
+  assert.equal(expected200.length, DESCRIPTION_MAX);
+  assert.equal(exact200.description, expected200);
+
+  const venue104 = 'V'.repeat(104);
+  const over201 = buildPreview(
+    {
+      event: {
+        name: 'Baby Shower Ejemplo',
+        theme_id: 'baby-shower',
+        starts_at: '2026-11-29T20:00:00Z',
+        venue_name: venue104,
+        city: 'Neiva',
+      },
+    },
+    ORIGIN,
+    'ABCDEFGHJK'
+  );
+  const expectedTruncated200 = `Domingo 29 de noviembre, 3:00 p. m. · ${venue104}, Neiva. Abre el enlace para ver tu invitación y confirma…`;
+  assert.equal(over201.description.length, DESCRIPTION_MAX);
+  assert.equal(over201.description.endsWith('…'), true);
+  assert.equal(over201.description, expectedTruncated200);
 });
 
 test('buildPreview: selecciona imagen segun temas conocidos o usa baby-shower por defecto', () => {
@@ -433,6 +532,13 @@ test('fetchInvitationPreview: error de red en fetchImpl devuelve tarjeta generic
   assert.deepEqual(result, genericPreview(ORIGIN, 'ABCDEFGHJK'));
 });
 
+test('KNOWN_THEMES: cada tema tiene su archivo og/<tema>.v1.jpg en src/web', () => {
+  for (const theme of KNOWN_THEMES) {
+    const imagePath = path.resolve('src/web/og', `${theme}.v1.jpg`);
+    assert.equal(fs.existsSync(imagePath), true, `Falta la imagen OG del tema ${theme}`);
+  }
+});
+
 test('fetchInvitationPreview: corta por tiempo limite aunque fetchImpl ignore signal y no resuelva', async () => {
   const recorder = createFetchRecorder(() => new Promise(() => {}));
 
@@ -446,8 +552,104 @@ test('fetchInvitationPreview: corta por tiempo limite aunque fetchImpl ignore si
   const elapsedMs = Date.now() - startedAt;
 
   assert.equal(recorder.calls.length, 1);
+  assert.equal(recorder.calls[0].options.signal.aborted, true);
   assert.deepEqual(result, genericPreview(ORIGIN, 'ABCDEFGHJK'));
-  assert.equal(elapsedMs < 1000, true);
+  assert.equal(elapsedMs < 500, true);
+});
+
+test('fetchInvitationPreview: rechazo de fetchImpl despues de vencer el tiempo no deja unhandledRejection', async () => {
+  let unhandledCount = 0;
+  const onUnhandled = () => {
+    unhandledCount += 1;
+  };
+  process.on('unhandledRejection', onUnhandled);
+
+  let rejectFetch;
+  const recorder = createFetchRecorder(
+    () =>
+      new Promise((_, reject) => {
+        rejectFetch = reject;
+      })
+  );
+
+  try {
+    const result = await fetchInvitationPreview('abcde-fghjk', ORIGIN, {
+      fetchImpl: recorder.fetchImpl,
+      timeoutMs: 20,
+      supabaseUrl: SUPABASE_URL,
+      publishableKey: PUBLISHABLE_KEY,
+    });
+
+    assert.deepEqual(result, genericPreview(ORIGIN, 'ABCDEFGHJK'));
+    assert.equal(recorder.calls[0].options.signal.aborted, true);
+
+    rejectFetch(new Error('Fallo tardio despues del timeout'));
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    assert.equal(unhandledCount, 0);
+  } finally {
+    process.off('unhandledRejection', onUnhandled);
+  }
+});
+
+test('fetchInvitationPreview: timeoutMs invalido usa valor por defecto y devuelve tarjeta del evento', async () => {
+  for (const invalidTimeout of [-1, Number.NaN, 'x']) {
+    const recorder = createFetchRecorder(
+      async () =>
+        new Response(
+          JSON.stringify({
+            event: {
+              name: 'Baby Shower Ejemplo',
+              theme_id: 'baby-shower',
+              starts_at: '2026-11-29T20:00:00Z',
+              venue_name: 'Salón Las Palmas',
+              city: 'Neiva',
+            },
+          }),
+          { status: 200, headers: { 'Content-Type': 'application/json' } }
+        )
+    );
+
+    const result = await fetchInvitationPreview('abcde-fghjk', ORIGIN, {
+      fetchImpl: recorder.fetchImpl,
+      timeoutMs: invalidTimeout,
+      supabaseUrl: SUPABASE_URL,
+      publishableKey: PUBLISHABLE_KEY,
+    });
+
+    assert.equal(recorder.calls.length, 1);
+    assert.equal(result.title, 'Baby Shower Ejemplo');
+  }
+});
+
+test('fetchInvitationPreview: configuracion invalida devuelve tarjeta generica sin llamar a fetchImpl', async () => {
+  const recorder = createFetchRecorder(async () => {
+    throw new Error('No debio llamarse fetchImpl');
+  });
+
+  const withoutFetch = await fetchInvitationPreview('abcde-fghjk', ORIGIN, {
+    fetchImpl: null,
+    timeoutMs: 1500,
+    supabaseUrl: SUPABASE_URL,
+    publishableKey: PUBLISHABLE_KEY,
+  });
+  assert.deepEqual(withoutFetch, genericPreview(ORIGIN, 'ABCDEFGHJK'));
+
+  const withoutUrl = await fetchInvitationPreview('abcde-fghjk', ORIGIN, {
+    fetchImpl: recorder.fetchImpl,
+    timeoutMs: 1500,
+    supabaseUrl: '',
+    publishableKey: PUBLISHABLE_KEY,
+  });
+  assert.deepEqual(withoutUrl, genericPreview(ORIGIN, 'ABCDEFGHJK'));
+
+  const withoutKey = await fetchInvitationPreview('abcde-fghjk', ORIGIN, {
+    fetchImpl: recorder.fetchImpl,
+    timeoutMs: 1500,
+    supabaseUrl: SUPABASE_URL,
+    publishableKey: '',
+  });
+  assert.deepEqual(withoutKey, genericPreview(ORIGIN, 'ABCDEFGHJK'));
+  assert.equal(recorder.calls.length, 0);
 });
 
 test('fetchInvitationPreview: codigo invalido devuelve tarjeta generica sin llamar a fetchImpl', async () => {
@@ -466,11 +668,8 @@ test('fetchInvitationPreview: codigo invalido devuelve tarjeta generica sin llam
   assert.deepEqual(result, genericPreview(ORIGIN, null));
 });
 
-test('SECURITY_HEADERS: expone los cuatro encabezados de seguridad esperados', () => {
-  assert.deepEqual(SECURITY_HEADERS, {
-    'X-Frame-Options': 'DENY',
-    'Content-Security-Policy': "frame-ancestors 'none'",
-    'Permissions-Policy': 'camera=(), microphone=(), geolocation=(), payment=(), usb=()',
-    'X-Robots-Tag': 'noindex, nofollow',
-  });
+test('SECURITY_HEADERS: coincide exactamente con los encabezados de src/web/_headers', () => {
+  const parsedHeaders = parseRootHeadersFile();
+  assert.equal(Object.keys(parsedHeaders).length, 4);
+  assert.deepEqual(SECURITY_HEADERS, parsedHeaders);
 });
