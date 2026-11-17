@@ -234,6 +234,28 @@ describe('GuestInvitationPage', () => {
     expect(giftsTitleEl?.textContent?.trim()).toBe('Lista de regalos');
   });
 
+  it('muestra "Un detalle para Ana y Luis" en una boda con honoree_name', async () => {
+    const weddingInvitation: GuestInvitation = {
+      ...mockGroupInvitation,
+      event: {
+        ...mockGroupInvitation.event,
+        event_type: 'wedding',
+        honoree_name: 'Ana y Luis',
+      },
+    };
+    mockGuestApi.getInvitation.mockResolvedValue(weddingInvitation);
+
+    fixture = TestBed.createComponent(GuestInvitationPage);
+    component = fixture.componentInstance;
+    fixture.componentRef.setInput('code', 'ABCD1234JK');
+
+    await component.loadInvitation();
+    fixture.detectChanges();
+
+    const giftsTitleEl = fixture.nativeElement.querySelector('.gifts-card__title');
+    expect(giftsTitleEl?.textContent?.trim()).toBe('Un detalle para Ana y Luis');
+  });
+
   it('renders individual invitation with singular texts', async () => {
     mockGuestApi.getInvitation.mockResolvedValue(mockIndividualInvitation);
     vi.mocked(QRCode.toDataURL).mockResolvedValue('data:image/png;base64,fakeqr' as never);

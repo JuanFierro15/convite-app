@@ -463,5 +463,11 @@ describe('invitation-texts utils', () => {
       expect(texts.giftsTitle).toBe('Un detalle para Sofía');
       expect(texts.giftsPageTitle).toBe('Ideas de regalo para Sofía');
     });
+
+    it('nombre sin eventType usa la voz con nombre', () => {
+      const texts = guestTexts('individual', 'Carlos', { honoreeName: 'Ana' });
+      expect(texts.giftsTitle).toBe('Un detalle para Ana');
+      expect(texts.giftsPageTitle).toBe('Ideas de regalo para Ana');
+    });
   });
 });

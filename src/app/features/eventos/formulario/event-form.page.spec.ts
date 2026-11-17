@@ -595,6 +595,33 @@ describe('EventFormPage', () => {
       );
     });
 
+    it('al editar y borrar honoree_name el payload de update lleva null', async () => {
+      mockEventContext.event.set({
+        ...mockEvent,
+        event_type: 'wedding',
+        honoree_name: 'Ana y Luis',
+      });
+      mockEventContext.role.set('owner');
+
+      fixture.componentRef.setInput('id', 'event-123');
+      component.ionViewWillEnter();
+      await vi.waitFor(() =>
+        expect(component.form.controls.honoree_name.value).toBe('Ana y Luis'),
+      );
+      fixture.detectChanges();
+
+      component.form.controls.honoree_name.setValue('');
+      await component.onSubmit();
+
+      expect(mockEventsRepo.update).toHaveBeenCalledWith(
+        'event-123',
+        expect.objectContaining({
+          event_type: 'wedding',
+          honoree_name: null,
+        }),
+      );
+    });
+
     it('al editar un evento con event_type desconocido carga other', async () => {
       mockEventContext.event.set({
         ...mockEvent,
