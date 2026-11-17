@@ -1,6 +1,7 @@
 export * from './arrival-counts';
 export * from './budget-summary';
 export * from './dates';
+export * from './event-types';
 export * from './expense-status';
 export * from './guest-gift-list';
 export * from './guest-link';

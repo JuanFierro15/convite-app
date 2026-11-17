@@ -29,6 +29,8 @@ import {
   IonInput,
   IonItem,
   IonList,
+  IonSelect,
+  IonSelectOption,
   IonSpinner,
   IonTextarea,
   IonTitle,
@@ -41,10 +43,13 @@ import { addIcons } from 'ionicons';
 import { addOutline, createOutline, trashOutline } from 'ionicons/icons';
 import {
   DEFAULT_THEME,
+  EVENT_TYPE_OPTIONS,
   EventContextService,
   EventInput,
+  EventType,
   EventsRepository,
   FIRST_BATCH_LABEL,
+  HONOREE_NAME_MAX,
   InvitationBatchRow,
   InvitationBatchesRepository,
   ThemeId,
@@ -57,6 +62,7 @@ import {
   themeOptionsFor,
   toBogotaDateInput,
   toBogotaDateTimeInput,
+  toEventType,
 } from '../../../core';
 import { CopInputDirective, EmptyStateComponent, ThemePickerComponent } from '../../../shared';
 import { BatchFormComponent } from './batch-form.component';
@@ -140,6 +146,8 @@ function toNullableBudget(value: string | number | null | undefined): number | n
     IonList,
     IonItem,
     IonInput,
+    IonSelect,
+    IonSelectOption,
     IonTextarea,
     IonButton,
     IonIcon,
@@ -163,6 +171,8 @@ export class EventFormPage implements ViewWillEnter {
   readonly id = input<string>();
 
   readonly themeOptions = computed(() => themeOptionsFor());
+  readonly eventTypeOptions = EVENT_TYPE_OPTIONS;
+  readonly honoreeNameMax = HONOREE_NAME_MAX;
   readonly loading = signal<boolean>(false);
   readonly loadError = signal<string | null>(null);
   readonly submitting = signal<boolean>(false);
@@ -193,6 +203,8 @@ export class EventFormPage implements ViewWillEnter {
   readonly form = this.fb.nonNullable.group(
     {
       name: ['', [requiredTrimmedValidator, Validators.maxLength(120)]],
+      event_type: ['' as EventType | '', [Validators.required]],
+      honoree_name: ['', [Validators.maxLength(HONOREE_NAME_MAX)]],
       theme_id: [DEFAULT_THEME as string, [Validators.required]],
       starts_at: ['', [requiredTrimmedValidator]],
       venue_name: ['', [Validators.maxLength(120)]],
@@ -332,10 +344,17 @@ export class EventFormPage implements ViewWillEnter {
       return;
     }
 
-    this.submitting.set(true);
     const raw = this.form.getRawValue();
+    if (!raw.event_type) {
+      this.form.markAllAsTouched();
+      return;
+    }
+
+    this.submitting.set(true);
     const payload: EventInput = {
       name: raw.name.trim(),
+      event_type: raw.event_type,
+      honoree_name: toNullableText(raw.honoree_name),
       theme_id: raw.theme_id,
       starts_at: fromBogotaDateTimeInput(raw.starts_at),
       venue_name: toNullableText(raw.venue_name),
@@ -377,6 +396,8 @@ export class EventFormPage implements ViewWillEnter {
     this.loadError.set(null);
     this.form.reset({
       name: '',
+      event_type: '',
+      honoree_name: '',
       theme_id: DEFAULT_THEME,
       starts_at: '',
       venue_name: '',
@@ -418,6 +439,8 @@ export class EventFormPage implements ViewWillEnter {
 
       this.form.reset({
         name: currentEvent.name,
+        event_type: toEventType(currentEvent.event_type),
+        honoree_name: currentEvent.honoree_name ?? '',
         theme_id: resolvedTheme,
         starts_at: toBogotaDateTimeInput(currentEvent.starts_at),
         venue_name: currentEvent.venue_name ?? '',

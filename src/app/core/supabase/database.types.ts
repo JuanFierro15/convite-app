@@ -46,6 +46,8 @@ export type Database = {
           city: string | null
           created_at: string
           created_by: string | null
+          event_type: string
+          honoree_name: string | null
           id: string
           map_url: string | null
           name: string
@@ -63,6 +65,8 @@ export type Database = {
           city?: string | null
           created_at?: string
           created_by?: string | null
+          event_type?: string
+          honoree_name?: string | null
           id?: string
           map_url?: string | null
           name: string
@@ -80,6 +84,8 @@ export type Database = {
           city?: string | null
           created_at?: string
           created_by?: string | null
+          event_type?: string
+          honoree_name?: string | null
           id?: string
           map_url?: string | null
           name?: string

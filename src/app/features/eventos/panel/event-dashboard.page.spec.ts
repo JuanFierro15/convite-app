@@ -27,6 +27,8 @@ const mockEvent: EventRow = {
   id: 'event-123',
   created_by: 'owner-1',
   name: 'Baby Shower Neiva',
+  event_type: 'baby_shower',
+  honoree_name: null,
   theme_id: 'honey-bee',
   starts_at: '2026-11-29T15:00:00-05:00',
   venue_name: 'Salón Comunitario',

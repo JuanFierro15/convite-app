@@ -63,6 +63,8 @@ describe('TasksPage', () => {
     id: 'evt-1',
     created_by: 'user-1',
     name: 'Baby Shower de Ejemplo',
+    event_type: 'baby_shower',
+    honoree_name: null,
     starts_at: '2026-11-29T15:00:00-05:00',
     rsvp_deadline: '2026-11-14T23:59:59-05:00',
     venue_name: 'Casa Campestre',
