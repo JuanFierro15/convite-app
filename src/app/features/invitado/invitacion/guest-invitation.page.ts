@@ -174,7 +174,10 @@ export class GuestInvitationPage implements OnInit, ViewWillEnter {
     const inv = this.invitation();
     const kind = inv?.invitation.kind ?? 'group';
     const groupName = inv?.invitation.group_name ?? '';
-    return guestTexts(kind, groupName);
+    return guestTexts(kind, groupName, {
+      eventType: inv?.event.event_type,
+      honoreeName: inv?.event.honoree_name,
+    });
   });
 
   readonly welcomeTitle = computed(() => this.texts().welcomeTitle);

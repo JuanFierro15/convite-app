@@ -146,6 +146,11 @@ describe('GuestInvitationPage', () => {
   it('renders group invitation with plural texts and entry code card', async () => {
     const invWithAccepted: GuestInvitation = {
       ...mockGroupInvitation,
+      event: {
+        ...mockGroupInvitation.event,
+        event_type: 'baby_shower',
+        honoree_name: 'Eloise',
+      },
       guests: [
         { id: 'g-1', full_name: 'Ana Ejemplo', rsvp: 'accepted' },
         { id: 'g-2', full_name: 'Luis Ejemplo', rsvp: 'pending' },
@@ -207,6 +212,28 @@ describe('GuestInvitationPage', () => {
     );
   });
 
+  it('muestra "Lista de regalos" cuando el evento no tiene honoree_name', async () => {
+    const invWithoutHonoree: GuestInvitation = {
+      ...mockGroupInvitation,
+      event: {
+        ...mockGroupInvitation.event,
+        event_type: 'baby_shower',
+        honoree_name: null,
+      },
+    };
+    mockGuestApi.getInvitation.mockResolvedValue(invWithoutHonoree);
+
+    fixture = TestBed.createComponent(GuestInvitationPage);
+    component = fixture.componentInstance;
+    fixture.componentRef.setInput('code', 'ABCD1234JK');
+
+    await component.loadInvitation();
+    fixture.detectChanges();
+
+    const giftsTitleEl = fixture.nativeElement.querySelector('.gifts-card__title');
+    expect(giftsTitleEl?.textContent?.trim()).toBe('Lista de regalos');
+  });
+
   it('renders individual invitation with singular texts', async () => {
     mockGuestApi.getInvitation.mockResolvedValue(mockIndividualInvitation);
     vi.mocked(QRCode.toDataURL).mockResolvedValue('data:image/png;base64,fakeqr' as never);
@@ -230,6 +257,11 @@ describe('GuestInvitationPage', () => {
   it('renders entry code card without QR image if generation fails', async () => {
     const invWithAccepted: GuestInvitation = {
       ...mockGroupInvitation,
+      event: {
+        ...mockGroupInvitation.event,
+        event_type: 'baby_shower',
+        honoree_name: 'Eloise',
+      },
       guests: [
         { id: 'g-1', full_name: 'Ana Ejemplo', rsvp: 'accepted' },
         { id: 'g-2', full_name: 'Luis Ejemplo', rsvp: 'pending' },

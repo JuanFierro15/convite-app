@@ -58,9 +58,10 @@ describe('invitation-texts utils', () => {
   });
 
   describe('nuevas claves de regalos y ausencia de clave anterior de sobre', () => {
-    it('devuelve el texto exacto para las 5 claves y no incluye clave por defecto de sobre', () => {
-      const groupTexts = guestTexts('group', 'Familia Ejemplo');
-      const indTexts = guestTexts('individual', 'Carlos');
+    it('devuelve el texto exacto para las 5 claves en voz bebé y no incluye clave por defecto de sobre', () => {
+      const gifts = { eventType: 'baby_shower', honoreeName: 'Eloise' };
+      const groupTexts = guestTexts('group', 'Familia Ejemplo', gifts);
+      const indTexts = guestTexts('individual', 'Carlos', gifts);
 
       expect(groupTexts.giftsPageIntro).toBe(
         'Estas son algunas cosas que voy a usar en mis primeros meses. Si eligen una, queda apartada para ustedes y así no se repite.',
@@ -127,7 +128,10 @@ describe('invitation-texts utils', () => {
     const testDate = '24 de noviembre';
 
     it('matches all fields for group', () => {
-      const texts = guestTexts('group', 'Familia Ejemplo');
+      const texts = guestTexts('group', 'Familia Ejemplo', {
+        eventType: 'baby_shower',
+        honoreeName: 'Eloise',
+      });
       expect(texts.welcomeTitle).toBe('La familia Ejemplo está invitada');
       expect(texts.deadlineReminder(testDate)).toBe('Por favor respondan antes del 24 de noviembre');
       expect(texts.deadlinePassed).toBe(
@@ -211,7 +215,10 @@ describe('invitation-texts utils', () => {
     });
 
     it('matches all fields for individual', () => {
-      const texts = guestTexts('individual', 'Carlos');
+      const texts = guestTexts('individual', 'Carlos', {
+        eventType: 'baby_shower',
+        honoreeName: 'Eloise',
+      });
       expect(texts.welcomeTitle).toBe('Carlos, te invitamos');
       expect(texts.deadlineReminder(testDate)).toBe('Por favor responde antes del 24 de noviembre');
       expect(texts.deadlinePassed).toBe(
@@ -333,6 +340,128 @@ describe('invitation-texts utils', () => {
       expect(texts.releaseGiftConfirm('Coche para bebé')).not.toContain(namePart);
       expect(texts.chooseGiftAriaLabel('Coche para bebé')).not.toContain(namePart);
       expect(texts.releaseGiftAriaLabel('Coche para bebé')).not.toContain(namePart);
+    });
+  });
+
+  describe('voces de regalos según tipo de evento y festejado', () => {
+    it('sin tercer argumento usa la voz neutra en individual y en grupo', () => {
+      const ind = guestTexts('individual', 'Carlos');
+      expect(ind.giftsTitle).toBe('Lista de regalos');
+      expect(ind.giftsPageTitle).toBe('Ideas de regalo');
+      expect(ind.giftsPageIntro).toBe(
+        'Estas son algunas ideas de regalo. Si eliges una, queda apartada para ti y así no se repite.',
+      );
+      expect(ind.giftsPageIntroNoList).toBe(
+        'Estas son algunas ideas de regalo, por si te hace ilusión llevar algo.',
+      );
+
+      const grp = guestTexts('group', 'Familia Ejemplo');
+      expect(grp.giftsTitle).toBe('Lista de regalos');
+      expect(grp.giftsPageTitle).toBe('Ideas de regalo');
+      expect(grp.giftsPageIntro).toBe(
+        'Estas son algunas ideas de regalo. Si eligen una, queda apartada para ustedes y así no se repite.',
+      );
+      expect(grp.giftsPageIntroNoList).toBe(
+        'Estas son algunas ideas de regalo, por si les hace ilusión llevar algo.',
+      );
+    });
+
+    it('voz bebé con baby_shower y nombre en individual y en grupo', () => {
+      const gifts = { eventType: 'baby_shower', honoreeName: 'Eloise' };
+
+      const ind = guestTexts('individual', 'Carlos', gifts);
+      expect(ind.giftsTitle).toBe('Un detalle para Eloise');
+      expect(ind.giftsPageTitle).toBe('Lo que me va a servir');
+      expect(ind.giftsPageIntro).toBe(
+        'Estas son algunas cosas que voy a usar en mis primeros meses. Si eliges una, queda apartada para ti y así no se repite.',
+      );
+      expect(ind.giftsPageIntroNoList).toBe(
+        'Estas son algunas cosas que voy a usar en mis primeros meses, por si te hace ilusión traerme algo.',
+      );
+
+      const grp = guestTexts('group', 'Familia Ejemplo', gifts);
+      expect(grp.giftsTitle).toBe('Un detalle para Eloise');
+      expect(grp.giftsPageTitle).toBe('Lo que me va a servir');
+      expect(grp.giftsPageIntro).toBe(
+        'Estas son algunas cosas que voy a usar en mis primeros meses. Si eligen una, queda apartada para ustedes y así no se repite.',
+      );
+      expect(grp.giftsPageIntroNoList).toBe(
+        'Estas son algunas cosas que voy a usar en mis primeros meses, por si les hace ilusión traerme algo.',
+      );
+    });
+
+    it('voz con nombre para boda y pareja en individual y en grupo', () => {
+      const gifts = { eventType: 'wedding', honoreeName: 'Ana y Luis' };
+
+      const ind = guestTexts('individual', 'Carlos', gifts);
+      expect(ind.giftsTitle).toBe('Un detalle para Ana y Luis');
+      expect(ind.giftsPageTitle).toBe('Ideas de regalo para Ana y Luis');
+      expect(ind.giftsPageIntro).toBe(
+        'Estas son algunas ideas para Ana y Luis. Si eliges una, queda apartada para ti y así no se repite.',
+      );
+      expect(ind.giftsPageIntroNoList).toBe(
+        'Estas son algunas ideas para Ana y Luis, por si te hace ilusión llevar algo.',
+      );
+
+      const grp = guestTexts('group', 'Familia Ejemplo', gifts);
+      expect(grp.giftsTitle).toBe('Un detalle para Ana y Luis');
+      expect(grp.giftsPageTitle).toBe('Ideas de regalo para Ana y Luis');
+      expect(grp.giftsPageIntro).toBe(
+        'Estas son algunas ideas para Ana y Luis. Si eligen una, queda apartada para ustedes y así no se repite.',
+      );
+      expect(grp.giftsPageIntroNoList).toBe(
+        'Estas son algunas ideas para Ana y Luis, por si les hace ilusión llevar algo.',
+      );
+    });
+
+    it('baby_shower sin nombre o con solo espacios da la voz neutra', () => {
+      for (const honoreeName of [null, undefined, '', '   ']) {
+        const ind = guestTexts('individual', 'Carlos', {
+          eventType: 'baby_shower',
+          honoreeName,
+        });
+        expect(ind.giftsTitle).toBe('Lista de regalos');
+        expect(ind.giftsPageTitle).toBe('Ideas de regalo');
+        expect(ind.giftsPageIntro).toBe(
+          'Estas son algunas ideas de regalo. Si eliges una, queda apartada para ti y así no se repite.',
+        );
+        expect(ind.giftsPageIntroNoList).toBe(
+          'Estas son algunas ideas de regalo, por si te hace ilusión llevar algo.',
+        );
+      }
+    });
+
+    it('birthday con espacios alrededor recorta el nombre', () => {
+      const texts = guestTexts('group', 'Familia Ejemplo', {
+        eventType: 'birthday',
+        honoreeName: '  Ana y Luis  ',
+      });
+      expect(texts.giftsTitle).toBe('Un detalle para Ana y Luis');
+      expect(texts.giftsPageTitle).toBe('Ideas de regalo para Ana y Luis');
+    });
+
+    it('baptism con nombre usa la voz con nombre', () => {
+      const texts = guestTexts('individual', 'Carlos', {
+        eventType: 'baptism',
+        honoreeName: 'Mateo',
+      });
+      expect(texts.giftsTitle).toBe('Un detalle para Mateo');
+      expect(texts.giftsPageTitle).toBe('Ideas de regalo para Mateo');
+      expect(texts.giftsPageIntro).toBe(
+        'Estas son algunas ideas para Mateo. Si eliges una, queda apartada para ti y así no se repite.',
+      );
+      expect(texts.giftsPageIntroNoList).toBe(
+        'Estas son algunas ideas para Mateo, por si te hace ilusión llevar algo.',
+      );
+    });
+
+    it('tipo desconocido con nombre usa la voz con nombre', () => {
+      const texts = guestTexts('group', 'Familia Ejemplo', {
+        eventType: 'party',
+        honoreeName: 'Sofía',
+      });
+      expect(texts.giftsTitle).toBe('Un detalle para Sofía');
+      expect(texts.giftsPageTitle).toBe('Ideas de regalo para Sofía');
     });
   });
 });
