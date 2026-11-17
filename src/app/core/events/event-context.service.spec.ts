@@ -13,6 +13,8 @@ function makeEvent(id: string): EventRow {
   return {
     id,
     name: `Evento ${id}`,
+    event_type: 'other',
+    honoree_name: null,
     theme_id: 'baby-shower',
     starts_at: '2026-11-29T15:00:00-05:00',
     rsvp_deadline: '2026-11-15T23:59:59-05:00',

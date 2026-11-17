@@ -18,6 +18,8 @@ const mockGroupInvitation: GuestInvitation = {
   },
   event: {
     name: 'Baby Shower de Martina',
+    event_type: 'baby_shower',
+    honoree_name: 'Martina',
     theme_id: 'baby-shower',
     starts_at: '2026-11-29T15:00:00-05:00',
     venue_name: 'Club Campestre',
@@ -41,6 +43,8 @@ const mockIndividualInvitation: GuestInvitation = {
   },
   event: {
     name: 'Baby Shower de Martina',
+    event_type: 'baby_shower',
+    honoree_name: 'Martina',
     theme_id: 'baby-shower',
     starts_at: '2026-11-29T15:00:00-05:00',
     venue_name: 'Club Campestre',
@@ -269,6 +273,36 @@ describe('GuestGiftsPage', () => {
         'Estas son algunas cosas que voy a usar en mis primeros meses, por si te hace ilusión traerme algo.',
       );
       expect(indFixture.nativeElement.querySelector('.gifts-header__note')).toBeNull();
+    });
+
+    it('muestra h1 "Ideas de regalo para Ana y Luis" con boda y nombre', async () => {
+      const weddingInv: GuestInvitation = {
+        ...mockGroupInvitation,
+        event: {
+          ...mockGroupInvitation.event,
+          event_type: 'wedding',
+          honoree_name: 'Ana y Luis',
+        },
+      };
+      const { fixture } = await createPage([buildUniqueGift()], weddingInv);
+
+      const headerTitle = fixture.nativeElement.querySelector('#gifts-title');
+      expect(headerTitle?.textContent?.trim()).toBe('Ideas de regalo para Ana y Luis');
+    });
+
+    it('muestra h1 "Ideas de regalo" sin nombre', async () => {
+      const neutralInv: GuestInvitation = {
+        ...mockGroupInvitation,
+        event: {
+          ...mockGroupInvitation.event,
+          event_type: 'baby_shower',
+          honoree_name: null,
+        },
+      };
+      const { fixture } = await createPage([buildUniqueGift()], neutralInv);
+
+      const headerTitle = fixture.nativeElement.querySelector('#gifts-title');
+      expect(headerTitle?.textContent?.trim()).toBe('Ideas de regalo');
     });
   });
 

@@ -16,6 +16,8 @@ import { InvitationSendPage } from './invitation-send.page';
 const mockEvent: EventRow = {
   id: 'evt-1',
   name: 'Baby Shower',
+  event_type: 'baby_shower',
+  honoree_name: null,
   welcome_message: 'Celebración familiar',
   starts_at: '2026-11-29T16:00:00-05:00',
   venue_name: 'Salón Comunal',

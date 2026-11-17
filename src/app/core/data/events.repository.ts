@@ -93,6 +93,11 @@ export class EventsRepository {
   async create(input: EventInput): Promise<EventRow> {
     const payload = {
       name: input.name.trim(),
+      event_type: input.event_type,
+      honoree_name:
+        typeof input.honoree_name === 'string'
+          ? input.honoree_name.trim() || null
+          : input.honoree_name,
       theme_id: input.theme_id,
       starts_at: input.starts_at,
       venue_name: input.venue_name,
@@ -120,6 +125,10 @@ export class EventsRepository {
     const payload: Partial<EventInput> = { ...input };
     if (typeof payload.name === 'string') {
       payload.name = payload.name.trim();
+    }
+    if (typeof payload.honoree_name === 'string') {
+      const trimmed = payload.honoree_name.trim();
+      payload.honoree_name = trimmed.length > 0 ? trimmed : null;
     }
 
     const { data, error } = await this.supabase.client

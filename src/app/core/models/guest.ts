@@ -5,6 +5,8 @@ import { GiftKind } from './gifts';
 
 export interface GuestInvitationEvent {
   name: string;
+  event_type?: string | null;
+  honoree_name?: string | null;
   theme_id: string;
   starts_at: string;
   venue_name: string | null;

@@ -19,6 +19,8 @@ const mockEvent: EventRow = {
   id: 'event-123',
   created_by: 'owner-1',
   name: 'Baby Shower Neiva',
+  event_type: 'baby_shower',
+  honoree_name: 'Eloise',
   theme_id: 'baby-shower',
   starts_at: '2026-11-29T15:00:00-05:00',
   venue_name: 'Salón Comunitario',
@@ -206,6 +208,7 @@ describe('EventFormPage', () => {
 
     component.form.patchValue({
       name: 'Evento Ejemplo',
+      event_type: 'birthday',
       starts_at: '2026-11-29T15:00',
       rsvp_deadline: '2026-11-20',
     });
@@ -468,5 +471,174 @@ describe('EventFormPage', () => {
     );
     expect(mockToastPresent).toHaveBeenCalled();
     expect(router.navigate).not.toHaveBeenCalled();
+  });
+
+  describe('tipo de evento y para quién es', () => {
+    it('al crear con event_type vacío el formulario es inválido, muestra error y no llama a create', async () => {
+      component.ionViewWillEnter();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      component.form.patchValue({
+        name: 'Evento Ejemplo',
+        starts_at: '2026-11-29T15:00',
+        rsvp_deadline: '2026-11-20',
+      });
+      expect(component.form.controls.event_type.value).toBe('');
+      expect(component.form.invalid).toBe(true);
+
+      await component.onSubmit();
+      fixture.detectChanges();
+
+      expect(mockEventsRepo.create).not.toHaveBeenCalled();
+      expect(fixture.nativeElement.textContent).toContain('Elige el tipo de evento');
+    });
+
+    it('el payload de create lleva event_type birthday y honoree_name null cuando solo hay espacios', async () => {
+      component.ionViewWillEnter();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      component.form.patchValue({
+        name: 'Cumpleaños Ejemplo',
+        event_type: 'birthday',
+        honoree_name: '   ',
+        starts_at: '2026-11-29T15:00',
+        rsvp_deadline: '2026-11-20',
+      });
+
+      await component.onSubmit();
+
+      expect(mockEventsRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event_type: 'birthday',
+          honoree_name: null,
+        }),
+      );
+    });
+
+    it('el payload de create recorta honoree_name con espacios alrededor', async () => {
+      component.ionViewWillEnter();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      component.form.patchValue({
+        name: 'Cumpleaños Ana',
+        event_type: 'birthday',
+        honoree_name: '  Ana  ',
+        starts_at: '2026-11-29T15:00',
+        rsvp_deadline: '2026-11-20',
+      });
+
+      await component.onSubmit();
+
+      expect(mockEventsRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          event_type: 'birthday',
+          honoree_name: 'Ana',
+        }),
+      );
+    });
+
+    it('honoree_name con 60 caracteres es válido y con 61 marca error', async () => {
+      component.ionViewWillEnter();
+      await fixture.whenStable();
+      fixture.detectChanges();
+
+      component.form.patchValue({
+        name: 'Evento Ejemplo',
+        event_type: 'other',
+        starts_at: '2026-11-29T15:00',
+        rsvp_deadline: '2026-11-20',
+      });
+
+      component.form.controls.honoree_name.setValue('a'.repeat(60));
+      component.form.controls.honoree_name.markAsTouched();
+      fixture.detectChanges();
+      expect(component.form.controls.honoree_name.valid).toBe(true);
+      expect(component.form.valid).toBe(true);
+      expect(fixture.nativeElement.textContent).not.toContain('Máximo 60 caracteres');
+
+      component.form.controls.honoree_name.setValue('a'.repeat(61));
+      component.form.controls.honoree_name.markAsTouched();
+      fixture.detectChanges();
+      expect(component.form.controls.honoree_name.hasError('maxlength')).toBe(true);
+      expect(component.form.invalid).toBe(true);
+      expect(fixture.nativeElement.textContent).toContain('Máximo 60 caracteres');
+    });
+
+    it('al editar carga event_type wedding y honoree_name Ana y Luis, y el payload de update los conserva', async () => {
+      mockEventContext.event.set({
+        ...mockEvent,
+        event_type: 'wedding',
+        honoree_name: 'Ana y Luis',
+      });
+      mockEventContext.role.set('owner');
+
+      fixture.componentRef.setInput('id', 'event-123');
+      component.ionViewWillEnter();
+      await vi.waitFor(() =>
+        expect(component.form.controls.event_type.value).toBe('wedding'),
+      );
+      fixture.detectChanges();
+
+      expect(component.form.controls.honoree_name.value).toBe('Ana y Luis');
+
+      await component.onSubmit();
+
+      expect(mockEventsRepo.update).toHaveBeenCalledWith(
+        'event-123',
+        expect.objectContaining({
+          event_type: 'wedding',
+          honoree_name: 'Ana y Luis',
+        }),
+      );
+    });
+
+    it('al editar y borrar honoree_name el payload de update lleva null', async () => {
+      mockEventContext.event.set({
+        ...mockEvent,
+        event_type: 'wedding',
+        honoree_name: 'Ana y Luis',
+      });
+      mockEventContext.role.set('owner');
+
+      fixture.componentRef.setInput('id', 'event-123');
+      component.ionViewWillEnter();
+      await vi.waitFor(() =>
+        expect(component.form.controls.honoree_name.value).toBe('Ana y Luis'),
+      );
+      fixture.detectChanges();
+
+      component.form.controls.honoree_name.setValue('');
+      await component.onSubmit();
+
+      expect(mockEventsRepo.update).toHaveBeenCalledWith(
+        'event-123',
+        expect.objectContaining({
+          event_type: 'wedding',
+          honoree_name: null,
+        }),
+      );
+    });
+
+    it('al editar un evento con event_type desconocido carga other', async () => {
+      mockEventContext.event.set({
+        ...mockEvent,
+        event_type: 'party',
+        honoree_name: null,
+      });
+      mockEventContext.role.set('owner');
+
+      fixture.componentRef.setInput('id', 'event-123');
+      component.ionViewWillEnter();
+      await vi.waitFor(() =>
+        expect(component.form.controls.name.value).toBe('Baby Shower Neiva'),
+      );
+      fixture.detectChanges();
+
+      expect(component.form.controls.event_type.value).toBe('other');
+      expect(component.form.controls.honoree_name.value).toBe('');
+    });
   });
 });

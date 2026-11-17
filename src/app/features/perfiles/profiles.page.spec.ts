@@ -82,6 +82,8 @@ describe('ProfilesPage', () => {
       event: signal<EventRow | null>({
         id: 'evt-123',
         name: 'Baby shower',
+        event_type: 'baby_shower',
+        honoree_name: null,
         budget_cop: null,
         city: 'Neiva',
         venue_name: null,
@@ -171,6 +173,8 @@ describe('ProfilesPage', () => {
     mockEventContext.event.set({
       id: 'evt-123',
       name: 'Baby shower',
+      event_type: 'baby_shower',
+      honoree_name: null,
       budget_cop: null,
       city: 'Neiva',
       venue_name: null,

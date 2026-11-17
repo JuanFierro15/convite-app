@@ -153,6 +153,8 @@ describe('ExpenseDetailPage', () => {
       event: signal<EventRow | null>({
         id: 'evt-1',
         name: 'Baby Shower',
+        event_type: 'baby_shower',
+        honoree_name: null,
         starts_at: '2026-11-29T15:00:00-05:00',
         theme_id: 'baby-shower',
         team_id: 'team-1',

@@ -55,6 +55,55 @@
             </div>
 
             <div class="form-field">
+              <ion-item class="form-item">
+                <ion-select
+                  label="Tipo de evento"
+                  labelPlacement="stacked"
+                  interface="popover"
+                  placeholder="Elige el tipo de evento"
+                  formControlName="event_type"
+                  required
+                >
+                  @for (option of eventTypeOptions; track option.value) {
+                    <ion-select-option [value]="option.value">{{ option.label }}</ion-select-option>
+                  }
+                </ion-select>
+              </ion-item>
+              @if (
+                (form.controls.event_type.touched || form.controls.event_type.dirty) &&
+                form.controls.event_type.hasError('required')
+              ) {
+                <p class="text-label form-field__error" role="alert">
+                  Elige el tipo de evento
+                </p>
+              }
+            </div>
+
+            <div class="form-field">
+              <ion-item class="form-item">
+                <ion-input
+                  label="Para quién es"
+                  labelPlacement="stacked"
+                  formControlName="honoree_name"
+                  type="text"
+                  [maxlength]="honoreeNameMax"
+                  placeholder="Ej. Ana y Luis"
+                ></ion-input>
+              </ion-item>
+              <p class="text-label form-field__help">
+                Opcional. Por ejemplo: Eloise, o Ana y Luis si es una pareja.
+              </p>
+              @if (
+                (form.controls.honoree_name.touched || form.controls.honoree_name.dirty) &&
+                form.controls.honoree_name.hasError('maxlength')
+              ) {
+                <p class="text-label form-field__error" role="alert">
+                  Máximo {{ honoreeNameMax }} caracteres
+                </p>
+              }
+            </div>
+
+            <div class="form-field">
               <app-theme-picker formControlName="theme_id" [options]="themeOptions()" />
             </div>
 

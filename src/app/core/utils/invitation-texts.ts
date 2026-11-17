@@ -1,6 +1,12 @@
+import { toEventType } from './event-types';
 import { joinSpanishNames } from './text';
 
 export type InvitationKind = 'group' | 'individual';
+
+export interface GuestGiftsContext {
+  eventType?: unknown;
+  honoreeName?: string | null;
+}
 
 export const GUEST_LOADING_TEXT = 'Cargando la invitación…';
 export const GUEST_INVALID_TITLE = 'No encontramos esta invitación';
@@ -64,8 +70,63 @@ function resolveWelcomeTitle(kind: InvitationKind, groupName: string): string {
   return `${trimmed}, queremos que nos acompañen`;
 }
 
-export function guestTexts(kind: InvitationKind, groupName: string): GuestTexts {
+interface GiftVoiceTexts {
+  giftsTitle: string;
+  giftsPageTitle: string;
+  giftsPageIntro: string;
+  giftsPageIntroNoList: string;
+}
+
+function resolveGiftVoiceTexts(
+  isIndividual: boolean,
+  gifts?: GuestGiftsContext,
+): GiftVoiceTexts {
+  const honoreeName = gifts?.honoreeName?.trim() ?? '';
+  if (!honoreeName) {
+    return {
+      giftsTitle: 'Lista de regalos',
+      giftsPageTitle: 'Ideas de regalo',
+      giftsPageIntro: isIndividual
+        ? 'Estas son algunas ideas de regalo. Si eliges una, queda apartada para ti y así no se repite.'
+        : 'Estas son algunas ideas de regalo. Si eligen una, queda apartada para ustedes y así no se repite.',
+      giftsPageIntroNoList: isIndividual
+        ? 'Estas son algunas ideas de regalo, por si te hace ilusión llevar algo.'
+        : 'Estas son algunas ideas de regalo, por si les hace ilusión llevar algo.',
+    };
+  }
+
+  if (toEventType(gifts?.eventType) === 'baby_shower') {
+    return {
+      giftsTitle: `Un detalle para ${honoreeName}`,
+      giftsPageTitle: 'Lo que me va a servir',
+      giftsPageIntro: isIndividual
+        ? 'Estas son algunas cosas que voy a usar en mis primeros meses. Si eliges una, queda apartada para ti y así no se repite.'
+        : 'Estas son algunas cosas que voy a usar en mis primeros meses. Si eligen una, queda apartada para ustedes y así no se repite.',
+      giftsPageIntroNoList: isIndividual
+        ? 'Estas son algunas cosas que voy a usar en mis primeros meses, por si te hace ilusión traerme algo.'
+        : 'Estas son algunas cosas que voy a usar en mis primeros meses, por si les hace ilusión traerme algo.',
+    };
+  }
+
+  return {
+    giftsTitle: `Un detalle para ${honoreeName}`,
+    giftsPageTitle: `Ideas de regalo para ${honoreeName}`,
+    giftsPageIntro: isIndividual
+      ? `Estas son algunas ideas para ${honoreeName}. Si eliges una, queda apartada para ti y así no se repite.`
+      : `Estas son algunas ideas para ${honoreeName}. Si eligen una, queda apartada para ustedes y así no se repite.`,
+    giftsPageIntroNoList: isIndividual
+      ? `Estas son algunas ideas para ${honoreeName}, por si te hace ilusión llevar algo.`
+      : `Estas son algunas ideas para ${honoreeName}, por si les hace ilusión llevar algo.`,
+  };
+}
+
+export function guestTexts(
+  kind: InvitationKind,
+  groupName: string,
+  gifts?: GuestGiftsContext,
+): GuestTexts {
   const isIndividual = kind === 'individual';
+  const giftVoice = resolveGiftVoiceTexts(isIndividual, gifts);
 
   return {
     welcomeTitle: resolveWelcomeTitle(kind, groupName),
@@ -130,8 +191,8 @@ export function guestTexts(kind: InvitationKind, groupName: string): GuestTexts 
     chooseGiftAriaLabel: (giftName: string) => `Elegir este regalo: ${giftName}`,
     releaseGiftAriaLabel: (giftName: string) =>
       isIndividual ? `Ya no lo llevo: ${giftName}` : `Ya no lo llevamos: ${giftName}`,
-    giftsTitle: 'Un detalle para Eloise',
-    giftsPageTitle: 'Lo que me va a servir',
+    giftsTitle: giftVoice.giftsTitle,
+    giftsPageTitle: giftVoice.giftsPageTitle,
     giftsIntro: isIndividual
       ? [
           'Tu compañía es el mejor regalo, así que no sientas ningún compromiso. Si te hace ilusión llevar algo, preparamos una lista con algunas ideas.',
@@ -139,12 +200,8 @@ export function guestTexts(kind: InvitationKind, groupName: string): GuestTexts 
       : [
           'Su compañía es el mejor regalo, así que no sientan ningún compromiso. Si les hace ilusión llevar algo, preparamos una lista con algunas ideas.',
         ],
-    giftsPageIntro: isIndividual
-      ? 'Estas son algunas cosas que voy a usar en mis primeros meses. Si eliges una, queda apartada para ti y así no se repite.'
-      : 'Estas son algunas cosas que voy a usar en mis primeros meses. Si eligen una, queda apartada para ustedes y así no se repite.',
-    giftsPageIntroNoList: isIndividual
-      ? 'Estas son algunas cosas que voy a usar en mis primeros meses, por si te hace ilusión traerme algo.'
-      : 'Estas son algunas cosas que voy a usar en mis primeros meses, por si les hace ilusión traerme algo.',
+    giftsPageIntro: giftVoice.giftsPageIntro,
+    giftsPageIntroNoList: giftVoice.giftsPageIntroNoList,
     giftsPageIntroClosed: isIndividual
       ? 'La lista de regalos ya cerró. Gracias por tu cariño: tu compañía es el mejor regalo.'
       : 'La lista de regalos ya cerró. Gracias por su cariño: su compañía es el mejor regalo.',
