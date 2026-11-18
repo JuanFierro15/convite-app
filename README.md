@@ -85,7 +85,7 @@ web.
 | Capacidad | Propietario | Ayudante | Invitado (web) |
 |---|:---:|:---:|:---:|
 | Ver el panel del evento y asistencia en tiempo real | ✅ | ✅ | — |
-| Crear, editar y eliminar eventos y temas | ✅ | — | — |
+| Crear y editar el evento (datos, tipo, festejado y tema) | ✅ | — | — |
 | Crear, editar y enviar invitaciones (individuales o grupo) | ✅ | ✅ | — |
 | Administrar tandas de confirmación (`invitation_batches`) | ✅ | — | — |
 | Ver registro de respuestas (`rsvp_log`) | ✅ | ✅ | — |
@@ -94,7 +94,8 @@ web.
 | Borrar fotos de la galería | Cualquiera del evento | Solo las propias | — |
 | Ver y marcar tareas; crear o editar tareas | ✅ | Solo ver y marcar | — |
 | Administrar lista de regalos y consultar reservas | ✅ | — | — |
-| Administrar presupuesto, categorías, gastos, abonos y perfiles | ✅ | — | — |
+| Administrar presupuesto, categorías, gastos y abonos | ✅ | — | — |
+| Administrar perfiles del equipo (quién paga o hace una tarea) | ✅ | Solo ver | — |
 | Ver invitación, confirmar asistencia por persona y abrir su QR | — | — | ✅ |
 | Elegir o liberar regalos de forma anónima | — | — | ✅ |
 
@@ -251,7 +252,7 @@ antes de subirse:
 | Códigos de invitación | 10 caracteres alfanuméricos sin caracteres ambiguos (`ABCDEFGHJKLMNPQRSTUVWXYZ23456789`), únicos por invitación y normalizados al buscar |
 | Teléfonos celulares | Formato colombiano `+57` seguido de 10 dígitos iniciando por `3` (`^\+573[0-9]{9}$`), validado en cliente y en PostgreSQL |
 | Confirmaciones (RSVP) | Cada integrante tiene estado `pending`, `accepted` o `declined`; el invitado puede cambiar su respuesta por web hasta el `rsvp_deadline` de su tanda o del evento |
-| Tandas de invitaciones | Cada tanda adicional (`invitation_batches`) tiene su propia fecha límite (`rsvp_deadline <= events.rsvp_deadline` o anterior al inicio según regla); si una invitación no tiene tanda asignada, usa la fecha límite del evento |
+| Tandas de invitaciones | Cada tanda (`invitation_batches`) tiene su propia fecha límite, que no puede pasar del inicio del evento (`rsvp_deadline <= events.starts_at`); si una invitación no tiene tanda asignada, usa la fecha límite del evento |
 | Registro de respuestas | Un disparador (`guests_log_rsvp`) registra en `rsvp_log` cada cambio de estado indicando si vino de la invitación (`guest`) o de la app (`team`) |
 | Regalos y anonimato | Máximo un regalo `free` por evento; los `unique` solo pueden tener una reserva activa (índice único parcial contra concurrencia); en `repeatable` el tope de familias se valida bajo bloqueo; `get_gifts` nunca devuelve quién apartó un regalo y el ayudante tiene bloqueado el acceso |
 | Llegadas sin conexión | `record_arrivals` es idempotente: guarda la hora original tomada al escanear en el celular y no sobrescribe una llegada ya registrada |
@@ -406,14 +407,14 @@ consta de **16 tablas**, todas con RLS habilitado:
 |---|---|---|
 | Framework UI | Ionic Angular (`@ionic/angular`) · Ionicons | `^9.0.0` · `^8.1.0` |
 | Aplicación web | Angular (standalone, signals, sin Zone.js) | `22.2.3` |
-| Lenguaje y estilos | TypeScript · SCSS · DM Sans / Lora (`@fontsource`) | `~6.0.0` |
+| Lenguaje y estilos | TypeScript · SCSS · DM Sans / Lora (`@fontsource`) | `~6.0.0` · `^5.3.0` |
 | Runtime móvil | Capacitor (`@capacitor/core`, `@capacitor/android`) | `8.5.3` |
 | Plugins nativos | Camera `8.2.6` · Barcode Scanner `3.1.3` · Preferences `8.0.1` · Network `8.0.1` · App `8.1.2` · Filesystem `8.1.5` · Share `8.0.3` · Haptics `8.0.2` · Keyboard `8.0.6` · Status Bar `8.0.4` | según `package.json` |
 | Backend y datos | `@supabase/supabase-js` (PostgreSQL, RLS, Auth, Realtime, Storage) | `^2.118.0` |
 | Códigos QR | `qrcode` (generación) · `@capacitor/barcode-scanner` (lectura ML Kit) | `^1.5.4` · `3.1.3` |
 | Hosting web | Cloudflare Pages + Pages Functions (`wrangler`) | `4.152.0` |
 | Pruebas | Vitest + `jsdom` + `node:test` | `~5.0.5` · `^30.1.1` |
-| Calidad de código | ESLint + `angular-eslint` + `typescript-eslint` | `^10.10.0` · `22.6.0` |
+| Calidad de código | ESLint + `angular-eslint` + `typescript-eslint` | `^10.10.0` · `22.6.0` · `^8.61.0` |
 
 ---
 
