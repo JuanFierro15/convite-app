@@ -268,8 +268,8 @@ flowchart TB
   subgraph Android["App Android (Capacitor 8 + Ionic 9 / Angular 22)"]
     UI["Pantallas standalone + Signals"]
     SVC["Servicios y repositorios (inject)"]
-    PREF[("Preferences\n(cola de llegadas y snapshot)")]
-    CAM["Plugins nativos\nCamera · BarcodeScanner · AppSettings"]
+    PREF[("Preferences<br/>(cola de llegadas y snapshot)")]
+    CAM["Plugins nativos<br/>Camera · BarcodeScanner · AppSettings"]
     UI --> SVC
     SVC --> PREF
     SVC --> CAM
@@ -277,13 +277,13 @@ flowchart TB
 
   subgraph Web["Vista web de invitados (Cloudflare Pages)"]
     SPA["Rutas /i/:code y /i/:code/regalos"]
-    OG["Function functions/i/[code].js\n(etiquetas Open Graph)"]
-    VID["Function functions/assets/video/[[path]].js\n(Range 206 para MP4)"]
+    OG["Function functions/i/[code].js<br/>(etiquetas Open Graph)"]
+    VID["Function functions/assets/video/[[path]].js<br/>(Range 206 para MP4)"]
   end
 
   subgraph Supa["Supabase"]
     AUTH["Auth (correo y contraseña)"]
-    DB[("PostgreSQL + RLS\n(16 tablas + RPCs)")]
+    DB[("PostgreSQL + RLS<br/>(16 tablas + RPCs)")]
     RT["Realtime (WebSocket)"]
     STG["Storage (bucket privado event-photos)"]
   end
@@ -330,7 +330,7 @@ sequenceDiagram
   DB-->>W: Datos del evento, integrantes y plazo
   I->>W: Selecciona "Acepto" o "No acepto"
   W->>DB: POST /rpc/set_rsvp (p_code, p_guest_id, p_rsvp)
-  DB->>DB: Valida código y deadline; dispara guests_log_rsvp
+  DB->>DB: Valida código y plazo, y dispara guests_log_rsvp
   DB-->>W: Invitación actualizada
   DB-->>RT: Evento en guests y rsvp_log
   RT-->>O: Notifica al panel e invitaciones (debounce 300 ms)
